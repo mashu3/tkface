@@ -2,6 +2,12 @@ import tkinter as tk
 from tkface import lang
 from typing import Optional
 
+# Icon type constants
+INFO = "info"
+WARNING = "warning"
+ERROR = "error"
+QUESTION = "question"
+
 def _get_or_create_root():
     """
     Get the existing Tk root window or create a new one.
@@ -329,7 +335,7 @@ def showinfo(master=None, message="", title=None, language=None, **kwargs):
         master=master,
         message=message,
         title=title or "Info",
-        icon="info",
+        icon=INFO,
         button_set="ok",
         language=language,
         **kwargs
@@ -356,7 +362,7 @@ def showerror(master=None, message="", title=None, language=None, **kwargs):
         master=master,
         message=message,
         title=title or "Error",
-        icon="error",
+        icon=ERROR,
         button_set="ok",
         language=language,
         **kwargs
@@ -383,7 +389,7 @@ def showwarning(master=None, message="", title=None, language=None, **kwargs):
         master=master,
         message=message,
         title=title or "Warning",
-        icon="warning",
+        icon=WARNING,
         button_set="ok",
         language=language,
         **kwargs
@@ -412,7 +418,7 @@ def askquestion(master=None, message="", title=None, language=None, **kwargs):
         master=master,
         message=message,
         title=title or "Question",
-        icon="question",
+        icon=QUESTION,
         button_set="yesno",
         language=language,
         **kwargs
@@ -439,15 +445,16 @@ def askyesno(master=None, message="", title=None, language=None, **kwargs):
         >>> if askyesno("Do you want to save?", language="ja"):
         ...     save_file()
     """
-    return CustomMessageBox.show(
+    result = CustomMessageBox.show(
         master=master,
         message=message,
         title=title or "Question",
-        icon="question",
+        icon=QUESTION,
         button_set="yesno",
         language=language,
         **kwargs
     )
+    return result == "yes"
 
 def askokcancel(master=None, message="", title=None, language=None, **kwargs):
     """
@@ -467,15 +474,16 @@ def askokcancel(master=None, message="", title=None, language=None, **kwargs):
         >>> if askokcancel("Do you want to save?", language="ja"):
         ...     save_file()
     """
-    return CustomMessageBox.show(
+    result = CustomMessageBox.show(
         master=master,
         message=message,
         title=title or "Confirm",
-        icon="question",
+        icon=QUESTION,
         button_set="okcancel",
         language=language,
         **kwargs
     )
+    return result == "ok"
 
 def askretrycancel(master=None, message="", title=None, language=None, **kwargs):
     """
@@ -496,15 +504,16 @@ def askretrycancel(master=None, message="", title=None, language=None, **kwargs)
         >>> if result == "retry":
         ...     retry_connection()
     """
-    return CustomMessageBox.show(
+    result = CustomMessageBox.show(
         master=master,
         message=message,
         title=title or "Retry",
-        icon="warning",
+        icon=WARNING,
         button_set="retrycancel",
         language=language,
         **kwargs
     )
+    return result == "retry"
 
 def askyesnocancel(master=None, message="", title=None, language=None, **kwargs):
     """
@@ -528,15 +537,21 @@ def askyesnocancel(master=None, message="", title=None, language=None, **kwargs)
         ...     discard_changes()
         >>> # else: cancel - do nothing
     """
-    return CustomMessageBox.show(
+    result = CustomMessageBox.show(
         master=master,
         message=message,
         title=title or "Question",
-        icon="question",
+        icon=QUESTION,
         button_set="yesnocancel",
         language=language,
         **kwargs
     )
+    if result == "yes":
+        return True
+    elif result == "no":
+        return False
+    else:
+        return None
 
 def askabortretryignore(master=None, message="", title=None, language=None, **kwargs):
     """
@@ -567,7 +582,7 @@ def askabortretryignore(master=None, message="", title=None, language=None, **kw
         master=master,
         message=message,
         title=title or "Abort",
-        icon="error",
+        icon=ERROR,
         button_set="abortretryignore",
         language=language,
         **kwargs

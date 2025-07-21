@@ -1,6 +1,6 @@
 [project]
 name = "tkface"
-version = "0.0.1"
+version = "0.0.2"
 description = "A comprehensive multilingual GUI extension library for Tkinter with enhanced message boxes, and Windows-specific features"
 authors = [
     { name = "mashu3", email = "your.email@example.com" }
@@ -50,6 +50,9 @@ include = ["tkface*"]
 
 [tool.setuptools.package-data]
 tkface = ["assets/*.msg"]
+
+[tool.setuptools.exclude-package-data]
+"" = ["tests/*", "tests"]
 
 [tool.black]
 line-length = 88

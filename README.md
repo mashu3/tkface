@@ -1,17 +1,22 @@
 # Tkface
+[![License: MIT](https://img.shields.io/pypi/l/tkface)](https://opensource.org/licenses/MIT)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/tkface)](https://pypi.org/project/tkface)
+[![GitHub Release](https://img.shields.io/github/release/mashu3/tkface?color=orange)](https://github.com/mashu3/tkface/releases)
+[![PyPi Version](https://img.shields.io/pypi/v/tkface?color=yellow)](https://pypi.org/project/tkface/)
+[![Downloads](https://static.pepy.tech/badge/tkface)](https://pepy.tech/project/tkface)
 
 **Restore the "face" to your Tkinter!**
 
-A modern, multilingual GUI extension library for Tkinter (tkinter)-bringing back the "face" (interface) that Tkinter left behind.
+A multilingual GUI extension library for Tkinter (tkinter) - bringing back the "face" (interface) that Tkinter left behind.
 
 ---
 
 ## 📖 Overview
 
-Tkface is a Python library designed to restore and enhance the "face" (user interface) of Tkinter. While Tkinter is a powerful toolkit, its dialogs and user-facing components are minimal and lack modern, friendly interfaces. Tkface fills this gap with beautiful, multilingual dialogs, advanced message boxes, and Windows-specific features.
+Tkface is a Python library designed to restore and enhance the "face" (user interface) of Tkinter. While Tkinter is a powerful toolkit, its dialogs and user-facing components are minimal and lack friendly interfaces. Tkface fills this gap with multilingual dialogs, advanced message boxes, and Windows-specific features.
 
-- **Restore the Face**: "Tkinter" stands for "Tk interface", but ironically, its "face" (user interface) is often lacking. Tkface restores and enhances this missing "face" with beautiful, multilingual dialogs and user-centric design.
-- **Vibe Coding**: Developed with a "Vibe Coding" approach-prioritizing developer joy, rapid prototyping, and a sense of fun. The codebase is hackable, readable, and easy to extend.
+- **Completing the Interface**: Tkinter stands for "Tk **inter**face," providing a powerful core for building GUIs. Tk**face** is designed to complement it by providing the user-facing components—the "**face**"—that are essential for a polished user experience but not built into the standard library. It extends Tkinter with ready-to-use, multilingual dialogs and widgets, letting you build sophisticated, user-friendly applications with less effort.
+- **Vibe Coding**: Developed with a "Vibe Coding" approach-prioritizing developer joy, rapid prototyping, and a sense of fun. The codebase is hackable, readable, and easy to extend—and so is this document.
 
 ---
 
@@ -157,8 +162,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ---
 
-## 👤 Author
-
+## 👨‍💻 Author
 [mashu3](https://github.com/mashu3)
 
---- 
+[![Authors](https://contrib.rocks/image?repo=mashu3/tkface)](https://github.com/mashu3/tkface/graphs/contributors)
