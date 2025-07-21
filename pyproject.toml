@@ -52,7 +52,7 @@ include = ["tkface*"]
 tkface = ["assets/*.msg"]
 
 [tool.setuptools.exclude-package-data]
-"" = ["tests/*", "tests"]
+tkface = ["tests/*", "tests", "examples/*", "examples"]
 
 [tool.black]
 line-length = 88
