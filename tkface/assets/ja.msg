@@ -35,4 +35,6 @@ Confirm {確認}
 Retry {再試行}
 Abort {中止}
 Please try again. {もう一度お試しください。}
+Failed to save. Retry? {保存に失敗しました。再試行しますか？}
+Select {選択}
 Illegal value {無効な値}

@@ -4,6 +4,7 @@ yes {Yes}
 no {No}
 retry {Retry}
 abort {Abort}
+Abort {Abort}
 ignore {Ignore}
 Are you sure? {Are you sure?}
 Do you want to save? {Do you want to save?}
@@ -26,4 +27,6 @@ Unknown error. {Unknown error.}
 Network error. {Network error.}
 Timeout occurred. {Timeout occurred.}
 Please try again. {Please try again.}
+Failed to save. Retry? {Failed to save. Retry?}
+Select {Select}
 Illegal value {Illegal value}
