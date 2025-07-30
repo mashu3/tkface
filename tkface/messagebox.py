@@ -1,12 +1,42 @@
 import tkinter as tk
 from tkface import lang
 from typing import Optional
+from tkface import win
 
-# Icon type constants
+# Icon configuration - unified structure for all icon-related data
+ICON_CONFIG = {
+    "info": {
+        "title": "Info",
+        "tk_icon": "::tk::icons::information"
+    },
+    "warning": {
+        "title": "Warning",
+        "tk_icon": "::tk::icons::warning"
+    },
+    "error": {
+        "title": "Error",
+        "tk_icon": "::tk::icons::error"
+    },
+    "question": {
+        "title": "Question",
+        "tk_icon": "::tk::icons::question"
+    }
+}
+
+# Icon type constants (for backward compatibility and convenience)
 INFO = "info"
 WARNING = "warning"
 ERROR = "error"
 QUESTION = "question"
+
+# Convenience functions for accessing icon configuration
+def get_icon_title(icon_type: str) -> str:
+    """Get the default title for an icon type."""
+    return ICON_CONFIG.get(icon_type, {}).get("title", "Message")
+
+def get_tk_icon(icon_type: str) -> str:
+    """Get the Tkinter icon name for an icon type."""
+    return ICON_CONFIG.get(icon_type, {}).get("tk_icon", f"::tk::icons::{icon_type}")
 
 def _get_or_create_root():
     """
@@ -76,7 +106,7 @@ class CustomMessageBox:
         language: The language code used for translations
     """
     
-    def __init__(self, master=None, title: Optional[str] = "Message", message="", icon=None, button_set: Optional[str] = "ok", buttons=None, default=None, cancel=None, x=None, y=None, x_offset=0, y_offset=0, language=None, custom_translations=None):
+    def __init__(self, master=None, title: Optional[str] = "Message", message="", icon=None, button_set: Optional[str] = "ok", buttons=None, default=None, cancel=None, x=None, y=None, x_offset=0, y_offset=0, language=None, custom_translations=None, choices=None, multiple=False, initial_selection=None, bell=False):
         """
         Initialize a custom message box.
         
@@ -95,16 +125,33 @@ class CustomMessageBox:
             y_offset (int): Y offset from calculated position
             language (str): Language code for translations
             custom_translations (dict): Custom translation dictionary
+            choices (list): List of choices for selection dialog
+            multiple (bool): Allow multiple selection if True
+            initial_selection (list): Initial selection indices for multiple selection
+            bell (bool): If True, ring the bell when the dialog is shown
         """
         if master is None:
             master = getattr(tk, '_default_root', None)
             if master is None:
                 raise RuntimeError("No Tk root window found. Please create a Tk instance or pass master explicitly.")
         self.language = language
+        self.choices = choices
+        self.multiple = multiple
+        self.initial_selection = initial_selection or []
         self.window = tk.Toplevel(master)
         self.window.title(lang.get(title, self.window, language=language))
         self.window.transient(master)
         self.window.grab_set()
+        
+        # Cache DPI scaling calculations for performance
+        self._scaled_sizes = win.calculate_dpi_sizes({
+            'padding': 20,
+            'wraplength': 300,
+            'button_width': 10,
+            'button_padding': 5,
+            'button_area_padding': 10
+        }, self.window, max_scale=1.5)
+        
         if custom_translations:
             for lang_code, dictionary in custom_translations.items():
                 lang.register(lang_code, dictionary, self.window)
@@ -114,6 +161,8 @@ class CustomMessageBox:
         self._set_window_position(master, x, y, x_offset, y_offset)
         self.window.lift()
         self.window.focus_set()
+        if bell:
+            self._ring_bell(icon)
         self.window.wait_window()
 
     def _create_content(self, message, icon):
@@ -124,19 +173,108 @@ class CustomMessageBox:
             message (str): Message text to display
             icon (str): Icon identifier or file path
         """
-        frame = tk.Frame(self.window, padx=20, pady=20)
+        # Use cached DPI scaling calculations
+        base_padding = self._scaled_sizes['padding']
+        base_wraplength = self._scaled_sizes['wraplength']
+        
+        frame = tk.Frame(self.window, padx=base_padding, pady=base_padding)
         frame.pack(fill="both", expand=True)
 
-        icon_frame = tk.Frame(frame)
-        icon_frame.pack(side="left", padx=(0, 10))
+        # Create a horizontal container for icon and content with proper alignment
+        content_container = tk.Frame(frame)
+        content_container.pack(fill="both", expand=True)
 
+        # Icon frame with vertical centering
         if icon:
+            icon_frame = tk.Frame(content_container)
+            icon_frame.pack(side="left", padx=(0, 5), fill="y")
+            
             icon_label = self._get_icon_label(icon, icon_frame)
             if icon_label:
-                icon_label.pack(side="left")
+                icon_label.pack(expand=True, anchor="center")
 
-        message_label = tk.Label(frame, text=message, wraplength=300, justify="left")
-        message_label.pack(side="left", fill="both", expand=True)
+        # Main content area
+        content_frame = tk.Frame(content_container)
+        content_frame.pack(side="left", fill="both", expand=True)
+
+        if message:
+            message_label = tk.Label(content_frame, text=message, wraplength=base_wraplength, justify="left")
+            message_label.pack(fill="both", expand=True, anchor="center")
+
+        # Add selection list if choices are provided
+        if self.choices:
+            self._create_selection_list(content_frame)
+
+    def _create_selection_list(self, parent):
+        """
+        Create a selection list (Listbox) for choices.
+        
+        Args:
+            parent: Parent widget for the list
+        """
+        # Create frame for listbox and scrollbar
+        list_frame = tk.Frame(parent)
+        list_frame.pack(fill="both", expand=True)
+
+        # Create scrollbar
+        scrollbar = tk.Scrollbar(list_frame)
+        scrollbar.pack(side="right", fill="y")
+
+        # Create listbox
+        self.listbox = tk.Listbox(
+            list_frame,
+            selectmode=tk.MULTIPLE if self.multiple else tk.SINGLE,
+            yscrollcommand=scrollbar.set,
+            height=min(len(self.choices), 10)  # Max 10 items visible
+        )
+        self.listbox.pack(side="left", fill="both", expand=True)
+        scrollbar.config(command=self.listbox.yview)
+
+        # Add choices to listbox
+        for choice in self.choices:
+            self.listbox.insert(tk.END, choice)
+
+        # Set initial selection
+        if self.initial_selection:
+            for index in self.initial_selection:
+                if 0 <= index < len(self.choices):
+                    self.listbox.selection_set(index)
+
+        # Bind double-click for single selection mode
+        if not self.multiple:
+            self.listbox.bind("<Double-Button-1>", self._on_double_click)
+
+    def _on_double_click(self, event):
+        """
+        Handle double-click on listbox item for single selection mode.
+        
+        Args:
+            event: Double-click event
+        """
+        selection = self.listbox.curselection()
+        if selection:
+            self.set_result(self.choices[selection[0]])
+
+    def _get_selection_result(self):
+        """
+        Get the current selection result.
+        
+        Returns:
+            Selected value(s) based on selection mode
+        """
+        if not hasattr(self, 'listbox'):
+            return None
+            
+        selection = self.listbox.curselection()
+        if not selection:
+            return None
+            
+        if self.multiple:
+            # Return list of selected values
+            return [self.choices[i] for i in selection]
+        else:
+            # Return single selected value
+            return self.choices[selection[0]]
 
     def _get_icon_label(self, icon, parent):
         """
@@ -149,14 +287,13 @@ class CustomMessageBox:
         Returns:
             tk.Label: Icon label widget or None if icon cannot be loaded
         """
-        icons = {
-            "error": "::tk::icons::error",
-            "info": "::tk::icons::information",
-            "warning": "::tk::icons::warning",
-            "question": "::tk::icons::question"
-        }
-        if icon in icons:
-            return tk.Label(parent, image=icons[icon])
+        if icon in ICON_CONFIG:
+            # Use Windows-specific icon scaling
+            scaled_icon_name = win.scale_icon(icon, parent, max_scale=3.0)
+            # Use the scaled icon name if it's different from original, otherwise use original
+            icon_to_use = scaled_icon_name if scaled_icon_name != icon else ICON_CONFIG[icon]["tk_icon"]
+            icon_label = tk.Label(parent, image=icon_to_use)
+            return icon_label
         try:
             icon_image = tk.PhotoImage(file=icon)
             return tk.Label(parent, image=icon_image)
@@ -173,15 +310,22 @@ class CustomMessageBox:
             default: Default button value
             cancel: Cancel button value
         """
+        # Use cached DPI scaling calculations
+        base_button_width = self._scaled_sizes['button_width']
+        base_button_padding = self._scaled_sizes['button_padding']
+        base_button_area_padding = self._scaled_sizes['button_area_padding']
+        
         button_frame = tk.Frame(self.window)
-        button_frame.pack(pady=(0, 10))
+        button_frame.pack(pady=(base_button_area_padding // 3, base_button_area_padding))
         self.button_widgets = []
         default_btn = None
         cancel_btn = None
         if buttons:
             for label, value in buttons:
-                btn = tk.Button(button_frame, text=label, width=10, command=lambda v=value: self.set_result(v))
-                btn.pack(side="left", padx=5)
+                btn = tk.Button(button_frame, text=label, width=base_button_width, command=lambda v=value: self.set_result(v))
+                # Configure button appearance for Windows
+                win.configure_button_for_windows(btn)
+                btn.pack(side="left", padx=base_button_padding)
                 self.button_widgets.append((btn, value))
                 if value == default:
                     default_btn = btn
@@ -194,8 +338,12 @@ class CustomMessageBox:
                 cancel_btn = self.button_widgets[-1][0]
         else:
             for text, value, is_default, is_cancel in _get_button_labels(button_set, self.window, language=self.language):
-                btn = tk.Button(button_frame, text=text, width=10, command=lambda v=value: self.set_result(v))
-                btn.pack(side="left", padx=5)
+                # Add keyboard shortcut to button text for Windows
+                button_text = win.get_button_label_with_shortcut(value, text)
+                btn = tk.Button(button_frame, text=button_text, width=base_button_width, command=lambda v=value: self.set_result(v))
+                # Configure button appearance for Windows
+                win.configure_button_for_windows(btn)
+                btn.pack(side="left", padx=base_button_padding)
                 self.button_widgets.append((btn, value))
                 if is_default:
                     default_btn = btn
@@ -203,6 +351,13 @@ class CustomMessageBox:
                     btn.configure(default=tk.ACTIVE)
                 if is_cancel:
                     cancel_btn = btn
+        
+        # Add left/right padding to button frame for window edge spacing
+        button_frame.configure(padx=base_button_area_padding)
+        
+        # Set consistent button spacing
+        for btn, _ in self.button_widgets:
+            btn.pack_configure(padx=base_button_padding)
         # Focus only on default button
         if default_btn:
             default_btn.focus_set()
@@ -212,6 +367,10 @@ class CustomMessageBox:
         # Esc triggers cancel button
         if cancel_btn:
             self.window.bind("<Escape>", lambda e: cancel_btn.invoke())
+        
+        # Add keyboard shortcuts for common buttons
+        self._add_keyboard_shortcuts()
+        
         # Tab navigation
         for i, (btn, _) in enumerate(self.button_widgets):
             btn.bind("<Tab>", lambda e, idx=i: self._focus_next(idx))
@@ -225,6 +384,26 @@ class CustomMessageBox:
         """
         next_idx = (idx + 1) % len(self.button_widgets)
         self.button_widgets[next_idx][0].focus_set()
+
+    def _add_keyboard_shortcuts(self):
+        """
+        Add keyboard shortcuts for common button actions.
+        """
+        # Map button values to keyboard shortcuts
+        shortcuts = {
+            "yes": ["y", "Y"],
+            "no": ["n", "N"],
+            "retry": ["r", "R"],
+            "abort": ["a", "A"],
+            "ignore": ["i", "I"]
+        }
+        
+        # Add shortcuts for each button
+        for btn, value in self.button_widgets:
+            if value.lower() in shortcuts:
+                for key in shortcuts[value.lower()]:
+                    self.window.bind(f"<Key-{key}>", lambda e, button=btn: button.invoke())
+                    self.window.bind(f"<Key-{key}>", lambda e, button=btn: button.invoke(), add="+")
 
     def _set_window_position(self, master, x=None, y=None, x_offset=0, y_offset=0):
         """
@@ -258,15 +437,41 @@ class CustomMessageBox:
         Args:
             value: The result value to return
         """
+        # For selection dialogs, if OK button is pressed, get the actual selection
+        if hasattr(self, 'listbox') and value in ["ok", "OK"]:
+            value = self._get_selection_result()
+        elif hasattr(self, 'listbox') and value in ["cancel", "Cancel"]:
+            value = None
+        
         self.result = value
         self.close()
+
+    def _ring_bell(self, icon):
+        """
+        Ring the bell based on the icon type.
+        
+        Args:
+            icon: Icon identifier ("error", "warning", "info", "question")
+        """
+        # Use Windows-specific bell sounds or fallback to standard bell
+        try:
+            win.bell(icon)
+        except Exception:
+            # Fallback to standard bell with some variation
+            if icon == ERROR:
+                # Error: Multiple bells for urgent attention
+                self.window.bell()
+                self.window.after(100, self.window.bell)
+            else:
+                # Warning/Info/Question: Standard bell
+                self.window.bell()
 
     def close(self):
         """Close the dialog window."""
         self.window.destroy()
 
     @classmethod
-    def show(cls, master=None, message="", title=None, icon=None, button_set=None, buttons=None, default=None, cancel=None, language=None, custom_translations=None, x=None, y=None, x_offset=0, y_offset=0):
+    def show(cls, master=None, message="", title=None, icon=None, button_set=None, buttons=None, default=None, cancel=None, language=None, custom_translations=None, x=None, y=None, x_offset=0, y_offset=0, choices=None, multiple=False, initial_selection=None, bell=False):
         """
         Show a message box dialog and return the result.
         
@@ -288,9 +493,13 @@ class CustomMessageBox:
             y (int): Y coordinate for window position
             x_offset (int): X offset from calculated position
             y_offset (int): Y offset from calculated position
+            choices (list): List of choices for selection dialog
+            multiple (bool): Allow multiple selection if True
+            initial_selection (list): Initial selection indices for multiple selection
+            bell (bool): If True, ring the bell when the dialog is shown
             
         Returns:
-            The value corresponding to the button that was clicked
+            The value corresponding to the button that was clicked, or selected choice(s)
         """
         root, created = _get_or_create_root() if master is None else (master, False)
         lang.set(language or "auto", root)
@@ -308,13 +517,17 @@ class CustomMessageBox:
             x=x,
             y=y,
             x_offset=x_offset,
-            y_offset=y_offset
+            y_offset=y_offset,
+            choices=choices,
+            multiple=multiple,
+            initial_selection=initial_selection,
+            bell=bell
         ).result
         if created:
             root.destroy()
         return result
 
-def showinfo(master=None, message="", title=None, language=None, **kwargs):
+def showinfo(master=None, message="", title=None, language=None, bell=False, **kwargs):
     """
     Show an information message box.
     
@@ -334,14 +547,15 @@ def showinfo(master=None, message="", title=None, language=None, **kwargs):
     return CustomMessageBox.show(
         master=master,
         message=message,
-        title=title or "Info",
+        title=title or get_icon_title(INFO),
         icon=INFO,
         button_set="ok",
         language=language,
+        bell=bell,
         **kwargs
     )
 
-def showerror(master=None, message="", title=None, language=None, **kwargs):
+def showerror(master=None, message="", title=None, language=None, bell=False, **kwargs):
     """
     Show an error message box.
     
@@ -361,14 +575,15 @@ def showerror(master=None, message="", title=None, language=None, **kwargs):
     return CustomMessageBox.show(
         master=master,
         message=message,
-        title=title or "Error",
+        title=title or get_icon_title(ERROR),
         icon=ERROR,
         button_set="ok",
         language=language,
+        bell=bell,
         **kwargs
     )
 
-def showwarning(master=None, message="", title=None, language=None, **kwargs):
+def showwarning(master=None, message="", title=None, language=None, bell=False, **kwargs):
     """
     Show a warning message box.
     
@@ -383,19 +598,20 @@ def showwarning(master=None, message="", title=None, language=None, **kwargs):
         The button value that was clicked (usually "ok")
         
     Example:
-        >>> showwarning("This is a warning message!", language="ja")
+        >>> showwarning("This is a warning message.", language="ja")
     """
     return CustomMessageBox.show(
         master=master,
         message=message,
-        title=title or "Warning",
+        title=title or get_icon_title(WARNING),
         icon=WARNING,
         button_set="ok",
         language=language,
+        bell=bell,
         **kwargs
     )
 
-def askquestion(master=None, message="", title=None, language=None, **kwargs):
+def askquestion(master=None, message="", title=None, language=None, bell=False, **kwargs):
     """
     Show a question dialog with Yes/No buttons.
     
@@ -417,14 +633,15 @@ def askquestion(master=None, message="", title=None, language=None, **kwargs):
     return CustomMessageBox.show(
         master=master,
         message=message,
-        title=title or "Question",
+        title=title or get_icon_title(QUESTION),
         icon=QUESTION,
         button_set="yesno",
         language=language,
+        bell=bell,
         **kwargs
     )
 
-def askyesno(master=None, message="", title=None, language=None, **kwargs):
+def askyesno(master=None, message="", title=None, language=None, bell=False, **kwargs):
     """
     Show a question dialog with Yes/No buttons.
     
@@ -448,17 +665,18 @@ def askyesno(master=None, message="", title=None, language=None, **kwargs):
     result = CustomMessageBox.show(
         master=master,
         message=message,
-        title=title or "Question",
+        title=title or get_icon_title(QUESTION),
         icon=QUESTION,
         button_set="yesno",
         language=language,
+        bell=bell,
         **kwargs
     )
     return result == "yes"
 
-def askokcancel(master=None, message="", title=None, language=None, **kwargs):
+def askokcancel(master=None, message="", title=None, language=None, bell=False, **kwargs):
     """
-    Show a confirmation dialog with OK/Cancel buttons.
+    Show a confirmation dialog with OK and Cancel buttons.
     
     Args:
         master: Parent window
@@ -468,10 +686,10 @@ def askokcancel(master=None, message="", title=None, language=None, **kwargs):
         **kwargs: Additional arguments passed to CustomMessageBox.show
         
     Returns:
-        True for "ok", False for "cancel"
+        True if OK was clicked, False if Cancel was clicked
         
     Example:
-        >>> if askokcancel("Do you want to save?", language="ja"):
+        >>> if askokcancel("Do you want to save?"):
         ...     save_file()
     """
     result = CustomMessageBox.show(
@@ -481,13 +699,14 @@ def askokcancel(master=None, message="", title=None, language=None, **kwargs):
         icon=QUESTION,
         button_set="okcancel",
         language=language,
+        bell=bell,
         **kwargs
     )
     return result == "ok"
 
-def askretrycancel(master=None, message="", title=None, language=None, **kwargs):
+def askretrycancel(master=None, message="", title=None, language=None, bell=False, **kwargs):
     """
-    Show a retry dialog with Retry/Cancel buttons.
+    Show a retry dialog with Retry and Cancel buttons.
     
     Args:
         master: Parent window
@@ -497,12 +716,11 @@ def askretrycancel(master=None, message="", title=None, language=None, **kwargs)
         **kwargs: Additional arguments passed to CustomMessageBox.show
         
     Returns:
-        "retry" or "cancel" depending on which button was clicked
+        True if Retry was clicked, False if Cancel was clicked
         
     Example:
-        >>> result = askretrycancel("Connection failed. Retry?", language="ja")
-        >>> if result == "retry":
-        ...     retry_connection()
+        >>> if askretrycancel("Failed to save. Retry?"):
+        ...     retry_save()
     """
     result = CustomMessageBox.show(
         master=master,
@@ -511,11 +729,12 @@ def askretrycancel(master=None, message="", title=None, language=None, **kwargs)
         icon=WARNING,
         button_set="retrycancel",
         language=language,
+        bell=bell,
         **kwargs
     )
     return result == "retry"
 
-def askyesnocancel(master=None, message="", title=None, language=None, **kwargs):
+def askyesnocancel(master=None, message="", title=None, language=None, bell=False, **kwargs):
     """
     Show a question dialog with Yes/No/Cancel buttons.
     
@@ -540,10 +759,11 @@ def askyesnocancel(master=None, message="", title=None, language=None, **kwargs)
     result = CustomMessageBox.show(
         master=master,
         message=message,
-        title=title or "Question",
+        title=title or get_icon_title(QUESTION),
         icon=QUESTION,
         button_set="yesnocancel",
         language=language,
+        bell=bell,
         **kwargs
     )
     if result == "yes":
@@ -553,17 +773,52 @@ def askyesnocancel(master=None, message="", title=None, language=None, **kwargs)
     else:
         return None
 
-def askabortretryignore(master=None, message="", title=None, language=None, **kwargs):
+def askfromlistbox(master=None, message="", title=None, choices=None, multiple=False, initial_selection=None, language=None, bell=False, **kwargs):
     """
-    Show a dialog with Abort/Retry/Ignore buttons.
-    
-    This is typically used for error handling scenarios where the user can
-    choose to abort the operation, retry it, or ignore the error.
+    Show a list selection dialog.
     
     Args:
         master: Parent window
-        message (str): Error message to display
-        title (str): Window title (defaults to "Abort")
+        message (str): Message to display above the list
+        title (str): Window title (defaults to "Select")
+        choices (list): List of choices to display
+        multiple (bool): Allow multiple selection if True
+        initial_selection (list): Initial selection indices for multiple selection
+        language (str): Language code for translations
+        **kwargs: Additional arguments passed to CustomMessageBox.show
+        
+    Returns:
+        Selected choice(s) or None if cancelled
+        
+    Example:
+        >>> choice = askfromlistbox("Choose a color:", choices=["Red", "Green", "Blue"])
+        >>> choices = askfromlistbox("Choose colors:", choices=["Red", "Green", "Blue"], multiple=True)
+    """
+    if not choices:
+        raise ValueError("choices parameter is required")
+    
+    return CustomMessageBox.show(
+        master=master,
+        message=message,
+        title=title or "Select",
+        icon=QUESTION,
+        button_set="okcancel",
+        language=language,
+        bell=bell,
+        choices=choices,
+        multiple=multiple,
+        initial_selection=initial_selection,
+        **kwargs
+    )
+
+def askabortretryignore(master=None, message="", title=None, language=None, bell=False, **kwargs):
+    """
+    Show an abort/retry/ignore dialog.
+    
+    Args:
+        master: Parent window
+        message (str): Message to display
+        title (str): Window title (defaults to "Error")
         language (str): Language code for translations
         **kwargs: Additional arguments passed to CustomMessageBox.show
         
@@ -571,19 +826,19 @@ def askabortretryignore(master=None, message="", title=None, language=None, **kw
         "abort", "retry", or "ignore" depending on which button was clicked
         
     Example:
-        >>> result = askabortretryignore("File access error", language="ja")
-        >>> if result == "abort":
-        ...     exit_program()
-        >>> elif result == "retry":
-        ...     retry_file_access()
-        >>> # else: ignore - continue with default behavior
+        >>> result = askabortretryignore("File access failed.")
+        >>> if result == "retry":
+        ...     retry_operation()
+        >>> elif result == "ignore":
+        ...     continue_operation()
     """
     return CustomMessageBox.show(
         master=master,
         message=message,
-        title=title or "Abort",
+        title=title or "Error",
         icon=ERROR,
         button_set="abortretryignore",
         language=language,
+        bell=bell,
         **kwargs
     ) 
