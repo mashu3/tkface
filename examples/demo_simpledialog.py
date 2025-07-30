@@ -1,12 +1,13 @@
 import tkinter as tk
 from tkinter import simpledialog as tk_simpledialog
 from tkface import simpledialog as tkface_simpledialog
-import platform
 from tkface import win
 
 # Enable DPI awareness only on Windows
-if platform.system() == "Windows":
+try:
     win.dpi()
+except Exception:
+    pass
 
 def main():
     root = tk.Tk()
