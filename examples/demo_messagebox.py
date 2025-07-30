@@ -1,24 +1,28 @@
 import tkinter as tk
 from tkinter import messagebox as tk_messagebox
+import tkface
 from tkface import messagebox as tkface_messagebox
-import platform
-from tkface import win
 
 # Enable DPI awareness only on Windows
-if platform.system() == "Windows":
-    win.dpi()
+try:
+    tkface.win.dpi()
+except Exception:
+    pass
+
+# Note: tkface.Button provides Windows-specific flat styling
+# On Windows: flat appearance (no shadow)
+# On non-Windows: standard button styling
 
 def main():
     root = tk.Tk()
     root.title("tkface messagebox demo")
-    width, height = 600, 400
-    # If DPI awareness is enabled on Windows, enlarge window size by scaling factor
-    if platform.system() == "Windows":
-        scaling = root.tk.call('tk', 'scaling')
-        width = int(width * scaling)
-        height = int(height * scaling)
-    else:
-        scaling = 1.0
+    width, height = 650, 550
+    # If DPI awareness is enabled on Windows, adjust window size by scaling factor
+    scaling = tkface.win.get_scaling_factor(root)
+    if scaling > 1.0:
+        # Adjust window size for Windows DPI scaling
+        width = int(width * scaling * 0.75)
+        height = int(height * scaling * 0.75)
     root.geometry(f"{width}x{height}")
     root.resizable(False, False)
 
@@ -34,7 +38,7 @@ def main():
     left_frame = tk.Frame(button_frame)
     left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
 
-    tk.Label(left_frame, text="tkinter.messagebox\n(System Default Language)", font=("Arial", 12, "bold")).pack(pady=(0, 10))
+    tk.Label(left_frame, text="tkinter.messagebox\n(System Default)", font=("Arial", 12, "bold")).pack(pady=(0, 10))
 
     # Functions for pure tkinter
     def tk_showerror():
@@ -67,12 +71,24 @@ def main():
         result = tk_messagebox.askokcancel("Confirm", "Do you want to save?", parent=root)
         print(f"Result: {result}")
 
-    tk.Button(left_frame, text="showerror", command=tk_showerror).pack(pady=3, fill=tk.X)
-    tk.Button(left_frame, text="showinfo", command=tk_showinfo).pack(pady=3, fill=tk.X)
-    tk.Button(left_frame, text="showwarning", command=tk_showwarning).pack(pady=3, fill=tk.X)
-    tk.Button(left_frame, text="askquestion", command=tk_askquestion).pack(pady=3, fill=tk.X)
-    tk.Button(left_frame, text="askyesno", command=tk_askyesno).pack(pady=3, fill=tk.X)
-    tk.Button(left_frame, text="askokcancel", command=tk_askokcancel).pack(pady=3, fill=tk.X)
+    def tk_askyesnocancel():
+        print("=== tkinter.messagebox.askyesnocancel ===")
+        result = tk_messagebox.askyesnocancel("Question", "Do you want to save before closing?", parent=root)
+        print(f"Result: {result}")
+
+    def tk_askretrycancel():
+        print("=== tkinter.messagebox.askretrycancel ===")
+        result = tk_messagebox.askretrycancel("Retry", "Failed to save. Retry?", parent=root)
+        print(f"Result: {result}")
+
+    tkface.Button(left_frame, text="showerror", command=tk_showerror).pack(pady=3, fill=tk.X)
+    tkface.Button(left_frame, text="showinfo", command=tk_showinfo).pack(pady=3, fill=tk.X)
+    tkface.Button(left_frame, text="showwarning", command=tk_showwarning).pack(pady=3, fill=tk.X)
+    tkface.Button(left_frame, text="askquestion", command=tk_askquestion).pack(pady=3, fill=tk.X)
+    tkface.Button(left_frame, text="askyesno", command=tk_askyesno).pack(pady=3, fill=tk.X)
+    tkface.Button(left_frame, text="askokcancel", command=tk_askokcancel).pack(pady=3, fill=tk.X)
+    tkface.Button(left_frame, text="askyesnocancel", command=tk_askyesnocancel).pack(pady=3, fill=tk.X)
+    tkface.Button(left_frame, text="askretrycancel", command=tk_askretrycancel).pack(pady=3, fill=tk.X)
 
     # Center column: tkface English
     center_frame = tk.Frame(button_frame)
@@ -83,22 +99,22 @@ def main():
     # Functions for tkface English
     def tkface_showerror_en():
         print("=== tkface.messagebox.showerror (English) ===")
-        result = tkface_messagebox.showerror(message="An error has occurred.", language="en")
+        result = tkface_messagebox.showerror(message="An error has occurred.", language="en", bell=True)
         print(f"Result: {result}")
 
     def tkface_showinfo_en():
         print("=== tkface.messagebox.showinfo (English) ===")
-        result = tkface_messagebox.showinfo(message="Operation completed successfully.", language="en")
+        result = tkface_messagebox.showinfo(message="Operation completed successfully.", language="en", bell=True)
         print(f"Result: {result}")
 
     def tkface_showwarning_en():
         print("=== tkface.messagebox.showwarning (English) ===")
-        result = tkface_messagebox.showwarning(message="This is a warning message.", language="en")
+        result = tkface_messagebox.showwarning(message="This is a warning message.", language="en", bell=True)
         print(f"Result: {result}")
 
     def tkface_askquestion_en():
         print("=== tkface.messagebox.askquestion (English) ===")
-        result = tkface_messagebox.askquestion(message="Do you want to proceed?", language="en")
+        result = tkface_messagebox.askquestion(message="Do you want to proceed?", language="en", bell=True)
         print(f"Result: {result}")
 
     def tkface_askyesno_en():
@@ -109,6 +125,16 @@ def main():
     def tkface_askokcancel_en():
         print("=== tkface.messagebox.askokcancel (English) ===")
         result = tkface_messagebox.askokcancel(message="Do you want to save?", language="en")
+        print(f"Result: {result}")
+
+    def tkface_askyesnocancel_en():
+        print("=== tkface.messagebox.askyesnocancel (English) ===")
+        result = tkface_messagebox.askyesnocancel(message="Do you want to save before closing?", language="en")
+        print(f"Result: {result}")
+
+    def tkface_askretrycancel_en():
+        print("=== tkface.messagebox.askretrycancel (English) ===")
+        result = tkface_messagebox.askretrycancel(message="Failed to save. Retry?", language="en")
         print(f"Result: {result}")
 
     def tkface_custom_position_en():
@@ -130,14 +156,38 @@ def main():
         )
         print(f"Result: {result}")
 
-    tk.Button(center_frame, text="showerror (EN)", command=tkface_showerror_en).pack(pady=3, fill=tk.X)
-    tk.Button(center_frame, text="showinfo (EN)", command=tkface_showinfo_en).pack(pady=3, fill=tk.X)
-    tk.Button(center_frame, text="showwarning (EN)", command=tkface_showwarning_en).pack(pady=3, fill=tk.X)
-    tk.Button(center_frame, text="askquestion (EN)", command=tkface_askquestion_en).pack(pady=3, fill=tk.X)
-    tk.Button(center_frame, text="askyesno (EN)", command=tkface_askyesno_en).pack(pady=3, fill=tk.X)
-    tk.Button(center_frame, text="askokcancel (EN)", command=tkface_askokcancel_en).pack(pady=3, fill=tk.X)
-    tk.Button(center_frame, text="custom position (EN)", command=tkface_custom_position_en).pack(pady=3, fill=tk.X)
-    tk.Button(center_frame, text="custom offset (EN)", command=tkface_custom_offset_en).pack(pady=3, fill=tk.X)
+    def tkface_askfromlistbox_single_en():
+        print("=== tkface.messagebox.askfromlistbox (single selection) ===")
+        result = tkface_messagebox.askfromlistbox(
+            message="Choose your favorite color:",
+            choices=["Red", "Blue", "Green", "Yellow", "Purple", "Orange", "Pink"],
+            language="en"
+        )
+        print(f"Result: {result}")
+
+    def tkface_askfromlistbox_multiple_en():
+        print("=== tkface.messagebox.askfromlistbox (multiple selection) ===")
+        result = tkface_messagebox.askfromlistbox(
+            message="Choose your favorite colors (multiple):",
+            choices=["Red", "Blue", "Green", "Yellow", "Purple", "Orange", "Pink"],
+            multiple=True,
+            initial_selection=[0, 2],  # Pre-select Red and Green
+            language="en"
+        )
+        print(f"Result: {result}")
+
+    tkface.Button(center_frame, text="showerror (EN)", command=tkface_showerror_en).pack(pady=3, fill=tk.X)
+    tkface.Button(center_frame, text="showinfo (EN)", command=tkface_showinfo_en).pack(pady=3, fill=tk.X)
+    tkface.Button(center_frame, text="showwarning (EN)", command=tkface_showwarning_en).pack(pady=3, fill=tk.X)
+    tkface.Button(center_frame, text="askquestion (EN)", command=tkface_askquestion_en).pack(pady=3, fill=tk.X)
+    tkface.Button(center_frame, text="askyesno (EN)", command=tkface_askyesno_en).pack(pady=3, fill=tk.X)
+    tkface.Button(center_frame, text="askokcancel (EN)", command=tkface_askokcancel_en).pack(pady=3, fill=tk.X)
+    tkface.Button(center_frame, text="askyesnocancel (EN)", command=tkface_askyesnocancel_en).pack(pady=3, fill=tk.X)
+    tkface.Button(center_frame, text="askretrycancel (EN)", command=tkface_askretrycancel_en).pack(pady=3, fill=tk.X)
+    tkface.Button(center_frame, text="askfromlistbox single (EN)", command=tkface_askfromlistbox_single_en).pack(pady=3, fill=tk.X)
+    tkface.Button(center_frame, text="askfromlistbox multiple (EN)", command=tkface_askfromlistbox_multiple_en).pack(pady=3, fill=tk.X)
+    tkface.Button(center_frame, text="custom position (EN)", command=tkface_custom_position_en).pack(pady=3, fill=tk.X)
+    tkface.Button(center_frame, text="custom offset (EN)", command=tkface_custom_offset_en).pack(pady=3, fill=tk.X)
 
     # Right column: tkface Japanese
     right_frame = tk.Frame(button_frame)
@@ -148,22 +198,22 @@ def main():
     # Functions for tkface Japanese
     def tkface_showerror_ja():
         print("=== tkface.messagebox.showerror (Japanese) ===")
-        result = tkface_messagebox.showerror(message="An error has occurred.", language="ja")
+        result = tkface_messagebox.showerror(message="An error has occurred.", language="ja", bell=True)
         print(f"Result: {result}")
 
     def tkface_showinfo_ja():
         print("=== tkface.messagebox.showinfo (Japanese) ===")
-        result = tkface_messagebox.showinfo(message="Operation completed successfully.", language="ja")
+        result = tkface_messagebox.showinfo(message="Operation completed successfully.", language="ja", bell=True)
         print(f"Result: {result}")
 
     def tkface_showwarning_ja():
         print("=== tkface.messagebox.showwarning (Japanese) ===")
-        result = tkface_messagebox.showwarning(message="This is a warning message.", language="ja")
+        result = tkface_messagebox.showwarning(message="This is a warning message.", language="ja", bell=True)
         print(f"Result: {result}")
 
     def tkface_askquestion_ja():
         print("=== tkface.messagebox.askquestion (Japanese) ===")
-        result = tkface_messagebox.askquestion(message="Do you want to proceed?", language="ja")
+        result = tkface_messagebox.askquestion(message="Do you want to proceed?", language="ja", bell=True)
         print(f"Result: {result}")
 
     def tkface_askyesno_ja():
@@ -174,6 +224,16 @@ def main():
     def tkface_askokcancel_ja():
         print("=== tkface.messagebox.askokcancel (Japanese) ===")
         result = tkface_messagebox.askokcancel(message="Do you want to save?", language="ja")
+        print(f"Result: {result}")
+
+    def tkface_askyesnocancel_ja():
+        print("=== tkface.messagebox.askyesnocancel (Japanese) ===")
+        result = tkface_messagebox.askyesnocancel(message="Do you want to save before closing?", language="ja")
+        print(f"Result: {result}")
+
+    def tkface_askretrycancel_ja():
+        print("=== tkface.messagebox.askretrycancel (Japanese) ===")
+        result = tkface_messagebox.askretrycancel(message="Failed to save. Retry?", language="ja")
         print(f"Result: {result}")
 
     def tkface_custom_position_ja():
@@ -195,14 +255,38 @@ def main():
         )
         print(f"Result: {result}")
 
-    tk.Button(right_frame, text="showerror (JA)", command=tkface_showerror_ja).pack(pady=3, fill=tk.X)
-    tk.Button(right_frame, text="showinfo (JA)", command=tkface_showinfo_ja).pack(pady=3, fill=tk.X)
-    tk.Button(right_frame, text="showwarning (JA)", command=tkface_showwarning_ja).pack(pady=3, fill=tk.X)
-    tk.Button(right_frame, text="askquestion (JA)", command=tkface_askquestion_ja).pack(pady=3, fill=tk.X)
-    tk.Button(right_frame, text="askyesno (JA)", command=tkface_askyesno_ja).pack(pady=3, fill=tk.X)
-    tk.Button(right_frame, text="askokcancel (JA)", command=tkface_askokcancel_ja).pack(pady=3, fill=tk.X)
-    tk.Button(right_frame, text="custom position (JA)", command=tkface_custom_position_ja).pack(pady=3, fill=tk.X)
-    tk.Button(right_frame, text="custom offset (JA)", command=tkface_custom_offset_ja).pack(pady=3, fill=tk.X)
+    def tkface_askfromlistbox_single_ja():
+        print("=== tkface.messagebox.askfromlistbox (single selection) ===")
+        result = tkface_messagebox.askfromlistbox(
+            message="好きな色を選んでください:",
+            choices=["赤", "青", "緑", "黄", "紫", "オレンジ", "ピンク"],
+            language="ja"
+        )
+        print(f"Result: {result}")
+
+    def tkface_askfromlistbox_multiple_ja():
+        print("=== tkface.messagebox.askfromlistbox (multiple selection) ===")
+        result = tkface_messagebox.askfromlistbox(
+            message="好きな色を複数選んでください:",
+            choices=["赤", "青", "緑", "黄", "紫", "オレンジ", "ピンク"],
+            multiple=True,
+            initial_selection=[0, 2],  # 最初に「赤」と「緑」を選択
+            language="ja"
+        )
+        print(f"Result: {result}")
+
+    tkface.Button(right_frame, text="showerror (JA)", command=tkface_showerror_ja).pack(pady=3, fill=tk.X)
+    tkface.Button(right_frame, text="showinfo (JA)", command=tkface_showinfo_ja).pack(pady=3, fill=tk.X)
+    tkface.Button(right_frame, text="showwarning (JA)", command=tkface_showwarning_ja).pack(pady=3, fill=tk.X)
+    tkface.Button(right_frame, text="askquestion (JA)", command=tkface_askquestion_ja).pack(pady=3, fill=tk.X)
+    tkface.Button(right_frame, text="askyesno (JA)", command=tkface_askyesno_ja).pack(pady=3, fill=tk.X)
+    tkface.Button(right_frame, text="askokcancel (JA)", command=tkface_askokcancel_ja).pack(pady=3, fill=tk.X)
+    tkface.Button(right_frame, text="askyesnocancel (JA)", command=tkface_askyesnocancel_ja).pack(pady=3, fill=tk.X)
+    tkface.Button(right_frame, text="askretrycancel (JA)", command=tkface_askretrycancel_ja).pack(pady=3, fill=tk.X)
+    tkface.Button(right_frame, text="askfromlistbox single (JA)", command=tkface_askfromlistbox_single_ja).pack(pady=3, fill=tk.X)
+    tkface.Button(right_frame, text="askfromlistbox multiple (JA)", command=tkface_askfromlistbox_multiple_ja).pack(pady=3, fill=tk.X)
+    tkface.Button(right_frame, text="custom position (JA)", command=tkface_custom_position_ja).pack(pady=3, fill=tk.X)
+    tkface.Button(right_frame, text="custom offset (JA)", command=tkface_custom_offset_ja).pack(pady=3, fill=tk.X)
 
     # Footer
     footer_frame = tk.Frame(main_frame)
