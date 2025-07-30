@@ -69,10 +69,10 @@ if messagebox.askyesno("Confirm", "Do you want to save?"):
 
 | Dialog Type | Windows Environment |
 |-------------|-------------------|
-| **Warning** | <img src="https://github.com/user-attachments/assets/5f731284-acae-4aa3-8ba4-ba0d913d1ba1" width="250px" alt="Warning Dialog"> |
-| **Error** | <img src="https://github.com/user-attachments/assets/73f01f18-c014-4334-910f-aeaf5fe452b3" width="250px" alt="Error Dialog"> |
-| **Information** | <img src="https://github.com/user-attachments/assets/1215eb13-7ce2-4f06-bb58-544be5209a50" width="250px" alt="Info Dialog"> |
-| **Question** | <img src="https://github.com/user-attachments/assets/59d8b173-730e-42f2-babd-b3a8076fd12e" width="250px" alt="Question Dialog"> |
+| **Warning** | <img src="examples/images/tkface_messagebox_warning.png" width="250px" alt="Warning Dialog"> |
+| **Error** | <img src="examples/images/tkface_messagebox_error.png" width="250px" alt="Error Dialog"> |
+| **Information** | <img src="examples/images/tkface_messagebox_info.png" width="250px" alt="Info Dialog"> |
+| **Question** | <img src="examples/images/tkface_messagebox_question.png" width="250px" alt="Question Dialog"> |
 
 ### Input Dialogs
 
