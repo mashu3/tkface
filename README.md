@@ -57,10 +57,22 @@ messagebox.showinfo("Success", "Operation completed successfully!")
 # Multilingual support
 messagebox.showerror("Error", "An error has occurred!", language="ja")
 
+# With system sound (Windows only)
+messagebox.showerror("Error", "An error has occurred!", bell=True)
+
 # Confirmation dialog
 if messagebox.askyesno("Confirm", "Do you want to save?"):
     save_file()
 ```
+
+### Screenshots
+
+| Dialog Type | Windows Environment |
+|-------------|-------------------|
+| **Warning** | ![Warning Dialog](https://github.com/user-attachments/assets/5f731284-acae-4aa3-8ba4-ba0d913d1ba1) |
+| **Error** | ![Error Dialog](https://github.com/user-attachments/assets/73f01f18-c014-4334-910f-aeaf5fe452b3) |
+| **Information** | ![Info Dialog](https://github.com/user-attachments/assets/1215eb13-7ce2-4f06-bb58-544be5209a50) |
+| **Question** | ![Question Dialog](https://github.com/user-attachments/assets/59d8b173-730e-42f2-babd-b3a8076fd12e) |
 
 ### Input Dialogs
 
@@ -78,13 +90,19 @@ age = simpledialog.askinteger("Age", "Enter your age:", minvalue=0, maxvalue=120
 
 ```python
 import tkinter as tk
-from tkface import win
+import tkface
 
 root = tk.Tk()
-win.dpi()         # Enable DPI awareness (Windows only)
-win.unround(root) # Disable corner rounding (Windows 11 only)
+tkface.win.dpi()         # Enable DPI awareness (Windows only)
+tkface.win.unround(root) # Disable corner rounding (Windows 11 only)
+tkface.win.bell("error") # Play Windows system sound (Windows only)
+
+# Windows-specific flat button styling
+button = tkface.Button(root, text="Flat Button", command=callback)  # No shadow on Windows
 root.mainloop()
 ```
+
+> **Note**: All Windows-specific features gracefully degrade on non-Windows platforms.
 
 ### Language Management
 
@@ -119,7 +137,7 @@ messagebox.showinfo(
 - **Multilingual Support**: Automatic language detection, English/Japanese built-in, custom dictionaries
 - **Enhanced Message Boxes**: All standard and advanced dialogs, custom positioning, keyboard shortcuts, tab navigation
 - **Enhanced Input Dialogs**: String/integer/float input, validation, password input, custom positioning
-- **Windows Features**: DPI awareness, Windows 11 corner rounding control (no-ops on other OS)
+- **Windows Features**: DPI awareness, Windows 11 corner rounding control, Windows system sounds, flat button styling (gracefully degrade on other OS)
 
 ---
 
