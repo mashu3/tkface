@@ -95,3 +95,8 @@ def test_simpledialog_translation_calls(root, lang):
     assert any(c.args[0] == 'ok' for c in calls)
     assert any(c.args[0] == 'cancel' for c in calls)
     assert all(c.kwargs['language'] == lang for c in calls if c.args[0] in ['ok', 'cancel', 'Test Title']) 
+
+def test_bell_parameter_not_supported_in_simpledialog(root):
+    """Test that bell parameter is not supported in simpledialog."""
+    with pytest.raises(TypeError, match="got an unexpected keyword argument 'bell'"):
+        simpledialog.askstring(master=root, message="Test", bell=True) 
