@@ -1,7 +1,7 @@
 import tkinter as tk
+from tkface import win
 from tkface import lang
 from typing import Optional
-from tkface import win
 
 # Icon configuration - unified structure for all icon-related data
 ICON_CONFIG = {
@@ -106,7 +106,7 @@ class CustomMessageBox:
         language: The language code used for translations
     """
     
-    def __init__(self, master=None, title: Optional[str] = "Message", message="", icon=None, button_set: Optional[str] = "ok", buttons=None, default=None, cancel=None, x=None, y=None, x_offset=0, y_offset=0, language=None, custom_translations=None, choices=None, multiple=False, initial_selection=None, bell=False):
+    def __init__(self, master=None, title: Optional[str] = "Message", message="", icon=None, button_set: Optional[str] = "ok", buttons=None, default=None, cancel=None, x=None, y=None, x_offset=0, y_offset=0, language=None, custom_translations=None, bell=False):
         """
         Initialize a custom message box.
         
@@ -125,9 +125,6 @@ class CustomMessageBox:
             y_offset (int): Y offset from calculated position
             language (str): Language code for translations
             custom_translations (dict): Custom translation dictionary
-            choices (list): List of choices for selection dialog
-            multiple (bool): Allow multiple selection if True
-            initial_selection (list): Initial selection indices for multiple selection
             bell (bool): If True, ring the bell when the dialog is shown
         """
         if master is None:
@@ -135,9 +132,6 @@ class CustomMessageBox:
             if master is None:
                 raise RuntimeError("No Tk root window found. Please create a Tk instance or pass master explicitly.")
         self.language = language
-        self.choices = choices
-        self.multiple = multiple
-        self.initial_selection = initial_selection or []
         self.window = tk.Toplevel(master)
         self.window.title(lang.get(title, self.window, language=language))
         self.window.transient(master)
@@ -200,81 +194,6 @@ class CustomMessageBox:
         if message:
             message_label = tk.Label(content_frame, text=message, wraplength=base_wraplength, justify="left")
             message_label.pack(fill="both", expand=True, anchor="center")
-
-        # Add selection list if choices are provided
-        if self.choices:
-            self._create_selection_list(content_frame)
-
-    def _create_selection_list(self, parent):
-        """
-        Create a selection list (Listbox) for choices.
-        
-        Args:
-            parent: Parent widget for the list
-        """
-        # Create frame for listbox and scrollbar
-        list_frame = tk.Frame(parent)
-        list_frame.pack(fill="both", expand=True)
-
-        # Create scrollbar
-        scrollbar = tk.Scrollbar(list_frame)
-        scrollbar.pack(side="right", fill="y")
-
-        # Create listbox
-        self.listbox = tk.Listbox(
-            list_frame,
-            selectmode=tk.MULTIPLE if self.multiple else tk.SINGLE,
-            yscrollcommand=scrollbar.set,
-            height=min(len(self.choices), 10)  # Max 10 items visible
-        )
-        self.listbox.pack(side="left", fill="both", expand=True)
-        scrollbar.config(command=self.listbox.yview)
-
-        # Add choices to listbox
-        for choice in self.choices:
-            self.listbox.insert(tk.END, choice)
-
-        # Set initial selection
-        if self.initial_selection:
-            for index in self.initial_selection:
-                if 0 <= index < len(self.choices):
-                    self.listbox.selection_set(index)
-
-        # Bind double-click for single selection mode
-        if not self.multiple:
-            self.listbox.bind("<Double-Button-1>", self._on_double_click)
-
-    def _on_double_click(self, event):
-        """
-        Handle double-click on listbox item for single selection mode.
-        
-        Args:
-            event: Double-click event
-        """
-        selection = self.listbox.curselection()
-        if selection:
-            self.set_result(self.choices[selection[0]])
-
-    def _get_selection_result(self):
-        """
-        Get the current selection result.
-        
-        Returns:
-            Selected value(s) based on selection mode
-        """
-        if not hasattr(self, 'listbox'):
-            return None
-            
-        selection = self.listbox.curselection()
-        if not selection:
-            return None
-            
-        if self.multiple:
-            # Return list of selected values
-            return [self.choices[i] for i in selection]
-        else:
-            # Return single selected value
-            return self.choices[selection[0]]
 
     def _get_icon_label(self, icon, parent):
         """
@@ -437,12 +356,6 @@ class CustomMessageBox:
         Args:
             value: The result value to return
         """
-        # For selection dialogs, if OK button is pressed, get the actual selection
-        if hasattr(self, 'listbox') and value in ["ok", "OK"]:
-            value = self._get_selection_result()
-        elif hasattr(self, 'listbox') and value in ["cancel", "Cancel"]:
-            value = None
-        
         self.result = value
         self.close()
 
@@ -471,7 +384,7 @@ class CustomMessageBox:
         self.window.destroy()
 
     @classmethod
-    def show(cls, master=None, message="", title=None, icon=None, button_set=None, buttons=None, default=None, cancel=None, language=None, custom_translations=None, x=None, y=None, x_offset=0, y_offset=0, choices=None, multiple=False, initial_selection=None, bell=False):
+    def show(cls, master=None, message="", title=None, icon=None, button_set=None, buttons=None, default=None, cancel=None, language=None, custom_translations=None, x=None, y=None, x_offset=0, y_offset=0, bell=False):
         """
         Show a message box dialog and return the result.
         
@@ -493,9 +406,6 @@ class CustomMessageBox:
             y (int): Y coordinate for window position
             x_offset (int): X offset from calculated position
             y_offset (int): Y offset from calculated position
-            choices (list): List of choices for selection dialog
-            multiple (bool): Allow multiple selection if True
-            initial_selection (list): Initial selection indices for multiple selection
             bell (bool): If True, ring the bell when the dialog is shown
             
         Returns:
@@ -518,9 +428,6 @@ class CustomMessageBox:
             y=y,
             x_offset=x_offset,
             y_offset=y_offset,
-            choices=choices,
-            multiple=multiple,
-            initial_selection=initial_selection,
             bell=bell
         ).result
         if created:
@@ -772,44 +679,6 @@ def askyesnocancel(master=None, message="", title=None, language=None, bell=Fals
         return False
     else:
         return None
-
-def askfromlistbox(master=None, message="", title=None, choices=None, multiple=False, initial_selection=None, language=None, bell=False, **kwargs):
-    """
-    Show a list selection dialog.
-    
-    Args:
-        master: Parent window
-        message (str): Message to display above the list
-        title (str): Window title (defaults to "Select")
-        choices (list): List of choices to display
-        multiple (bool): Allow multiple selection if True
-        initial_selection (list): Initial selection indices for multiple selection
-        language (str): Language code for translations
-        **kwargs: Additional arguments passed to CustomMessageBox.show
-        
-    Returns:
-        Selected choice(s) or None if cancelled
-        
-    Example:
-        >>> choice = askfromlistbox("Choose a color:", choices=["Red", "Green", "Blue"])
-        >>> choices = askfromlistbox("Choose colors:", choices=["Red", "Green", "Blue"], multiple=True)
-    """
-    if not choices:
-        raise ValueError("choices parameter is required")
-    
-    return CustomMessageBox.show(
-        master=master,
-        message=message,
-        title=title or "Select",
-        icon=QUESTION,
-        button_set="okcancel",
-        language=language,
-        bell=bell,
-        choices=choices,
-        multiple=multiple,
-        initial_selection=initial_selection,
-        **kwargs
-    )
 
 def askabortretryignore(master=None, message="", title=None, language=None, bell=False, **kwargs):
     """

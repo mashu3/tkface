@@ -16,7 +16,7 @@ except Exception:
 def main():
     root = tk.Tk()
     root.title("tkface messagebox demo")
-    width, height = 650, 550
+    width, height = 650, 500
     # If DPI awareness is enabled on Windows, adjust window size by scaling factor
     scaling = tkface.win.get_scaling_factor(root)
     if scaling > 1.0:
@@ -156,25 +156,7 @@ def main():
         )
         print(f"Result: {result}")
 
-    def tkface_askfromlistbox_single_en():
-        print("=== tkface.messagebox.askfromlistbox (single selection) ===")
-        result = tkface_messagebox.askfromlistbox(
-            message="Choose your favorite color:",
-            choices=["Red", "Blue", "Green", "Yellow", "Purple", "Orange", "Pink"],
-            language="en"
-        )
-        print(f"Result: {result}")
 
-    def tkface_askfromlistbox_multiple_en():
-        print("=== tkface.messagebox.askfromlistbox (multiple selection) ===")
-        result = tkface_messagebox.askfromlistbox(
-            message="Choose your favorite colors (multiple):",
-            choices=["Red", "Blue", "Green", "Yellow", "Purple", "Orange", "Pink"],
-            multiple=True,
-            initial_selection=[0, 2],  # Pre-select Red and Green
-            language="en"
-        )
-        print(f"Result: {result}")
 
     tkface.Button(center_frame, text="showerror (EN)", command=tkface_showerror_en).pack(pady=3, fill=tk.X)
     tkface.Button(center_frame, text="showinfo (EN)", command=tkface_showinfo_en).pack(pady=3, fill=tk.X)
@@ -184,8 +166,6 @@ def main():
     tkface.Button(center_frame, text="askokcancel (EN)", command=tkface_askokcancel_en).pack(pady=3, fill=tk.X)
     tkface.Button(center_frame, text="askyesnocancel (EN)", command=tkface_askyesnocancel_en).pack(pady=3, fill=tk.X)
     tkface.Button(center_frame, text="askretrycancel (EN)", command=tkface_askretrycancel_en).pack(pady=3, fill=tk.X)
-    tkface.Button(center_frame, text="askfromlistbox single (EN)", command=tkface_askfromlistbox_single_en).pack(pady=3, fill=tk.X)
-    tkface.Button(center_frame, text="askfromlistbox multiple (EN)", command=tkface_askfromlistbox_multiple_en).pack(pady=3, fill=tk.X)
     tkface.Button(center_frame, text="custom position (EN)", command=tkface_custom_position_en).pack(pady=3, fill=tk.X)
     tkface.Button(center_frame, text="custom offset (EN)", command=tkface_custom_offset_en).pack(pady=3, fill=tk.X)
 
@@ -255,25 +235,7 @@ def main():
         )
         print(f"Result: {result}")
 
-    def tkface_askfromlistbox_single_ja():
-        print("=== tkface.messagebox.askfromlistbox (single selection) ===")
-        result = tkface_messagebox.askfromlistbox(
-            message="好きな色を選んでください:",
-            choices=["赤", "青", "緑", "黄", "紫", "オレンジ", "ピンク"],
-            language="ja"
-        )
-        print(f"Result: {result}")
 
-    def tkface_askfromlistbox_multiple_ja():
-        print("=== tkface.messagebox.askfromlistbox (multiple selection) ===")
-        result = tkface_messagebox.askfromlistbox(
-            message="好きな色を複数選んでください:",
-            choices=["赤", "青", "緑", "黄", "紫", "オレンジ", "ピンク"],
-            multiple=True,
-            initial_selection=[0, 2],  # 最初に「赤」と「緑」を選択
-            language="ja"
-        )
-        print(f"Result: {result}")
 
     tkface.Button(right_frame, text="showerror (JA)", command=tkface_showerror_ja).pack(pady=3, fill=tk.X)
     tkface.Button(right_frame, text="showinfo (JA)", command=tkface_showinfo_ja).pack(pady=3, fill=tk.X)
@@ -283,8 +245,6 @@ def main():
     tkface.Button(right_frame, text="askokcancel (JA)", command=tkface_askokcancel_ja).pack(pady=3, fill=tk.X)
     tkface.Button(right_frame, text="askyesnocancel (JA)", command=tkface_askyesnocancel_ja).pack(pady=3, fill=tk.X)
     tkface.Button(right_frame, text="askretrycancel (JA)", command=tkface_askretrycancel_ja).pack(pady=3, fill=tk.X)
-    tkface.Button(right_frame, text="askfromlistbox single (JA)", command=tkface_askfromlistbox_single_ja).pack(pady=3, fill=tk.X)
-    tkface.Button(right_frame, text="askfromlistbox multiple (JA)", command=tkface_askfromlistbox_multiple_ja).pack(pady=3, fill=tk.X)
     tkface.Button(right_frame, text="custom position (JA)", command=tkface_custom_position_ja).pack(pady=3, fill=tk.X)
     tkface.Button(right_frame, text="custom offset (JA)", command=tkface_custom_offset_ja).pack(pady=3, fill=tk.X)
 

@@ -69,10 +69,10 @@ if messagebox.askyesno("Confirm", "Do you want to save?"):
 
 | Dialog Type | Windows Environment |
 |-------------|-------------------|
-| **Warning** | <img src="examples/images/tkface_messagebox_warning.png" width="250px" alt="Warning Dialog"> |
-| **Error** | <img src="examples/images/tkface_messagebox_error.png" width="250px" alt="Error Dialog"> |
-| **Information** | <img src="examples/images/tkface_messagebox_info.png" width="250px" alt="Info Dialog"> |
-| **Question** | <img src="examples/images/tkface_messagebox_question.png" width="250px" alt="Question Dialog"> |
+| **Warning** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_warning.png" width="250px" alt="Warning Dialog"> |
+| **Error** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_error.png" width="250px" alt="Error Dialog"> |
+| **Information** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_info.png" width="250px" alt="Info Dialog"> |
+| **Question** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_question.png" width="250px" alt="Question Dialog"> |
 
 ### Input Dialogs
 
@@ -84,6 +84,12 @@ name = simpledialog.askstring("Name", "Enter your name:")
 
 # Integer input with validation
 age = simpledialog.askinteger("Age", "Enter your age:", minvalue=0, maxvalue=120)
+
+# List selection dialog
+color = simpledialog.askfromlistbox("Choose a color:", choices=["Red", "Green", "Blue"])
+
+# Multiple selection dialog
+colors = simpledialog.askfromlistbox("Choose colors:", choices=["Red", "Green", "Blue"], multiple=True)
 ```
 
 ### Windows-Specific Features
@@ -121,10 +127,10 @@ custom_translations = {
         "Custom Button": "カスタムボタン"
     }
 }
-from tkface import messagebox
-messagebox.showinfo(
-    "Custom Message",
-    "This will be translated",
+from tkface import simpledialog
+simpledialog.askfromlistbox(
+    "Choose an option:",
+    choices=["Option 1", "Option 2", "Option 3"],
     custom_translations=custom_translations,
     language="ja"
 )
@@ -136,7 +142,7 @@ messagebox.showinfo(
 
 - **Multilingual Support**: Automatic language detection, English/Japanese built-in, custom dictionaries
 - **Enhanced Message Boxes**: All standard and advanced dialogs, custom positioning, keyboard shortcuts, tab navigation
-- **Enhanced Input Dialogs**: String/integer/float input, validation, password input, custom positioning
+- **Enhanced Input Dialogs**: String/integer/float input, validation, password input, list selection, custom positioning
 - **Windows Features**: DPI awareness, Windows 11 corner rounding control, Windows system sounds, flat button styling (gracefully degrade on other OS)
 
 ---

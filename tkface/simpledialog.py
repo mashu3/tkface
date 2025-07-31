@@ -30,7 +30,8 @@ class CustomSimpleDialog:
     def __init__(self, master=None, title: Optional[str] = "Input", message="", 
                  initialvalue=None, show=None, ok_label=None, cancel_label=None, 
                  x=None, y=None, x_offset=0, y_offset=0, language=None, 
-                 custom_translations=None, validate_func: Optional[Callable[[str], bool]] = None):
+                 custom_translations=None, validate_func: Optional[Callable[[str], bool]] = None,
+                 choices=None, multiple=False, initial_selection=None):
         """
         Initialize the CustomSimpleDialog.
         
@@ -47,6 +48,9 @@ class CustomSimpleDialog:
             language: Language code for internationalization.
             custom_translations: Custom translation dictionary.
             validate_func: Function to validate input before accepting.
+            choices: List of choices for selection dialog.
+            multiple: Allow multiple selection if True.
+            initial_selection: Initial selection indices for multiple selection.
         """
         if master is None:
             master = getattr(tk, '_default_root', None)
@@ -54,6 +58,9 @@ class CustomSimpleDialog:
                 raise RuntimeError("No Tk root window found. Please create a Tk instance or pass master explicitly.")
         self.language = language
         self.validate_func = validate_func
+        self.choices = choices
+        self.multiple = multiple
+        self.initial_selection = initial_selection or []
         self.window = tk.Toplevel(master)
         self.window.title(lang.get(title, self.window, language=language))
         self.window.transient(master)
@@ -81,7 +88,7 @@ class CustomSimpleDialog:
 
     def _create_content(self, master, message, initialvalue, show):
         """
-        Create the content area with message label and entry field.
+        Create the content area with message label and entry field or selection list.
         
         Args:
             master: Parent widget for the content.
@@ -90,18 +97,103 @@ class CustomSimpleDialog:
             show: Character to show for password input.
             
         Returns:
-            tk.Entry: The entry widget that should receive focus.
+            tk.Entry or tk.Listbox: The widget that should receive focus.
         """
         if message:
             message_label = tk.Label(master, text=message, justify="left")
             message_label.grid(row=0, padx=5, sticky="w")
-        self.entry_var = tk.StringVar(value=initialvalue if initialvalue is not None else "")
-        entry = tk.Entry(master, textvariable=self.entry_var, show=show)
-        entry.grid(row=1, padx=5, sticky="ew")
-        self.entry = entry
-        entry.bind("<Return>", lambda e: self._on_ok())
-        entry.bind("<Escape>", lambda e: self._on_cancel())
-        return entry
+        
+        # If choices are provided, create a selection list instead of entry field
+        if self.choices:
+            return self._create_selection_list(master)
+        else:
+            self.entry_var = tk.StringVar(value=initialvalue if initialvalue is not None else "")
+            entry = tk.Entry(master, textvariable=self.entry_var, show=show)
+            entry.grid(row=1, padx=5, sticky="ew")
+            self.entry = entry
+            entry.bind("<Return>", lambda e: self._on_ok())
+            entry.bind("<Escape>", lambda e: self._on_cancel())
+            return entry
+
+    def _create_selection_list(self, parent):
+        """
+        Create a selection list (Listbox) for choices.
+        
+        Args:
+            parent: Parent widget for the list
+            
+        Returns:
+            tk.Listbox: The listbox widget that should receive focus
+        """
+        # Create frame for listbox and scrollbar
+        list_frame = tk.Frame(parent)
+        list_frame.grid(row=1, padx=5, sticky="ew")
+
+        # Create scrollbar
+        scrollbar = tk.Scrollbar(list_frame)
+        scrollbar.pack(side="right", fill="y")
+
+        # Create listbox
+        self.listbox = tk.Listbox(
+            list_frame,
+            selectmode=tk.MULTIPLE if self.multiple else tk.SINGLE,
+            yscrollcommand=scrollbar.set,
+            height=min(len(self.choices), 10)  # Max 10 items visible
+        )
+        self.listbox.pack(side="left", fill="both", expand=True)
+        scrollbar.config(command=self.listbox.yview)
+
+        # Add choices to listbox
+        for choice in self.choices:
+            self.listbox.insert(tk.END, choice)
+
+        # Set initial selection
+        if self.initial_selection:
+            for index in self.initial_selection:
+                if 0 <= index < len(self.choices):
+                    self.listbox.selection_set(index)
+
+        # Bind double-click for single selection mode
+        if not self.multiple:
+            self.listbox.bind("<Double-Button-1>", self._on_double_click)
+
+        # Bind keyboard shortcuts
+        self.listbox.bind("<Return>", lambda e: self._on_ok())
+        self.listbox.bind("<Escape>", lambda e: self._on_cancel())
+
+        return self.listbox
+
+    def _on_double_click(self, event):
+        """
+        Handle double-click on listbox item for single selection mode.
+        
+        Args:
+            event: Double-click event
+        """
+        selection = self.listbox.curselection()
+        if selection:
+            self.set_result(self.choices[selection[0]])
+
+    def _get_selection_result(self):
+        """
+        Get the current selection result.
+        
+        Returns:
+            Selected value(s) based on selection mode
+        """
+        if not hasattr(self, 'listbox'):
+            return None
+            
+        selection = self.listbox.curselection()
+        if not selection:
+            return None
+            
+        if self.multiple:
+            # Return list of selected values
+            return [self.choices[i] for i in selection]
+        else:
+            # Return single selected value
+            return self.choices[selection[0]]
 
     def _create_buttons(self, ok_label, cancel_label):
         """
@@ -154,6 +246,13 @@ class CustomSimpleDialog:
 
     def _on_ok(self):
         """Handle OK button click with validation if specified."""
+        # For selection dialogs, get the selection result
+        if hasattr(self, 'listbox'):
+            self.result = self._get_selection_result()
+            self.close()
+            return
+            
+        # For regular entry dialogs, validate and get entry value
         if self.validate_func:
             result = self.entry_var.get()
             if not self.validate_func(result):
@@ -177,6 +276,16 @@ class CustomSimpleDialog:
         self.result = None
         self.close()
 
+    def set_result(self, value):
+        """
+        Set the dialog result and close the window.
+        
+        Args:
+            value: The result value to return
+        """
+        self.result = value
+        self.close()
+
     def close(self):
         """Close the dialog window."""
         self.window.destroy()
@@ -185,7 +294,8 @@ class CustomSimpleDialog:
     def show(cls, master=None, message="", title=None, initialvalue=None, 
              show=None, ok_label=None, cancel_label=None, language=None, 
              custom_translations=None, x=None, y=None, x_offset=0, y_offset=0, 
-             validate_func: Optional[Callable[[str], bool]] = None):
+             validate_func: Optional[Callable[[str], bool]] = None,
+             choices=None, multiple=False, initial_selection=None):
         """
         Show the dialog and return the result.
         
@@ -225,7 +335,10 @@ class CustomSimpleDialog:
             y=y,
             x_offset=x_offset,
             y_offset=y_offset,
-            validate_func=validate_func
+            validate_func=validate_func,
+            choices=choices,
+            multiple=multiple,
+            initial_selection=initial_selection
         ).result
         if created:
             root.destroy()
@@ -403,4 +516,52 @@ def askfloat(master=None, message="", title=None, initialvalue=None,
     
     if result is None:
         return None
-    return float(result) 
+    return float(result)
+
+
+def askfromlistbox(master=None, message="", title=None, choices=None, multiple=False, initial_selection=None, 
+                   ok_label=None, cancel_label=None, language=None, custom_translations=None, 
+                   x=None, y=None, x_offset=0, y_offset=0):
+    """
+    Show a list selection dialog.
+    
+    Args:
+        master: Parent window
+        message (str): Message to display above the list
+        title (str): Window title (defaults to "Select")
+        choices (list): List of choices to display
+        multiple (bool): Allow multiple selection if True
+        initial_selection (list): Initial selection indices for multiple selection
+        ok_label: Custom text for OK button
+        cancel_label: Custom text for Cancel button
+        language (str): Language code for translations
+        custom_translations: Custom translation dictionary
+        x, y: Absolute position for the dialog
+        x_offset, y_offset: Offset from parent window center
+        
+    Returns:
+        Selected choice(s) or None if cancelled
+        
+    Example:
+        >>> choice = askfromlistbox("Choose a color:", choices=["Red", "Green", "Blue"])
+        >>> choices = askfromlistbox("Choose colors:", choices=["Red", "Green", "Blue"], multiple=True)
+    """
+    if not choices:
+        raise ValueError("choices parameter is required")
+    
+    return CustomSimpleDialog.show(
+        master=master,
+        message=message,
+        title=title or "Select",
+        ok_label=ok_label,
+        cancel_label=cancel_label,
+        language=language,
+        custom_translations=custom_translations,
+        x=x,
+        y=y,
+        x_offset=x_offset,
+        y_offset=y_offset,
+        choices=choices,
+        multiple=multiple,
+        initial_selection=initial_selection
+    ) 

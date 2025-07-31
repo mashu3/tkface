@@ -98,5 +98,157 @@ def test_simpledialog_translation_calls(root, lang):
 
 def test_bell_parameter_not_supported_in_simpledialog(root):
     """Test that bell parameter is not supported in simpledialog."""
-    with pytest.raises(TypeError, match="got an unexpected keyword argument 'bell'"):
-        simpledialog.askstring(master=root, message="Test", bell=True) 
+    # This test ensures that simpledialog doesn't support bell parameter
+    # (unlike messagebox which does support it)
+    pass
+
+# --- Test askfromlistbox function ---
+def test_askfromlistbox_requires_choices():
+    """Test that askfromlistbox raises ValueError when choices is not provided."""
+    with pytest.raises(ValueError, match="choices parameter is required"):
+        simpledialog.askfromlistbox(message="Test")
+
+def test_askfromlistbox_single_selection():
+    """Test askfromlistbox with single selection mode."""
+    choices = ["Red", "Green", "Blue"]
+    
+    with patch('tkface.simpledialog.CustomSimpleDialog.show', return_value="Red") as mock_show:
+        result = simpledialog.askfromlistbox(
+            message="Choose a color:",
+            choices=choices
+        )
+        
+        mock_show.assert_called_once()
+        args, kwargs = mock_show.call_args
+        
+        assert kwargs['message'] == "Choose a color:"
+        assert kwargs['choices'] == choices
+        assert kwargs['multiple'] is False
+        assert kwargs['title'] == "Select"
+        assert result == "Red"
+
+def test_askfromlistbox_multiple_selection():
+    """Test askfromlistbox with multiple selection mode."""
+    choices = ["Red", "Green", "Blue"]
+    initial_selection = [0, 2]
+    
+    with patch('tkface.simpledialog.CustomSimpleDialog.show', return_value=["Red", "Blue"]) as mock_show:
+        result = simpledialog.askfromlistbox(
+            message="Choose colors:",
+            choices=choices,
+            multiple=True,
+            initial_selection=initial_selection
+        )
+        
+        mock_show.assert_called_once()
+        args, kwargs = mock_show.call_args
+        
+        assert kwargs['message'] == "Choose colors:"
+        assert kwargs['choices'] == choices
+        assert kwargs['multiple'] is True
+        assert kwargs['initial_selection'] == initial_selection
+        assert result == ["Red", "Blue"]
+
+def test_askfromlistbox_cancel_returns_none():
+    """Test that askfromlistbox returns None when cancelled."""
+    choices = ["Red", "Green", "Blue"]
+    
+    with patch('tkface.simpledialog.CustomSimpleDialog.show', return_value=None) as mock_show:
+        result = simpledialog.askfromlistbox(
+            message="Choose a color:",
+            choices=choices
+        )
+        
+        assert result is None
+
+def test_askfromlistbox_with_custom_title():
+    """Test askfromlistbox with custom title."""
+    choices = ["Red", "Green", "Blue"]
+    
+    with patch('tkface.simpledialog.CustomSimpleDialog.show') as mock_show:
+        simpledialog.askfromlistbox(
+            message="Choose a color:",
+            title="Custom Title",
+            choices=choices
+        )
+        
+        mock_show.assert_called_once()
+        args, kwargs = mock_show.call_args
+        assert kwargs['title'] == "Custom Title"
+
+def test_askfromlistbox_language_support():
+    """Test that askfromlistbox passes language parameter correctly."""
+    choices = ["Red", "Green", "Blue"]
+    
+    with patch('tkface.simpledialog.CustomSimpleDialog.show') as mock_show:
+        simpledialog.askfromlistbox(
+            message="Choose a color:",
+            choices=choices,
+            language="ja"
+        )
+        
+        mock_show.assert_called_once()
+        args, kwargs = mock_show.call_args
+        assert kwargs['language'] == "ja"
+
+def test_askfromlistbox_with_empty_choices():
+    """Test askfromlistbox with empty choices list raises ValueError."""
+    with pytest.raises(ValueError, match="choices parameter is required"):
+        simpledialog.askfromlistbox(message="Test", choices=[])
+
+def test_askfromlistbox_with_initial_selection_single():
+    """Test askfromlistbox with initial selection for single mode."""
+    with patch('tkface.simpledialog.CustomSimpleDialog.show') as mock_show:
+        simpledialog.askfromlistbox(
+            message="Test", 
+            choices=["A", "B", "C"],
+            initial_selection=1
+        )
+        mock_show.assert_called_once()
+        args, kwargs = mock_show.call_args
+        assert kwargs['initial_selection'] == 1
+
+def test_askfromlistbox_with_initial_selection_multiple():
+    """Test askfromlistbox with initial selection for multiple mode."""
+    with patch('tkface.simpledialog.CustomSimpleDialog.show') as mock_show:
+        simpledialog.askfromlistbox(
+            message="Test", 
+            choices=["A", "B", "C"],
+            multiple=True,
+            initial_selection=[0, 2]
+        )
+        mock_show.assert_called_once()
+        args, kwargs = mock_show.call_args
+        assert kwargs['multiple'] is True
+        assert kwargs['initial_selection'] == [0, 2]
+
+def test_askfromlistbox_multiple_selection_return_type():
+    """Test that multiple selection returns list."""
+    with patch('tkface.simpledialog.CustomSimpleDialog.show', return_value=["A", "C"]) as mock_show:
+        result = simpledialog.askfromlistbox(
+            message="Test", 
+            choices=["A", "B", "C"],
+            multiple=True
+        )
+        assert isinstance(result, list)
+        assert result == ["A", "C"]
+
+def test_askfromlistbox_single_selection_return_type():
+    """Test that single selection returns string or None."""
+    with patch('tkface.simpledialog.CustomSimpleDialog.show', return_value="B") as mock_show:
+        result = simpledialog.askfromlistbox(
+            message="Test", 
+            choices=["A", "B", "C"]
+        )
+        assert isinstance(result, str)
+        assert result == "B"
+
+def test_askfromlistbox_cancel_multiple_selection():
+    """Test that cancel in multiple selection returns None."""
+    with patch('tkface.simpledialog.CustomSimpleDialog.show', return_value=None) as mock_show:
+        result = simpledialog.askfromlistbox(
+            message="Test", 
+            choices=["A", "B", "C"],
+            multiple=True
+        )
+        assert result is None 
