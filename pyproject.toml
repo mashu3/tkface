@@ -49,7 +49,7 @@ where = ["."]
 include = ["tkface*"]
 
 [tool.setuptools.package-data]
-tkface = ["assets/*.msg", "theme/calendar/*.ini"]
+tkface = ["locales/*.msg", "themes/*.ini"]
 
 [tool.setuptools.exclude-package-data]
 tkface = ["tests/*", "tests", "examples/*", "examples"]
