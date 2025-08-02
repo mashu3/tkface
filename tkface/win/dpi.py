@@ -4,12 +4,16 @@ import ctypes
 # Global flag to track if DPI awareness is enabled
 _dpi_enabled = False
 
-def dpi():
+def dpi(root=None):
     """
     Enable DPI awareness for Windows applications.
     
+    If root is provided, also enables DPI-aware geometry for the window.
     This function should be called before creating any Tkinter windows
     to ensure proper scaling on high-DPI displays.
+    
+    Args:
+        root: Optional Tkinter root window for DPI-aware geometry
     """
     if not sys.platform.startswith("win"):
         return False
@@ -19,9 +23,133 @@ def dpi():
         ctypes.windll.shcore.SetProcessDpiAwareness(1)
         global _dpi_enabled
         _dpi_enabled = True
+        
+        # If root is provided, enable DPI-aware geometry
+        if root is not None:
+            enable_dpi_geometry(root)
+        
         return True
     except Exception:
         return False
+
+def adjust_window_size(root, base_width, base_height, scale_factor=1.5, max_scale=2.0):
+    """
+    Adjust window size based on DPI scaling factor.
+    
+    Args:
+        root: Tkinter root window
+        base_width (int): Base window width
+        base_height (int): Base window height
+        scale_factor (float): Additional scaling factor (default: 0.75)
+        max_scale (float): Maximum scaling factor (default: 1.5)
+        
+    Returns:
+        tuple: (adjusted_width, adjusted_height)
+    """
+    if not sys.platform.startswith("win") or not _dpi_enabled:
+        return base_width, base_height
+    
+    try:
+        scaling = get_scaling_factor(root)
+        if scaling > 1.0:
+            # Apply DPI scaling with additional scale factor and max limit
+            adjusted_scale = min(scaling * scale_factor, max_scale)
+            adjusted_width = int(base_width * adjusted_scale)
+            adjusted_height = int(base_height * adjusted_scale)
+            return adjusted_width, adjusted_height
+    except Exception:
+        pass
+    
+    return base_width, base_height
+
+def dpi_with_window_size(root, base_width, base_height, scale_factor=1.5, max_scale=2.0):
+    """
+    Enable DPI awareness and adjust window size in one call.
+    
+    Args:
+        root: Tkinter root window
+        base_width (int): Base window width
+        base_height (int): Base window height
+        scale_factor (float): Additional scaling factor (default: 0.75)
+        max_scale (float): Maximum scaling factor (default: 1.5)
+        
+    Returns:
+        tuple: (adjusted_width, adjusted_height)
+    """
+    # Enable DPI awareness
+    dpi_enabled = dpi()
+    
+    # Adjust window size
+    adjusted_width, adjusted_height = adjust_window_size(root, base_width, base_height, scale_factor, max_scale)
+    
+    # Set window geometry
+    root.geometry(f"{adjusted_width}x{adjusted_height}")
+    
+    return adjusted_width, adjusted_height
+
+def enable_dpi_geometry(root):
+    """
+    Enable DPI-aware geometry for a Tkinter root window.
+    This patches the geometry method to automatically apply DPI scaling.
+    
+    Args:
+        root: Tkinter root window
+    """
+    if not sys.platform.startswith("win"):
+        return
+    
+    # Enable DPI awareness
+    dpi()
+    
+    # Adjust Tkinter scaling for UI elements
+    try:
+        scaling = get_scaling_factor(root)
+        if scaling > 1.0:
+            # Apply higher scaling for UI elements
+            ui_scale = min(scaling * 2.0, 2.5)  # Scale UI elements more aggressively
+            root.tk.call('tk', 'scaling', ui_scale)
+    except Exception:
+        pass
+    
+    # Store original geometry method
+    original_geometry = root.geometry
+    
+    def dpi_geometry(geometry_string=None):
+        if geometry_string is None:
+            return original_geometry()
+        
+        # Parse geometry string (e.g., "600x600" or "600x600+100+100")
+        if 'x' in geometry_string:
+            # Extract size part
+            size_part = geometry_string.split('+')[0]
+            if 'x' in size_part:
+                width_str, height_str = size_part.split('x')
+                try:
+                    base_width = int(width_str)
+                    base_height = int(height_str)
+                    
+                    # Apply DPI scaling
+                    adjusted_width, adjusted_height = adjust_window_size(
+                        root, base_width, base_height
+                    )
+                    
+                    # Reconstruct geometry string with adjusted size
+                    if '+' in geometry_string:
+                        position_part = geometry_string.split('+', 1)[1]
+                        adjusted_geometry = f"{adjusted_width}x{adjusted_height}+{position_part}"
+                    else:
+                        adjusted_geometry = f"{adjusted_width}x{adjusted_height}"
+                    
+                    return original_geometry(adjusted_geometry)
+                except ValueError:
+                    # If parsing fails, use original geometry
+                    return original_geometry(geometry_string)
+        
+        # For non-size geometry strings, use original method
+        return original_geometry(geometry_string)
+    
+    # Replace the geometry method
+    root.geometry = dpi_geometry
 
 def get_scaling_factor(root):
     """
@@ -41,7 +169,7 @@ def get_scaling_factor(root):
     except Exception:
         return 1.0
 
-def calculate_dpi_sizes(base_sizes, root, max_scale=1.5):
+def calculate_dpi_sizes(base_sizes, root, max_scale=2.5):
     """
     Calculate DPI-aware sizes for various UI elements.
     

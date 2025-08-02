@@ -3,12 +3,6 @@ from tkinter import messagebox as tk_messagebox
 import tkface
 from tkface import messagebox as tkface_messagebox
 
-# Enable DPI awareness only on Windows
-try:
-    tkface.win.dpi()
-except Exception:
-    pass
-
 # Note: tkface.Button provides Windows-specific flat styling
 # On Windows: flat appearance (no shadow)
 # On non-Windows: standard button styling
@@ -16,14 +10,12 @@ except Exception:
 def main():
     root = tk.Tk()
     root.title("tkface messagebox demo")
-    width, height = 650, 500
-    # If DPI awareness is enabled on Windows, adjust window size by scaling factor
-    scaling = tkface.win.get_scaling_factor(root)
-    if scaling > 1.0:
-        # Adjust window size for Windows DPI scaling
-        width = int(width * scaling * 0.75)
-        height = int(height * scaling * 0.75)
-    root.geometry(f"{width}x{height}")
+    
+    # Enable DPI-aware geometry (automatically adjusts window size)
+    tkface.win.dpi(root)
+    
+    # Set window size (will be automatically adjusted for DPI if enabled)
+    root.geometry("650x500")
     root.resizable(False, False)
 
     # Main frame

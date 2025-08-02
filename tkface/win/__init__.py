@@ -12,13 +12,14 @@ Available features:
 - Windows 11 corner rounding control
 """
 
-from .dpi import dpi, get_scaling_factor, calculate_dpi_sizes, scale_icon
+from .dpi import dpi, get_scaling_factor, calculate_dpi_sizes, scale_icon, adjust_window_size, dpi_with_window_size, enable_dpi_geometry
 from .button import configure_button_for_windows, get_button_label_with_shortcut, FlatButton, create_flat_button
 from .unround import unround
 from .bell import bell
 
 __all__ = [
-    'dpi', 'get_scaling_factor', 'calculate_dpi_sizes', 'scale_icon',
+    'dpi', 'get_scaling_factor', 'calculate_dpi_sizes', 'scale_icon', 
+    'adjust_window_size', 'dpi_with_window_size', 'enable_dpi_geometry',
     'configure_button_for_windows', 'get_button_label_with_shortcut', 
     'FlatButton', 'create_flat_button',
     'unround', 'bell'
