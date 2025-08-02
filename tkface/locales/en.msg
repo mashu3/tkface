@@ -30,3 +30,24 @@ Please try again. {Please try again.}
 Failed to save. Retry? {Failed to save. Retry?}
 Select {Select}
 Illegal value {Illegal value}
+# Calendar translations
+Sunday {Sun}
+Monday {Mon}
+Tuesday {Tue}
+Wednesday {Wed}
+Thursday {Thu}
+Friday {Fri}
+Saturday {Sat}
+January {Jan}
+February {Feb}
+March {Mar}
+April {Apr}
+May {May}
+June {Jun}
+July {Jul}
+August {Aug}
+September {Sep}
+October {Oct}
+November {Nov}
+December {Dec}
+Week {Week}
