@@ -49,59 +49,132 @@ pip install git+https://github.com/mashu3/tkface.git
 ### Message Boxes
 
 ```python
-from tkface import messagebox
+import tkface
 
 # Simple information dialog
-messagebox.showinfo("Success", "Operation completed successfully!")
+tkface.messagebox.showinfo("Success", "Operation completed successfully!")
 
 # Multilingual support
-messagebox.showerror("Error", "An error has occurred!", language="ja")
+tkface.messagebox.showerror("Error", "An error has occurred!", language="ja")
 
 # With system sound (Windows only)
-messagebox.showerror("Error", "An error has occurred!", bell=True)
+tkface.messagebox.showerror("Error", "An error has occurred!", bell=True)
 
 # Confirmation dialog
-if messagebox.askyesno("Confirm", "Do you want to save?"):
+if tkface.messagebox.askyesno("Confirm", "Do you want to save?"):
     save_file()
 ```
 
 ### Screenshots
 
-| Dialog Type | Windows Environment |
-|-------------|-------------------|
-| **Warning** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_warning.png" width="250px" alt="Warning Dialog"> |
-| **Error** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_error.png" width="250px" alt="Error Dialog"> |
-| **Information** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_info.png" width="250px" alt="Info Dialog"> |
-| **Question** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_question.png" width="250px" alt="Question Dialog"> |
+| Dialog Type | Windows | macOS |
+|-------------|---------|-------|
+| **Warning** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_warning_windows.png" width="25%" alt="Warning Dialog"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_warning_mac.png" width="25%" alt="Warning Dialog"> |
+| **Error** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_error_windows.png" width="25%" alt="Error Dialog"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_error_mac.png" width="25%" alt="Error Dialog"> |
+| **Information** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_info_windows.png" width="25%" alt="Info Dialog"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_info_mac.png" width="25%" alt="Info Dialog"> |
+| **Question** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_question_windows.png" width="25%" alt="Question Dialog"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_question_mac.png" width="25%" alt="Question Dialog"> |
 
 ### Input Dialogs
 
 ```python
-from tkface import simpledialog
+import tkface
 
 # String input
-name = simpledialog.askstring("Name", "Enter your name:")
+name = tkface.simpledialog.askstring("Name", "Enter your name:")
 
 # Integer input with validation
-age = simpledialog.askinteger("Age", "Enter your age:", minvalue=0, maxvalue=120)
+age = tkface.simpledialog.askinteger("Age", "Enter your age:", minvalue=0, maxvalue=120)
 
 # List selection dialog
-color = simpledialog.askfromlistbox("Choose a color:", choices=["Red", "Green", "Blue"])
+color = tkface.simpledialog.askfromlistbox("Choose a color:", choices=["Red", "Green", "Blue"])
 
 # Multiple selection dialog
-colors = simpledialog.askfromlistbox("Choose colors:", choices=["Red", "Green", "Blue"], multiple=True)
+colors = tkface.simpledialog.askfromlistbox("Choose colors:", choices=["Red", "Green", "Blue"], multiple=True)
 ```
 
-### Windows-Specific Features
+### Calendar Widget
+
+#### Screenshots
+
+| Widget Type | Windows | macOS |
+|-------------|---------|-------|
+| **DateEntry** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_calendar_dateentry_windows.png" width="25%" alt="DateEntry Widget"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_calendar_dateentry_mac.png" width="25%" alt="DateEntry Widget"> |
+
+#### Usage Examples
 
 ```python
 import tkinter as tk
 import tkface
 
 root = tk.Tk()
-tkface.win.dpi()         # Enable DPI awareness (Windows only)
-tkface.win.unround(root) # Disable corner rounding (Windows 11 only)
-tkface.win.bell("error") # Play Windows system sound (Windows only)
+root.title("Calendar Demo")
+
+# Basic calendar
+calendar = tkface.calendar.Calendar(root, year=2024, month=1)
+calendar.pack(padx=10, pady=10)
+
+# Advanced calendar with multiple months and features
+calendar = tkface.calendar.Calendar(
+    root,
+    year=2024,
+    month=1,
+    months=3,                    # Display 3 months horizontally
+    show_week_numbers=True,      # Show week numbers
+    week_start="Monday",         # Start week on Monday
+    day_colors={                 # Color weekends
+        "Sunday": "lightcoral",
+        "Saturday": "lightblue"
+    },
+    holidays={                   # Highlight holidays
+        "2024-01-01": "red",     # New Year's Day
+        "2024-01-15": "blue"     # Custom holiday
+    }
+)
+calendar.pack(padx=10, pady=10)
+
+# Change language
+tkface.lang.set("ja", root)  # Japanese
+calendar._update_display()   # Refresh display
+
+root.mainloop()
+```
+
+### Windows-Specific Features
+
+#### DPI Awareness and Scaling
+
+```python
+import tkinter as tk
+import tkface
+
+root = tk.Tk()
+
+# Enable DPI awareness and automatic scaling
+tkface.dpi(root)  # Short alias for tkface.win.dpi()
+
+# Or use the full function name
+# tkface.win.dpi(root)
+
+# Window geometry is automatically adjusted for DPI
+root.geometry("600x400")  # Will be scaled appropriately
+
+# UI elements are automatically scaled
+button = tkface.Button(root, text="Scaled Button")
+button.pack()
+
+root.mainloop()
+```
+
+#### Other Windows Features
+
+```python
+import tkinter as tk
+import tkface
+
+root = tk.Tk()
+tkface.win.dpi(root)         # Enable DPI awareness (Windows only)
+tkface.win.unround(root)     # Disable corner rounding (Windows 11 only)
+tkface.win.bell("error")     # Play Windows system sound (Windows only)
 
 # Windows-specific flat button styling
 button = tkface.Button(root, text="Flat Button", command=callback)  # No shadow on Windows
@@ -113,12 +186,12 @@ root.mainloop()
 ### Language Management
 
 ```python
-from tkface import lang
+import tkface
 import tkinter as tk
 
 root = tk.Tk()
-lang.set("ja", root)  # Set language manually
-lang.set("auto", root)  # Auto-detect system language
+tkface.lang.set("ja", root)  # Set language manually
+tkface.lang.set("auto", root)  # Auto-detect system language
 
 # Register custom translations
 custom_translations = {
@@ -127,8 +200,7 @@ custom_translations = {
         "Custom Button": "カスタムボタン"
     }
 }
-from tkface import simpledialog
-simpledialog.askfromlistbox(
+tkface.simpledialog.askfromlistbox(
     "Choose an option:",
     choices=["Option 1", "Option 2", "Option 3"],
     custom_translations=custom_translations,
@@ -143,7 +215,13 @@ simpledialog.askfromlistbox(
 - **Multilingual Support**: Automatic language detection, English/Japanese built-in, custom dictionaries
 - **Enhanced Message Boxes**: All standard and advanced dialogs, custom positioning, keyboard shortcuts, tab navigation
 - **Enhanced Input Dialogs**: String/integer/float input, validation, password input, list selection, custom positioning
-- **Windows Features**: DPI awareness, Windows 11 corner rounding control, Windows system sounds, flat button styling (gracefully degrade on other OS)
+- **Calendar Widget**: Multi-month display, week numbers, holiday highlighting, customizable colors, language support
+- **Windows Features**: 
+  - **DPI Awareness**: Automatic scaling for high-resolution displays
+  - **Windows 11 Corner Rounding Control**: Modern UI appearance
+  - **Windows System Sounds**: Platform-specific audio feedback
+  - **Flat Button Styling**: Modern appearance without shadows
+  - All features gracefully degrade on other OS
 
 ---
 
@@ -153,6 +231,7 @@ See the `examples/` directory for complete working examples:
 
 - `demo_messagebox.py` - Message box demonstrations
 - `demo_simpledialog.py` - Input dialog demonstrations
+- `demo_calendar.py` - Calendar widget demonstrations
 
 > **Note**: Test files are not included in the public release. For testing, see the development repository.
 

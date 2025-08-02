@@ -1,14 +1,14 @@
 [project]
 name = "tkface"
-version = "0.0.4"
-description = "A comprehensive multilingual GUI extension library for Tkinter with enhanced message boxes, and Windows-specific features"
+version = "0.0.5"
+description = "A comprehensive multilingual GUI extension library for Tkinter with enhanced message boxes, calendar widgets, theme system, and Windows-specific features"
 authors = [
     { name = "mashu3", email = "your.email@example.com" }
 ]
 readme = "README.md"
 requires-python = ">=3.7"
 license = { text = "MIT" }
-keywords = ["tkinter", "gui", "multilingual", "internationalization", "messagebox", "dialog", "windows"]
+keywords = ["tkinter", "gui", "multilingual", "internationalization", "messagebox", "dialog", "calendar", "theme", "windows"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -49,7 +49,7 @@ where = ["."]
 include = ["tkface*"]
 
 [tool.setuptools.package-data]
-tkface = ["assets/*.msg"]
+tkface = ["assets/*.msg", "theme/calendar/*.ini"]
 
 [tool.setuptools.exclude-package-data]
 tkface = ["tests/*", "tests", "examples/*", "examples"]
