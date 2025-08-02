@@ -41,12 +41,16 @@ class LanguageManager:
                 self.msgcat_loaded.add(lang_code)
         except Exception:
             pass
-        # Load assets/xx_YY.msg or assets/xx.msg by parsing and mcset
+        # Load locales/xx_YY.msg or locales/xx.msg by parsing and mcset
         try:
-            assets_path_full = os.path.join(os.path.dirname(__file__), '..', 'assets', f'{lang_code}.msg')
-            assets_path_short = os.path.join(os.path.dirname(__file__), '..', 'assets', f'{lang_code.split("_")[0]}.msg')
+            assets_path_full = os.path.join(os.path.dirname(__file__), '..', 'locales', f'{lang_code}.msg')
+            assets_path_short = os.path.join(os.path.dirname(__file__), '..', 'locales', f'{lang_code.split("_")[0]}.msg')
             loaded = False
             if os.path.exists(assets_path_full):
+                # Initialize user_dicts for this language
+                if lang_code not in self.user_dicts:
+                    self.user_dicts[lang_code] = {}
+                
                 with open(assets_path_full, encoding='utf-8') as f:
                     for line in f:
                         line = line.strip()
@@ -56,11 +60,19 @@ class LanguageManager:
                             key, val = line.split('{', 1)
                             key = key.strip()
                             val = val.rsplit('}', 1)[0].strip()
+                            # Store in user_dicts
+                            self.user_dicts[lang_code][key] = val
+                            # Also set in msgcat
                             root.tk.call('msgcat::mcset', lang_code, key, val)
                 root.tk.call('msgcat::mclocale', lang_code)
                 self.msgcat_loaded.add(lang_code)
                 loaded = True
             elif os.path.exists(assets_path_short):
+                short_lang = lang_code.split('_')[0]
+                # Initialize user_dicts for this language
+                if short_lang not in self.user_dicts:
+                    self.user_dicts[short_lang] = {}
+                
                 with open(assets_path_short, encoding='utf-8') as f:
                     for line in f:
                         line = line.strip()
@@ -70,9 +82,12 @@ class LanguageManager:
                             key, val = line.split('{', 1)
                             key = key.strip()
                             val = val.rsplit('}', 1)[0].strip()
-                            root.tk.call('msgcat::mcset', lang_code.split('_')[0], key, val)
-                root.tk.call('msgcat::mclocale', lang_code.split('_')[0])
-                self.msgcat_loaded.add(lang_code.split('_')[0])
+                            # Store in user_dicts
+                            self.user_dicts[short_lang][key] = val
+                            # Also set in msgcat
+                            root.tk.call('msgcat::mcset', short_lang, key, val)
+                root.tk.call('msgcat::mclocale', short_lang)
+                self.msgcat_loaded.add(short_lang)
                 loaded = True
         except Exception:
             pass
@@ -90,7 +105,8 @@ class LanguageManager:
                 raise RuntimeError("No Tk root window found. Please create a Tk instance or pass root explicitly.")
         lang_code = language or self.current_lang
         if lang_code in self.user_dicts and key in self.user_dicts[lang_code]:
-            return self.user_dicts[lang_code][key]
+            result = self.user_dicts[lang_code][key]
+            return result
         try:
             orig_locale = root.tk.call('msgcat::mclocale')
             root.tk.call('msgcat::mclocale', lang_code)
