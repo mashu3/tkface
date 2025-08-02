@@ -69,10 +69,10 @@ if tkface.messagebox.askyesno("Confirm", "Do you want to save?"):
 
 | Dialog Type | Windows | macOS |
 |-------------|---------|-------|
-| **Warning** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_warning_windows.png" width="25%" alt="Warning Dialog"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_warning_mac.png" width="25%" alt="Warning Dialog"> |
-| **Error** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_error_windows.png" width="25%" alt="Error Dialog"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_error_mac.png" width="25%" alt="Error Dialog"> |
-| **Information** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_info_windows.png" width="25%" alt="Info Dialog"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_info_mac.png" width="25%" alt="Info Dialog"> |
-| **Question** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_question_windows.png" width="25%" alt="Question Dialog"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_question_mac.png" width="25%" alt="Question Dialog"> |
+| **Warning** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_warning_windows.png" width="200px" alt="Warning Dialog"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_warning_mac.png" width="200px" alt="Warning Dialog"> |
+| **Error** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_error_windows.png" width="200px" alt="Error Dialog"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_error_mac.png" width="200px" alt="Error Dialog"> |
+| **Information** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_info_windows.png" width="200px" alt="Info Dialog"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_info_mac.png" width="200px" alt="Info Dialog"> |
+| **Question** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_question_windows.png" width="200px" alt="Question Dialog"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_messagebox_question_mac.png" width="200px" alt="Question Dialog"> |
 
 ### Input Dialogs
 
@@ -98,7 +98,7 @@ colors = tkface.simpledialog.askfromlistbox("Choose colors:", choices=["Red", "G
 
 | Widget Type | Windows | macOS |
 |-------------|---------|-------|
-| **DateEntry** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_calendar_dateentry_windows.png" width="25%" alt="DateEntry Widget"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_calendar_dateentry_mac.png" width="25%" alt="DateEntry Widget"> |
+| **DateEntry** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_calendar_dateentry_windows.png" width="200px" alt="DateEntry Widget"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_calendar_dateentry_mac.png" width="200px" alt="DateEntry Widget"> |
 
 #### Usage Examples
 
