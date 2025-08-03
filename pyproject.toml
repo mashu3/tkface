@@ -7,12 +7,12 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.7"
-license = { text = "MIT" }
+license = "MIT"
 keywords = ["tkinter", "gui", "multilingual", "internationalization", "messagebox", "dialog", "calendar", "theme", "windows"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.7",
@@ -47,6 +47,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["tkface*"]
+exclude = ["tests*", "examples*"]
 
 [tool.setuptools.package-data]
 tkface = ["locales/*.msg", "themes/*.ini"]
