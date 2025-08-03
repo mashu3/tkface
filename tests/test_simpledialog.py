@@ -78,7 +78,7 @@ def test_simpledialog_translation_calls(root, lang):
     with patch('tkface.lang.get') as mock_lang_get:
         mock_lang_get.side_effect = lambda key, *a, **kw: f"{key}_{lang}"
 
-        from tkface.simpledialog import CustomSimpleDialog
+        from tkface.dialog.simpledialog import CustomSimpleDialog
         with patch('tkinter.Toplevel.wait_window'), \
              patch('tkinter.Label'), \
              patch('tkinter.Button'), \

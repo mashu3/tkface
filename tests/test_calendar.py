@@ -1,11 +1,11 @@
 """
-Tests for tkface.calendar module
+Tests for tkface Calendar and DateEntry widgets
 """
 
 import pytest
 import tkinter as tk
 import datetime
-from tkface import calendar as tkface_calendar
+from tkface import Calendar, DateEntry
 from tkface import lang
 
 
@@ -15,60 +15,60 @@ class TestCalendar:
     @pytest.fixture
     def calendar_widget(self, root):
         """Create a Calendar widget for testing."""
-        return tkface_calendar.Calendar(root, year=2024, month=1)
+        return Calendar(root, year=2024, month=1)
         
     def test_calendar_creation(self, root):
         """Test basic calendar creation."""
-        cal = tkface_calendar.Calendar(root)
+        cal = Calendar(root)
         assert cal is not None
         assert cal.year == datetime.date.today().year
         assert cal.month == datetime.date.today().month
         
     def test_calendar_with_specific_date(self, root):
         """Test calendar creation with specific year and month."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=3)
+        cal = Calendar(root, year=2024, month=3)
         assert cal.year == 2024
         assert cal.month == 3
         
     def test_multiple_months(self, root):
         """Test multiple months display."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=3)
+        cal = Calendar(root, year=2024, month=1, months=3)
         assert cal.months == 3
         assert len(cal.month_frames) == 3
         
     def test_week_numbers(self, root):
         """Test week numbers display."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, show_week_numbers=True)
+        cal = Calendar(root, year=2024, month=1, show_week_numbers=True)
         assert cal.show_week_numbers is True
         assert len(cal.week_labels) > 0
         
     def test_week_start_sunday(self, root):
         """Test week start with Sunday."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, week_start="Sunday")
+        cal = Calendar(root, year=2024, month=1, week_start="Sunday")
         assert cal.week_start == "Sunday"
         assert cal.cal.getfirstweekday() == 6  # calendar.SUNDAY
         
     def test_week_start_monday(self, root):
         """Test week start with Monday."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, week_start="Monday")
+        cal = Calendar(root, year=2024, month=1, week_start="Monday")
         assert cal.week_start == "Monday"
         assert cal.cal.getfirstweekday() == 0  # calendar.MONDAY
         
     def test_invalid_week_start(self, root):
         """Test invalid week start raises error."""
         with pytest.raises(ValueError):
-            tkface_calendar.Calendar(root, year=2024, month=1, week_start="Tuesday")
+            Calendar(root, year=2024, month=1, week_start="Tuesday")
             
     def test_holidays(self, root):
         """Test holiday highlighting."""
         holidays = {"2024-01-01": "red", "2024-01-15": "blue"}
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, holidays=holidays)
+        cal = Calendar(root, year=2024, month=1, holidays=holidays)
         assert cal.holidays == holidays
         
     def test_day_colors(self, root):
         """Test day of week colors."""
         day_colors = {"Sunday": "red", "Saturday": "blue"}
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, day_colors=day_colors)
+        cal = Calendar(root, year=2024, month=1, day_colors=day_colors)
         assert cal.day_colors == day_colors
         
     def test_set_date(self, calendar_widget):
@@ -102,33 +102,33 @@ class TestCalendar:
         
     def test_get_day_names_sunday_start(self, root):
         """Test day names with Sunday start."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, week_start="Sunday")
+        cal = Calendar(root, year=2024, month=1, week_start="Sunday")
         day_names = cal._get_day_names()
         assert day_names[0] == lang.get("Sunday")
         assert day_names[6] == lang.get("Saturday")
         
     def test_get_day_names_monday_start(self, root):
         """Test day names with Monday start."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, week_start="Monday")
+        cal = Calendar(root, year=2024, month=1, week_start="Monday")
         day_names = cal._get_day_names()
         assert day_names[0] == lang.get("Monday")
         assert day_names[6] == lang.get("Sunday")
         
     def test_get_month_name(self, root):
         """Test month name localization."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1)
+        cal = Calendar(root, year=2024, month=1)
         assert cal._get_month_name(1) == lang.get("January")
         assert cal._get_month_name(12) == lang.get("December")
         
     def test_month_overflow(self, root):
         """Test month overflow handling."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=12, months=2)
+        cal = Calendar(root, year=2024, month=12, months=2)
         # Should handle December + January correctly
         assert len(cal.month_frames) == 2
         
     def test_year_overflow(self, root):
         """Test year overflow handling."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=12, months=3)
+        cal = Calendar(root, year=2024, month=12, months=3)
         # Should handle December + January + February correctly
         assert len(cal.month_frames) == 3
         
@@ -144,7 +144,7 @@ class TestCalendar:
         # Create calendar with custom settings
         day_colors = {"Sunday": "red", "Saturday": "blue"}
         holidays = {"2024-01-01": "green"}
-        cal = tkface_calendar.Calendar(
+        cal = Calendar(
             root, year=2024, month=1, 
             day_colors=day_colors, 
             holidays=holidays,
@@ -164,7 +164,7 @@ class TestCalendar:
         # Create calendar with custom settings
         day_colors = {"Sunday": "red", "Saturday": "blue"}
         holidays = {"2024-01-01": "green"}
-        cal = tkface_calendar.Calendar(
+        cal = Calendar(
             root, year=2024, month=1, 
             day_colors=day_colors, 
             holidays=holidays,
@@ -181,7 +181,7 @@ class TestCalendar:
         
     def test_day_header_width_prevents_overlap(self, root):
         """Test that day headers have sufficient width to prevent overlap."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, show_week_numbers=True)
+        cal = Calendar(root, year=2024, month=1, show_week_numbers=True)
         
         # Get the days frame
         month_frame = cal.month_frames[0]
@@ -195,7 +195,7 @@ class TestCalendar:
                 
     def test_day_names_update_on_language_change(self, root):
         """Test that day names update when language changes."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1)
+        cal = Calendar(root, year=2024, month=1)
         
         # Get initial day names in English
         lang.set("en", root)
@@ -231,7 +231,7 @@ class TestCalendar:
         
     def test_day_names_update_on_week_start_change(self, root):
         """Test that day names update when week start changes."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, week_start="Sunday")
+        cal = Calendar(root, year=2024, month=1, week_start="Sunday")
         
         # Get initial day names with Sunday start
         cal._update_display()
@@ -273,7 +273,7 @@ class TestCalendar:
         lang.set("ja", root)
         
         # Create calendar
-        cal = tkface_calendar.Calendar(root, year=2024, month=1)
+        cal = Calendar(root, year=2024, month=1)
         
         # Get the days frame
         month_frame = cal.month_frames[0]
@@ -297,7 +297,7 @@ class TestCalendar:
         lang.set("en", root)
         
         # Create calendar
-        cal = tkface_calendar.Calendar(root, year=2024, month=1)
+        cal = Calendar(root, year=2024, month=1)
         
         # Get the days frame
         month_frame = cal.month_frames[0]
@@ -317,7 +317,7 @@ class TestCalendar:
         
     def test_set_months(self, root):
         """Test setting the number of months to display."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=1)
+        cal = Calendar(root, year=2024, month=1, months=1)
         
         # Initially should have 1 month
         assert cal.months == 1
@@ -338,7 +338,7 @@ class TestCalendar:
         # Create calendar with custom settings
         day_colors = {"Sunday": "red", "Saturday": "blue"}
         holidays = {"2024-01-01": "green"}
-        cal = tkface_calendar.Calendar(
+        cal = Calendar(
             root, year=2024, month=1, 
             months=1,
             day_colors=day_colors, 
@@ -357,7 +357,7 @@ class TestCalendar:
         
     def test_set_months_invalid_value(self, root):
         """Test that setting invalid months raises error."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1)
+        cal = Calendar(root, year=2024, month=1)
         
         with pytest.raises(ValueError):
             cal.set_months(0)
@@ -368,35 +368,35 @@ class TestCalendar:
     def test_grid_layout_auto_calculation(self, root):
         """Test automatic grid layout calculation."""
         # Test 1 month
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=1)
+        cal = Calendar(root, year=2024, month=1, months=1)
         assert cal.grid_rows == 1
         assert cal.grid_cols == 1
         
         # Test 3 months
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=3)
+        cal = Calendar(root, year=2024, month=1, months=3)
         assert cal.grid_rows == 1
         assert cal.grid_cols == 3
         
         # Test 6 months
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=6)
+        cal = Calendar(root, year=2024, month=1, months=6)
         assert cal.grid_rows == 2
         assert cal.grid_cols == 3
         
         # Test 12 months
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=12)
+        cal = Calendar(root, year=2024, month=1, months=12)
         assert cal.grid_rows == 3
         assert cal.grid_cols == 4
         
     def test_custom_grid_layout(self, root):
         """Test custom grid layout."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=4, grid_layout=(2, 2))
+        cal = Calendar(root, year=2024, month=1, months=4, grid_layout=(2, 2))
         assert cal.grid_rows == 2
         assert cal.grid_cols == 2
         assert len(cal.month_frames) == 4
         
     def test_scrollable_container(self, root):
         """Test that scrollable container is created."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=6)
+        cal = Calendar(root, year=2024, month=1, months=6)
         
         # Check that canvas and scrollbar exist
         assert hasattr(cal, 'canvas')
@@ -408,7 +408,7 @@ class TestCalendar:
         
     def test_adjacent_month_days_display(self, root):
         """Test that adjacent month days are displayed."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=1)
+        cal = Calendar(root, year=2024, month=1, months=1)
         
         # Find a day label that should show previous month day
         # January 1, 2024 is a Monday, so the first week should show December 2023 days
@@ -426,16 +426,16 @@ class TestCalendar:
     def test_month_headers_toggle(self, root):
         """Test that month headers can be toggled."""
         # Test with headers
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=1, show_month_headers=True)
+        cal = Calendar(root, year=2024, month=1, months=1, show_month_headers=True)
         assert cal.show_month_headers == True
         
         # Test without headers
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=1, show_month_headers=False)
+        cal = Calendar(root, year=2024, month=1, months=1, show_month_headers=False)
         assert cal.show_month_headers == False
         
     def test_single_date_selection(self, root):
         """Test single date selection."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=1, selectmode="single")
+        cal = Calendar(root, year=2024, month=1, months=1, selectmode="single")
         
         # Simulate clicking on January 15, 2024
         # January 15, 2024 is a Monday in the third week
@@ -447,7 +447,7 @@ class TestCalendar:
         
     def test_range_date_selection(self, root):
         """Test range date selection."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=1, selectmode="range")
+        cal = Calendar(root, year=2024, month=1, months=1, selectmode="range")
         
         # Simulate clicking on January 15, 2024 (start)
         cal._on_date_click(0, 2, 1)  # January 15 (Tuesday)
@@ -467,7 +467,7 @@ class TestCalendar:
             callback_called = True
             callback_value = selection
         
-        cal = tkface_calendar.Calendar(root, year=2024, month=1, months=1, selectmode="single")
+        cal = Calendar(root, year=2024, month=1, months=1, selectmode="single")
         cal.bind_date_selected(callback)
         
         # Simulate clicking on January 15, 2024
@@ -483,67 +483,67 @@ class TestDateEntry:
     @pytest.fixture
     def dateentry_widget(self, root):
         """Create a DateEntry widget for testing."""
-        return tkface_calendar.DateEntry(root)
+        return DateEntry(root)
         
     def test_dateentry_creation(self, root):
         """Test basic DateEntry creation."""
-        de = tkface_calendar.DateEntry(root)
+        de = DateEntry(root)
         assert de is not None
         assert de.date_format == "%Y-%m-%d"
         assert de.selected_date is None
         
     def test_dateentry_with_custom_format(self, root):
         """Test DateEntry with custom date format."""
-        de = tkface_calendar.DateEntry(root, date_format="%d/%m/%Y")
+        de = DateEntry(root, date_format="%d/%m/%Y")
         assert de.date_format == "%d/%m/%Y"
         
     def test_dateentry_with_specific_date(self, root):
         """Test DateEntry with specific year and month."""
-        de = tkface_calendar.DateEntry(root, year=2024, month=3)
+        de = DateEntry(root, year=2024, month=3)
         assert de.calendar_config['year'] == 2024
         assert de.calendar_config['month'] == 3
         
     def test_dateentry_with_theme(self, root):
         """Test DateEntry with theme setting."""
-        de = tkface_calendar.DateEntry(root, theme="dark")
+        de = DateEntry(root, theme="dark")
         assert de.calendar_config['theme'] == "dark"
         
     def test_dateentry_with_language(self, root):
         """Test DateEntry with language setting."""
-        de = tkface_calendar.DateEntry(root, language="ja")
+        de = DateEntry(root, language="ja")
         # Language should be set in the parent window
         assert True  # Just check that no error occurs
         
     def test_dateentry_with_today_color(self, root):
         """Test DateEntry with today color setting."""
-        de = tkface_calendar.DateEntry(root, today_color="red")
+        de = DateEntry(root, today_color="red")
         assert de.today_color == "red"
         
     def test_dateentry_with_day_colors(self, root):
         """Test DateEntry with day colors setting."""
         day_colors = {"Sunday": "red", "Saturday": "blue"}
-        de = tkface_calendar.DateEntry(root, day_colors=day_colors)
+        de = DateEntry(root, day_colors=day_colors)
         assert de.calendar_config['day_colors'] == day_colors
         
     def test_dateentry_with_holidays(self, root):
         """Test DateEntry with holidays setting."""
         holidays = {"2024-01-01": "red", "2024-01-15": "blue"}
-        de = tkface_calendar.DateEntry(root, holidays=holidays)
+        de = DateEntry(root, holidays=holidays)
         assert de.calendar_config['holidays'] == holidays
         
     def test_dateentry_with_week_start(self, root):
         """Test DateEntry with week start setting."""
-        de = tkface_calendar.DateEntry(root, week_start="Monday")
+        de = DateEntry(root, week_start="Monday")
         assert de.calendar_config['week_start'] == "Monday"
         
     def test_dateentry_with_show_week_numbers(self, root):
         """Test DateEntry with week numbers setting."""
-        de = tkface_calendar.DateEntry(root, show_week_numbers=True)
+        de = DateEntry(root, show_week_numbers=True)
         assert de.calendar_config['show_week_numbers'] is True
         
     def test_dateentry_with_selectmode(self, root):
         """Test DateEntry with select mode setting."""
-        de = tkface_calendar.DateEntry(root, selectmode="range")
+        de = DateEntry(root, selectmode="range")
         assert de.calendar_config['selectmode'] == "range"
         
     def test_get_date_none(self, dateentry_widget):
@@ -563,7 +563,7 @@ class TestDateEntry:
         
     def test_set_date_with_custom_format(self, root):
         """Test setting a date with custom format."""
-        de = tkface_calendar.DateEntry(root, date_format="%d/%m/%Y")
+        de = DateEntry(root, date_format="%d/%m/%Y")
         test_date = datetime.date(2024, 3, 15)
         de.set_selected_date(test_date)
         assert de.get_date_string() == "15/03/2024"
@@ -578,7 +578,7 @@ class TestDateEntry:
             callback_called = True
             callback_value = date
         
-        de = tkface_calendar.DateEntry(root, date_callback=callback)
+        de = DateEntry(root, date_callback=callback)
         test_date = datetime.date(2024, 3, 15)
         
         # Simulate date selection
@@ -624,7 +624,7 @@ class TestCalendarIntegration:
     
     def test_language_switching(self, root):
         """Test calendar updates when language changes."""
-        cal = tkface_calendar.Calendar(root, year=2024, month=1)
+        cal = Calendar(root, year=2024, month=1)
         
         # Test English
         lang.set("en", root)
@@ -643,7 +643,7 @@ class TestCalendarIntegration:
     def test_today_highlighting(self, root):
         """Test that today's date is highlighted."""
         today = datetime.date.today()
-        cal = tkface_calendar.Calendar(root, year=today.year, month=today.month)
+        cal = Calendar(root, year=today.year, month=today.month)
         
         # Find today's label and check if it's highlighted
         today_found = False

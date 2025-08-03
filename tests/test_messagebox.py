@@ -96,7 +96,7 @@ def test_messagebox_translation_calls(root, lang):
         # Assume translated text to be returned
         mock_lang_get.side_effect = lambda key, *a, **kw: f"{key}_{lang}"
 
-        from tkface.messagebox import CustomMessageBox
+        from tkface.dialog.messagebox import CustomMessageBox
         with patch('tkinter.Toplevel.wait_window'), \
              patch('tkinter.Label'), \
              patch('tkinter.Button'):

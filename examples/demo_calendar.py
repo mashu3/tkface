@@ -68,7 +68,7 @@ class DateEntryDemo:
         entry_row.pack(fill='x', pady=(0, 10))
         
         tk.Label(entry_row, text="Sample Date Entry:").pack(side='left')
-        self.dateentry = tkface.calendar.DateEntry(
+        self.dateentry = tkface.DateEntry(
             entry_row, 
             date_format=self.date_formats[self.format_var.get()],
             day_colors=self.weekend_colors,
@@ -168,7 +168,7 @@ class DateEntryDemo:
         
         # Calendar Initial Date
         tk.Label(config_row4, text="Initial Date:").pack(side='left')
-        self.initial_dateentry = tkface.calendar.DateEntry(
+        self.initial_dateentry = tkface.DateEntry(
             config_row4,
             date_format="%Y-%m-%d",
             theme=self.theme_var.get(),
@@ -243,7 +243,7 @@ class DateEntryDemo:
         self.dateentry.destroy()
         
         # Create new DateEntry with updated year and month
-        self.dateentry = tkface.calendar.DateEntry(
+        self.dateentry = tkface.DateEntry(
             parent, 
             date_format=self.date_formats[self.format_var.get()],
             day_colors=self.weekend_colors,
@@ -280,7 +280,7 @@ class DateEntryDemo:
         
         # Create new DateEntry
         new_format = self.date_formats[self.format_var.get()]
-        self.dateentry = tkface.calendar.DateEntry(
+        self.dateentry = tkface.DateEntry(
             parent, 
             date_format=new_format,
             day_colors=self.weekend_colors,
@@ -366,7 +366,7 @@ class DateEntryDemo:
             "import tkface",
             "",
             "# Create DateEntry with current settings:",
-            "dateentry = tkface.calendar.DateEntry(",
+            "dateentry = tkface.DateEntry(",
             f"    parent,  # Replace 'parent' with your parent widget",
             f"    date_format='{self.date_formats[self.format_var.get()]}',",
         ]

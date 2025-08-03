@@ -1,8 +1,7 @@
-from . import messagebox
-from . import simpledialog
 from . import lang
 from . import win
-from . import calendar
+from . import widget
+from . import dialog
 
 # Export Windows-specific flat button as Button
 from .win.button import FlatButton as Button
@@ -10,5 +9,12 @@ from .win.button import FlatButton as Button
 # Export DPI functions for easy access
 from .win.dpi import enable_dpi_geometry as dpi
 
+# Export Calendar and DateEntry for backward compatibility
+from .widget.calendar import Calendar
+from .dialog.dateentry import DateEntry
+
+# Export messagebox and simpledialog for backward compatibility
+from .dialog import messagebox, simpledialog
+
 __version__ = "0.0.5"
-__all__ = ["messagebox", "simpledialog", "lang", "win", "calendar", "Button", "dpi"] 
+__all__ = ["lang", "win", "widget", "dialog", "Button", "dpi", "Calendar", "DateEntry", "messagebox", "simpledialog"] 
