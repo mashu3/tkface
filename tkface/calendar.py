@@ -2,7 +2,6 @@ import tkinter as tk
 import calendar
 import datetime
 import configparser
-import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 from . import lang
