@@ -110,11 +110,11 @@ root = tk.Tk()
 root.title("DateEntry Demo")
 
 # Basic DateEntry
-date_entry = tkface.calendar.DateEntry(root, year=2025, month=8)
+date_entry = tkface.DateEntry(root, year=2025, month=8)
 date_entry.pack(padx=10, pady=10)
 
 # Advanced DateEntry with features
-date_entry = tkface.calendar.DateEntry(
+date_entry = tkface.DateEntry(
     root,
     year=2025,
     month=8,
