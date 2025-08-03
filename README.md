@@ -7,13 +7,13 @@
 
 **Restore the "face" to your Tkinter!**
 
-A multilingual GUI extension library for Tkinter (tkinter) - bringing back the "face" (interface) that Tkinter left behind.
+A multilingual GUI extension library for Tkinter (tkinter) - bringing back the "face" (interface) that Tkinter left behind. **Built with zero external dependencies, using only Python's standard library.**
 
 ---
 
 ## 📖 Overview
 
-Tkface is a Python library designed to restore and enhance the "face" (user interface) of Tkinter. While Tkinter is a powerful toolkit, its dialogs and user-facing components are minimal and lack friendly interfaces. Tkface fills this gap with multilingual dialogs, advanced message boxes, and Windows-specific features.
+Tkface is a Python library designed to restore and enhance the "face" (user interface) of Tkinter. While Tkinter is a powerful toolkit, its dialogs and user-facing components are minimal and lack friendly interfaces. Tkface fills this gap with multilingual dialogs, advanced message boxes, and Windows-specific features. **The library is built entirely with Python's standard library, requiring no external dependencies.**
 
 - **Completing the Interface**: Tkinter stands for "Tk **inter**face," providing a powerful core for building GUIs. Tk**face** is designed to complement it by providing the user-facing components—the "**face**"—that are essential for a polished user experience but not built into the standard library. It extends Tkinter with ready-to-use, multilingual dialogs and widgets, letting you build sophisticated, user-friendly applications with less effort.
 - **Vibe Coding**: Developed with a "Vibe Coding" approach-prioritizing developer joy, rapid prototyping, and a sense of fun. The codebase is hackable, readable, and easy to extend—and so is this document.
@@ -24,7 +24,7 @@ Tkface is a Python library designed to restore and enhance the "face" (user inte
 
 - Python 3.7+
 - Tkinter (included with Python)
-- No additional dependencies
+- **Zero external dependencies** - Uses only Python standard library
 
 ---
 
@@ -107,18 +107,17 @@ import tkinter as tk
 import tkface
 
 root = tk.Tk()
-root.title("Calendar Demo")
+root.title("DateEntry Demo")
 
-# Basic calendar
-calendar = tkface.calendar.Calendar(root, year=2024, month=1)
-calendar.pack(padx=10, pady=10)
+# Basic DateEntry
+date_entry = tkface.calendar.DateEntry(root, year=2025, month=8)
+date_entry.pack(padx=10, pady=10)
 
-# Advanced calendar with multiple months and features
-calendar = tkface.calendar.Calendar(
+# Advanced DateEntry with features
+date_entry = tkface.calendar.DateEntry(
     root,
-    year=2024,
-    month=1,
-    months=3,                    # Display 3 months horizontally
+    year=2025,
+    month=8,
     show_week_numbers=True,      # Show week numbers
     week_start="Monday",         # Start week on Monday
     day_colors={                 # Color weekends
@@ -126,15 +125,17 @@ calendar = tkface.calendar.Calendar(
         "Saturday": "lightblue"
     },
     holidays={                   # Highlight holidays
-        "2024-01-01": "red",     # New Year's Day
-        "2024-01-15": "blue"     # Custom holiday
-    }
+        "2025-08-15": "red",     # Custom holiday
+        "2025-08-30": "blue"     # Another holiday
+    },
+    theme="light",               # Light theme
+    language="ja"                # Japanese language
 )
-calendar.pack(padx=10, pady=10)
+date_entry.pack(padx=10, pady=10)
 
-# Change language
-tkface.lang.set("ja", root)  # Japanese
-calendar._update_display()   # Refresh display
+# Get selected date
+selected_date = date_entry.get_date()
+print(f"Selected date: {selected_date}")
 
 root.mainloop()
 ```
@@ -150,10 +151,7 @@ import tkface
 root = tk.Tk()
 
 # Enable DPI awareness and automatic scaling
-tkface.dpi(root)  # Short alias for tkface.win.dpi()
-
-# Or use the full function name
-# tkface.win.dpi(root)
+tkface.win.dpi(root)  # Enable DPI awareness
 
 # Window geometry is automatically adjusted for DPI
 root.geometry("600x400")  # Will be scaled appropriately
@@ -177,7 +175,7 @@ tkface.win.unround(root)     # Disable corner rounding (Windows 11 only)
 tkface.win.bell("error")     # Play Windows system sound (Windows only)
 
 # Windows-specific flat button styling
-button = tkface.Button(root, text="Flat Button", command=callback)  # No shadow on Windows
+button = tkface.Button(root, text="Flat Button", command=callback)  # Flat styling on Windows
 root.mainloop()
 ```
 
@@ -196,8 +194,10 @@ tkface.lang.set("auto", root)  # Auto-detect system language
 # Register custom translations
 custom_translations = {
     "ja": {
-        "Custom Message": "カスタムメッセージ",
-        "Custom Button": "カスタムボタン"
+        "Choose an option:": "オプションを選択:",
+        "Option 1": "オプション1",
+        "Option 2": "オプション2", 
+        "Option 3": "オプション3"
     }
 }
 tkface.simpledialog.askfromlistbox(
@@ -212,6 +212,7 @@ tkface.simpledialog.askfromlistbox(
 
 ## 🧩 Features
 
+- **Zero Dependencies**: Built entirely with Python's standard library - no external packages required
 - **Multilingual Support**: Automatic language detection, English/Japanese built-in, custom dictionaries
 - **Enhanced Message Boxes**: All standard and advanced dialogs, custom positioning, keyboard shortcuts, tab navigation
 - **Enhanced Input Dialogs**: String/integer/float input, validation, password input, list selection, custom positioning
