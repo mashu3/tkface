@@ -107,49 +107,53 @@ class DateEntryDemo:
         theme_combo.pack(side='left', padx=(5, 20))
         theme_combo.bind('<<ComboboxSelected>>', lambda e: self.change_theme())
         
+        # Configuration controls - Row 2 (Language and Week Start)
+        config_row2 = tk.Frame(config_frame)
+        config_row2.pack(fill='x', pady=(0, 10))
+        
         # Language selection
-        tk.Label(config_row1, text="Language:").pack(side='left')
-        lang_combo = ttk.Combobox(config_row1, textvariable=self.lang_var, 
+        tk.Label(config_row2, text="Language:").pack(side='left')
+        lang_combo = ttk.Combobox(config_row2, textvariable=self.lang_var, 
                                 values=["en", "ja"], state="readonly", width=8)
         lang_combo.pack(side='left', padx=(5, 20))
         lang_combo.bind('<<ComboboxSelected>>', lambda e: self.change_language())
         
         # Week start selection
-        tk.Label(config_row1, text="Week Start:").pack(side='left')
+        tk.Label(config_row2, text="Week Start:").pack(side='left')
         self.week_start_var = tk.StringVar(value="Sunday")
-        week_combo = ttk.Combobox(config_row1, textvariable=self.week_start_var, 
+        week_combo = ttk.Combobox(config_row2, textvariable=self.week_start_var, 
                                 values=["Sunday", "Monday"], state="readonly", width=8)
         week_combo.pack(side='left', padx=(5, 20))
         week_combo.bind('<<ComboboxSelected>>', lambda e: self.change_week_start())
-        
-        # Configuration controls - Row 2
-        config_row2 = tk.Frame(config_frame)
-        config_row2.pack(fill='x', pady=(0, 10))
-        
-        # Weekend colors selection
-        tk.Label(config_row2, text="Sunday Color:").pack(side='left')
-        self.sunday_color_var = tk.StringVar(value="lightcoral")
-        sunday_combo = ttk.Combobox(config_row2, textvariable=self.sunday_color_var, 
-                                  values=["lightcoral", "lightpink", "lightblue", "lightgreen", "lightyellow", "lightgray", "gray", "darkgray", "none"], 
-                                  state="readonly", width=10)
-        sunday_combo.pack(side='left', padx=(5, 10))
-        sunday_combo.bind('<<ComboboxSelected>>', lambda e: self.change_weekend_colors())
-        
-        tk.Label(config_row2, text="Saturday Color:").pack(side='left')
-        self.saturday_color_var = tk.StringVar(value="lightblue")
-        saturday_combo = ttk.Combobox(config_row2, textvariable=self.saturday_color_var, 
-                                    values=["lightblue", "lightcoral", "lightpink", "lightgreen", "lightyellow", "lightgray", "gray", "darkgray", "none"], 
-                                    state="readonly", width=10)
-        saturday_combo.pack(side='left', padx=(5, 10))
-        saturday_combo.bind('<<ComboboxSelected>>', lambda e: self.change_weekend_colors())
         
         # Configuration controls - Row 3
         config_row3 = tk.Frame(config_frame)
         config_row3.pack(fill='x', pady=(0, 10))
         
+        # Weekend colors selection
+        tk.Label(config_row3, text="Sunday Color:").pack(side='left')
+        self.sunday_color_var = tk.StringVar(value="lightcoral")
+        sunday_combo = ttk.Combobox(config_row3, textvariable=self.sunday_color_var, 
+                                  values=["lightcoral", "lightpink", "lightblue", "lightgreen", "lightyellow", "lightgray", "gray", "darkgray", "none"], 
+                                  state="readonly", width=10)
+        sunday_combo.pack(side='left', padx=(5, 10))
+        sunday_combo.bind('<<ComboboxSelected>>', lambda e: self.change_weekend_colors())
+        
+        tk.Label(config_row3, text="Saturday Color:").pack(side='left')
+        self.saturday_color_var = tk.StringVar(value="lightblue")
+        saturday_combo = ttk.Combobox(config_row3, textvariable=self.saturday_color_var, 
+                                    values=["lightblue", "lightcoral", "lightpink", "lightgreen", "lightyellow", "lightgray", "gray", "darkgray", "none"], 
+                                    state="readonly", width=10)
+        saturday_combo.pack(side='left', padx=(5, 10))
+        saturday_combo.bind('<<ComboboxSelected>>', lambda e: self.change_weekend_colors())
+        
+        # Configuration controls - Row 4
+        config_row4 = tk.Frame(config_frame)
+        config_row4.pack(fill='x', pady=(0, 10))
+        
         # Today color selection
-        tk.Label(config_row3, text="Today Color:").pack(side='left')
-        today_combo = ttk.Combobox(config_row3, textvariable=self.today_color_var, 
+        tk.Label(config_row4, text="Today Color:").pack(side='left')
+        today_combo = ttk.Combobox(config_row4, textvariable=self.today_color_var, 
                                  values=["yellow", "orange", "red", "pink", "lightblue", "lightgreen", "lightgray", "none"], 
                                  state="readonly", width=10)
         today_combo.pack(side='left', padx=(5, 20))
@@ -157,19 +161,19 @@ class DateEntryDemo:
         
         # Week numbers checkbox
         self.show_week_var = tk.BooleanVar(value=False)
-        week_check = tk.Checkbutton(config_row3, text="Show Week Numbers", 
+        week_check = tk.Checkbutton(config_row4, text="Show Week Numbers", 
                                   variable=self.show_week_var, 
                                   command=self.toggle_week_numbers)
         week_check.pack(side='left')
         
-        # Configuration controls - Row 4 (Calendar Initial Date)
-        config_row4 = tk.Frame(config_frame)
-        config_row4.pack(fill='x', pady=(0, 5))
+        # Configuration controls - Row 5 (Calendar Initial Date)
+        config_row5 = tk.Frame(config_frame)
+        config_row5.pack(fill='x', pady=(0, 5))
         
         # Calendar Initial Date
-        tk.Label(config_row4, text="Initial Date:").pack(side='left')
+        tk.Label(config_row5, text="Initial Date:").pack(side='left')
         self.initial_dateentry = tkface.DateEntry(
-            config_row4,
+            config_row5,
             date_format="%Y-%m-%d",
             theme=self.theme_var.get(),
             language=self.lang_var.get(),
@@ -181,7 +185,7 @@ class DateEntryDemo:
         self.initial_dateentry.set_selected_date(current_date)
         
         # Reset to current date button
-        reset_button = tk.Button(config_row4, text="Reset to Current Date", 
+        reset_button = tk.Button(config_row5, text="Reset to Current Date", 
                                command=self.reset_to_current_date)
         reset_button.pack(side='left', padx=(20, 0))
         
