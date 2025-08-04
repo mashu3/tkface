@@ -16,5 +16,5 @@ from .dialog.dateentry import DateEntry
 # Export messagebox and simpledialog for backward compatibility
 from .dialog import messagebox, simpledialog
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 __all__ = ["lang", "win", "widget", "dialog", "Button", "dpi", "Calendar", "DateEntry", "messagebox", "simpledialog"] 
