@@ -64,8 +64,8 @@ class Calendar(tk.Frame):
             month = datetime.date.today().month
             
         # Validate week_start
-        if week_start not in ["Sunday", "Monday"]:
-            raise ValueError("week_start must be 'Sunday' or 'Monday'")
+        if week_start not in ["Sunday", "Monday", "Saturday"]:
+            raise ValueError("week_start must be 'Sunday', 'Monday', or 'Saturday'")
             
         # Validate theme and initialize theme colors
         try:
@@ -112,12 +112,9 @@ class Calendar(tk.Frame):
             else:
                 self.grid_rows, self.grid_cols = 4, 4
         
-        # Calendar instance
+        # Calendar instance - will be reused for efficiency
         self.cal = calendar.Calendar()
-        if week_start == "Monday":
-            self.cal.setfirstweekday(calendar.MONDAY)
-        else:
-            self.cal.setfirstweekday(calendar.SUNDAY)
+        self._update_calendar_week_start()
             
         # Widget storage
         self.month_frames = []
@@ -133,6 +130,24 @@ class Calendar(tk.Frame):
             # Create normal calendar widgets
             self._create_widgets()
             self._update_display()
+        
+    def _update_calendar_week_start(self):
+        """Update calendar week start setting efficiently."""
+        if self.week_start == "Monday":
+            self.cal.setfirstweekday(calendar.MONDAY)
+        elif self.week_start == "Saturday":
+            self.cal.setfirstweekday(calendar.SATURDAY)
+        else:  # Sunday
+            self.cal.setfirstweekday(calendar.SUNDAY)
+    
+    def _get_week_start_offset(self, date: datetime.date) -> int:
+        """Get the offset for week start calculation efficiently."""
+        if self.week_start == "Monday":
+            return date.weekday()
+        elif self.week_start == "Saturday":
+            return (date.weekday() + 2) % 7
+        else:  # Sunday
+            return (date.weekday() + 1) % 7
         
     def _create_widgets(self):
         """Create the calendar widget structure."""
@@ -353,6 +368,9 @@ class Calendar(tk.Frame):
         if self.week_start == "Sunday":
             # Move Sunday to the beginning
             days = days[-1:] + days[:-1]
+        elif self.week_start == "Saturday":
+            # Move Saturday to the beginning
+            days = days[-2:] + days[:-2]
         
         # Get translations and handle short names
         day_names = []
@@ -410,15 +428,13 @@ class Calendar(tk.Frame):
         
     def _get_display_date(self, month_index: int) -> datetime.date:
         """Get the date for a specific month frame, handling overflow."""
-        display_month = self.month + month_index
-        display_year = self.year
-        
-        # Handle month overflow using datetime
-        while display_month > 12:
-            display_month -= 12
-            display_year += 1
-            
-        return datetime.date(display_year, display_month, 1)
+        # Use datetime arithmetic for more efficient month overflow handling
+        base_date = datetime.date(self.year, self.month, 1)
+        # Calculate target month and year using calendar module
+        target_month = base_date.month + month_index
+        target_year = base_date.year + (target_month - 1) // 12
+        target_month = ((target_month - 1) % 12) + 1
+        return datetime.date(target_year, target_month, 1)
     
     def _on_prev_month(self, month_index: int):
         """Handle previous month navigation."""
@@ -486,11 +502,8 @@ class Calendar(tk.Frame):
         # Get the first day of the month using existing helper
         first_day = self._get_display_date(month_index)
         
-        # Get the first day of the week for this month
-        if self.week_start == "Monday":
-            first_weekday = first_day.weekday()
-        else:
-            first_weekday = (first_day.weekday() + 1) % 7
+        # Get the first day of the week for this month efficiently
+        first_weekday = self._get_week_start_offset(first_day)
         
         # Calculate the date for this position using datetime arithmetic
         days_from_start = week * 7 + day - first_weekday
@@ -565,20 +578,43 @@ class Calendar(tk.Frame):
                         child.config(text=day_names[day_header_index])
                         day_header_index += 1
             
-            # Get calendar data
+            # Get calendar data efficiently using monthrange
+            _, last_day = calendar.monthrange(display_year, display_month)
             month_days = list(self.cal.itermonthdays(display_year, display_month))
             
             # Update week numbers
             if self.show_week_numbers:
+                # Reuse existing calendar object for efficiency
+                month_calendar = self.cal.monthdatescalendar(display_year, display_month)
+                
                 for week in range(6):
                     if week_label_index + week < len(self.week_labels):
                         week_label = self.week_labels[week_label_index + week]
-                        if week < len(month_days) // 7 + (1 if len(month_days) % 7 > 0 else 0):
-                            # Calculate week number
-                            day_index = week * 7
-                            if day_index < len(month_days) and month_days[day_index] != 0:
-                                date = datetime.date(display_year, display_month, month_days[day_index])
-                                week_num = date.isocalendar()[1]
+                        
+                        if week < len(month_calendar):
+                            # Get the week dates
+                            week_dates = month_calendar[week]
+                            
+                            # Check if this week contains days from the current month
+                            week_has_month_days = any(
+                                date.year == display_year and date.month == display_month 
+                                for date in week_dates
+                            )
+                            
+                            if week_has_month_days:
+                                # For ISO week numbers, we need to use the Monday of the week
+                                # as the reference date for week number calculation
+                                if self.week_start == "Monday":
+                                    # Monday is already the first day of the week
+                                    reference_date = week_dates[0]
+                                elif self.week_start == "Saturday":
+                                    # Saturday start: Monday is the third day (index 2)
+                                    reference_date = week_dates[2]
+                                else:  # Sunday
+                                    # Sunday start: Monday is the second day (index 1)
+                                    reference_date = week_dates[1]
+                                
+                                week_num = reference_date.isocalendar()[1]
                                 week_label.config(text=str(week_num))
                             else:
                                 week_label.config(text="")
@@ -618,22 +654,17 @@ class Calendar(tk.Frame):
         # Calculate the date for this position using datetime arithmetic
         first_day = datetime.date(year, month, 1)
         
-        # Get the first day of the week for this month
-        if self.week_start == "Monday":
-            first_weekday = first_day.weekday()
-        else:
-            first_weekday = (first_day.weekday() + 1) % 7
+        # Get the first day of the week for this month efficiently
+        first_weekday = self._get_week_start_offset(first_day)
         
         # Calculate the date for this position
         days_from_start = week * 7 + day - first_weekday
         clicked_date = first_day + datetime.timedelta(days=days_from_start)
         
-        # Check if the date is valid (not in current month)
+        # Check if the date is valid (not in current month) using calendar module
+        _, last_day = calendar.monthrange(year, month)
         current_month_start = datetime.date(year, month, 1)
-        if month == 12:
-            current_month_end = datetime.date(year + 1, 1, 1) - datetime.timedelta(days=1)
-        else:
-            current_month_end = datetime.date(year, month + 1, 1) - datetime.timedelta(days=1)
+        current_month_end = datetime.date(year, month, last_day)
         
         if clicked_date < current_month_start or clicked_date > current_month_end:
             # Adjacent month day
@@ -799,15 +830,11 @@ class Calendar(tk.Frame):
         
     def set_week_start(self, week_start: str):
         """Set the week start day."""
-        if week_start not in ["Sunday", "Monday"]:
-            raise ValueError("week_start must be 'Sunday' or 'Monday'")
+        if week_start not in ["Sunday", "Monday", "Saturday"]:
+            raise ValueError("week_start must be 'Sunday', 'Monday', or 'Saturday'")
             
         self.week_start = week_start
-        if week_start == "Monday":
-            self.cal.setfirstweekday(calendar.MONDAY)
-        else:
-            self.cal.setfirstweekday(calendar.SUNDAY)
-            
+        self._update_calendar_week_start()
         self._recreate_widgets()
         
     def set_show_week_numbers(self, show: bool):

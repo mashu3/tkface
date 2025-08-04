@@ -35,6 +35,9 @@ class DateEntryDemo:
         # Initialize today color variable
         self.today_color_var = tk.StringVar(value="yellow")
         
+        # Initialize week start variable
+        self.week_start_var = tk.StringVar(value="Sunday")
+        
         self.create_widgets()
         
     def create_widgets(self):
@@ -77,7 +80,8 @@ class DateEntryDemo:
             language=self.lang_var.get(),
             today_color=self.today_color_var.get(),
             year=self.year_var.get(),
-            month=self.month_var.get()
+            month=self.month_var.get(),
+            week_start=self.week_start_var.get()
         )
         self.dateentry.pack(side='left', padx=(5, 10))
         
@@ -122,7 +126,7 @@ class DateEntryDemo:
         tk.Label(config_row2, text="Week Start:").pack(side='left')
         self.week_start_var = tk.StringVar(value="Sunday")
         week_combo = ttk.Combobox(config_row2, textvariable=self.week_start_var, 
-                                values=["Sunday", "Monday"], state="readonly", width=8)
+                                values=["Sunday", "Monday", "Saturday"], state="readonly", width=8)
         week_combo.pack(side='left', padx=(5, 20))
         week_combo.bind('<<ComboboxSelected>>', lambda e: self.change_week_start())
         
@@ -177,6 +181,7 @@ class DateEntryDemo:
             date_format="%Y-%m-%d",
             theme=self.theme_var.get(),
             language=self.lang_var.get(),
+            week_start=self.week_start_var.get(),
             date_callback=self._on_initial_date_selected
         )
         self.initial_dateentry.pack(side='left', padx=(5, 20))

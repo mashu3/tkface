@@ -54,6 +54,12 @@ class TestCalendar:
         assert cal.week_start == "Monday"
         assert cal.cal.getfirstweekday() == 0  # calendar.MONDAY
         
+    def test_week_start_saturday(self, root):
+        """Test week start with Saturday."""
+        cal = Calendar(root, year=2024, month=1, week_start="Saturday")
+        assert cal.week_start == "Saturday"
+        assert cal.cal.getfirstweekday() == 5  # calendar.SATURDAY
+        
     def test_invalid_week_start(self, root):
         """Test invalid week start raises error."""
         with pytest.raises(ValueError):
@@ -95,6 +101,10 @@ class TestCalendar:
         assert calendar_widget.week_start == "Monday"
         assert calendar_widget.cal.getfirstweekday() == 0
         
+        calendar_widget.set_week_start("Saturday")
+        assert calendar_widget.week_start == "Saturday"
+        assert calendar_widget.cal.getfirstweekday() == 5
+        
     def test_set_show_week_numbers(self, calendar_widget):
         """Test toggling week numbers."""
         calendar_widget.set_show_week_numbers(True)
@@ -113,6 +123,13 @@ class TestCalendar:
         day_names = cal._get_day_names()
         assert day_names[0] == lang.get("Monday")
         assert day_names[6] == lang.get("Sunday")
+        
+    def test_get_day_names_saturday_start(self, root):
+        """Test day names with Saturday start."""
+        cal = Calendar(root, year=2024, month=1, week_start="Saturday")
+        day_names = cal._get_day_names()
+        assert day_names[0] == lang.get("Saturday")
+        assert day_names[6] == lang.get("Friday")
         
     def test_get_month_name(self, root):
         """Test month name localization."""
@@ -536,6 +553,9 @@ class TestDateEntry:
         de = DateEntry(root, week_start="Monday")
         assert de.calendar_config['week_start'] == "Monday"
         
+        de = DateEntry(root, week_start="Saturday")
+        assert de.calendar_config['week_start'] == "Saturday"
+        
     def test_dateentry_with_show_week_numbers(self, root):
         """Test DateEntry with week numbers setting."""
         de = DateEntry(root, show_week_numbers=True)
@@ -612,6 +632,9 @@ class TestDateEntry:
         """Test setting week start."""
         dateentry_widget.set_week_start("Monday")
         assert dateentry_widget.calendar_config['week_start'] == "Monday"
+        
+        dateentry_widget.set_week_start("Saturday")
+        assert dateentry_widget.calendar_config['week_start'] == "Saturday"
         
     def test_set_show_week_numbers(self, dateentry_widget):
         """Test setting week numbers display."""
