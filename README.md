@@ -92,13 +92,13 @@ color = tkface.simpledialog.askfromlistbox("Choose a color:", choices=["Red", "G
 colors = tkface.simpledialog.askfromlistbox("Choose colors:", choices=["Red", "Green", "Blue"], multiple=True)
 ```
 
-### Calendar Widget
+### DatePicker Widgets
 
 #### Screenshots
 
 | Widget Type | Windows | macOS |
 |-------------|---------|-------|
-| **DateEntry** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_calendar_dateentry_windows.png" width="200px" alt="DateEntry Widget"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_calendar_dateentry_mac.png" width="200px" alt="DateEntry Widget"> |
+| **DateFrame** | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_calendar_dateframe_windows.png" width="200px" alt="DateFrame Widget"> | <img src="https://raw.githubusercontent.com/mashu3/tkface/main/examples/images/tkface_calendar_dateframe_mac.png" width="200px" alt="DateFrame Widget"> |
 
 #### Usage Examples
 
