@@ -11,10 +11,10 @@ from .win.dpi import enable_dpi_geometry as dpi
 
 # Export Calendar and DateEntry for backward compatibility
 from .widget.calendar import Calendar
-from .dialog.dateentry import DateEntry
+from .widget.datepicker import DateFrame, DateEntry
 
 # Export messagebox and simpledialog for backward compatibility
 from .dialog import messagebox, simpledialog
 
-__version__ = "0.0.6"
-__all__ = ["lang", "win", "widget", "dialog", "Button", "dpi", "Calendar", "DateEntry", "messagebox", "simpledialog"] 
+__version__ = "0.0.7"
+__all__ = ["lang", "win", "widget", "dialog", "Button", "dpi", "Calendar", "DateFrame", "DateEntry", "messagebox", "simpledialog"] 

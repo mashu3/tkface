@@ -1,12 +1,13 @@
-import tkinter as tk
+import sys
 import datetime
-from typing import Dict, Optional, Any
-from ..widget.calendar import Calendar, get_calendar_theme, get_calendar_themes
-from .. import lang
+import tkinter as tk
+from tkinter import ttk
+from typing import Dict, Optional
+from ..widget.calendar import Calendar, get_calendar_theme
 
 
-class DateEntry(tk.Frame):
-    """A DateEntry widget that shows a popup calendar."""
+class _DatePickerBase:
+    """Base class for date picker widgets with common functionality."""
     
     def __init__(self, parent, date_format: str = "%Y-%m-%d", 
                  year: Optional[int] = None, month: Optional[int] = None,
@@ -16,23 +17,14 @@ class DateEntry(tk.Frame):
                  selectmode: str = "single", theme: str = "light", 
                  language: str = "en", today_color: str = "yellow", 
                  date_callback: Optional[callable] = None, **kwargs):
-        super().__init__(parent)
         
         # Get platform information once
-        import sys
         self.platform = sys.platform
         
         self.date_format = date_format
-        self.selected_date = None  # Store selected date locally
+        self.selected_date = None
         self.popup = None
         self.date_callback = date_callback
-        
-        # Create entry and button
-        self.entry = tk.Entry(self, state='readonly', width=15)
-        self.entry.pack(side='left', fill='x', expand=True)
-        
-        self.button = tk.Button(self, text="📅", command=self.show_calendar)
-        self.button.pack(side='right')
         
         # Calendar will be created when popup is shown
         self.calendar = None
@@ -50,35 +42,28 @@ class DateEntry(tk.Frame):
             'date_format': date_format
         }
         
-        # Set language if specified
-        if language != "en":
-            import tkface
-            tkface.lang.set(language, parent)
-        
         # Set today color if specified
         self.today_color = None
         if today_color != "yellow":
             self.set_today_color(today_color)
         
-        # Calendar selection will be bound when created
-        
     def _on_date_selected(self, date):
         """Handle date selection from calendar."""
         if date:
-            self.selected_date = date  # Update local selected_date
-            self.entry.config(state='normal')
-            self.entry.delete(0, tk.END)
-            self.entry.insert(0, date.strftime(self.date_format))
-            self.entry.config(state='readonly')
+            self.selected_date = date
+            self._update_entry_text(date.strftime(self.date_format))
             self.hide_calendar()
             
             # Call the callback if provided
             if self.date_callback:
                 self.date_callback(date)
+                
+    def _update_entry_text(self, text: str):
+        """Update the entry text (to be implemented by subclasses)."""
+        raise NotImplementedError
         
     def _on_popup_click(self, event):
-        """Handle click events in the popup to detect clicks outside the calendar (unified macOS logic for all platforms)."""
-        # Handle case where event.widget might be a string
+        """Handle click events in the popup to detect clicks outside the calendar."""
         if isinstance(event.widget, str):
             self.hide_calendar()
             return "break"
@@ -87,31 +72,23 @@ class DateEntry(tk.Frame):
             self.hide_calendar()
         else:
             self.calendar.focus_set()
-        # Stop event propagation
         return "break"
         
     def _bind_calendar_events(self, widget):
         """Bind events to all child widgets of the calendar."""
         try:
-            # Only bind events to prevent propagation outside calendar
-            # Don't block Button-1 events that are needed for date selection
             widget.bind('<ButtonRelease-1>', lambda e: 'break')
             
-            # Recursively bind events to child widgets
             for child in widget.winfo_children():
                 self._bind_calendar_events(child)
         except Exception as e:
             pass
             
     def _setup_click_outside_handling(self):
-        """Setup click outside handling (unified macOS logic for all platforms)."""
-        # Use FocusOut event (same as tkcalendar)
+        """Setup click outside handling."""
         self.calendar.bind('<FocusOut>', self._on_focus_out)
-        # Add mouse click events
         self.popup.bind('<Button-1>', self._on_popup_click)
-        # Also bind mouse release events
         self.popup.bind('<ButtonRelease-1>', self._on_popup_click)
-        # Also bind click events to main window
         self.winfo_toplevel().bind('<Button-1>', self._on_main_window_click)
             
     def _is_child_of_popup(self, widget):
@@ -124,40 +101,27 @@ class DateEntry(tk.Frame):
         return False
         
     def _setup_focus(self):
-        """Setup focus for the popup (unified macOS logic for all platforms)."""
-        # Do not use grab_set, only manage focus
+        """Setup focus for the popup."""
         try:
-            # Bring popup to front
             self.popup.lift()
-            # Set focus to calendar
             self.calendar.focus_set()
-            # Set focus again after a short delay
             self.popup.after(50, lambda: self.calendar.focus_set())
-            # Force focus after a longer delay
             self.popup.after(100, lambda: self.calendar.focus_force())
         except Exception as e:
             pass
                 
     def _on_focus_out(self, event):
-        """Handle focus out events (unified macOS logic for all platforms)."""
-        # Use same approach as tkcalendar
-        # Get the widget that received focus
+        """Handle focus out events."""
         focus_widget = self.focus_get()
-        
-        # Check grab_current() status
-        grab_widget = self.popup.grab_current()
         
         if focus_widget is not None:
             if focus_widget == self:
-                # If focus returned to DateEntry itself
                 x, y = event.x, event.y
                 if (type(x) != int or type(y) != int):
                     self.hide_calendar()
             else:
-                # If focus moved to another widget
                 self.hide_calendar()
         else:
-            # No focus (common state)
             try:
                 x, y = self.popup.winfo_pointerxy()
                 xc = self.popup.winfo_rootx()
@@ -166,21 +130,16 @@ class DateEntry(tk.Frame):
                 h = self.popup.winfo_height()
                 
                 if xc <= x <= xc + w and yc <= y <= yc + h:
-                    # If mouse is inside popup, return focus to calendar
                     self.calendar.focus_force()
                 else:
-                    # If mouse is outside popup, close calendar
                     self.hide_calendar()
             except Exception as e:
-                # Close calendar even if error occurs
                 self.hide_calendar()
                 
-        # Stop event propagation
         return "break"
         
     def _is_child_of_calendar(self, widget, calendar_widget):
         """Check if widget is a child of calendar widget."""
-        # Handle case where widget might be a string
         if isinstance(widget, str):
             return False
             
@@ -192,29 +151,23 @@ class DateEntry(tk.Frame):
         return False
         
     def _on_main_window_click(self, event):
-        """Handle click events on the main window (unified macOS logic for all platforms)."""
-        # Handle case where event.widget might be a string
+        """Handle click events on the main window."""
         if isinstance(event.widget, str):
             return "break"
             
-        # Only process if popup exists
         if self.popup and self.popup.winfo_exists():
-            # Check if click position is outside popup
             popup_x = self.popup.winfo_rootx()
             popup_y = self.popup.winfo_rooty()
             popup_w = self.popup.winfo_width()
             popup_h = self.popup.winfo_height()
             
-            # Convert main window click coordinates to root coordinates
             root_x = self.winfo_toplevel().winfo_rootx() + event.x
             root_y = self.winfo_toplevel().winfo_rooty() + event.y
             
-            # If click is outside popup, close calendar
             if (root_x < popup_x or root_x > popup_x + popup_w or 
                 root_y < popup_y or root_y > popup_y + popup_h):
                 self.hide_calendar()
                 
-        # Stop event propagation
         return "break"
             
     def _on_calendar_month_selected(self, year, month):
@@ -233,30 +186,23 @@ class DateEntry(tk.Frame):
         if hasattr(self, 'year_view_window') and self.year_view_window:
             return
             
-        # Hide the popup calendar instead of destroying it
         if self.popup:
             self.popup.withdraw()
             
-        # Create year view window as a child of DateEntry (same as popup)
         self.year_view_window = tk.Toplevel(self)
         self.year_view_window.withdraw()
         
-        # Get theme colors from calendar config
         theme = self.calendar_config.get('theme', 'light')
         try:
             theme_colors = get_calendar_theme(theme)
         except ValueError:
             theme_colors = get_calendar_theme('light')
         
-        # Make it look like part of the calendar
-        self.year_view_window.overrideredirect(True)  # Remove title bar and borders
+        self.year_view_window.overrideredirect(True)
         self.year_view_window.resizable(False, False)
         self.year_view_window.configure(bg=theme_colors['background'])
-        
-        # Make year view window modal (same as popup)
         self.year_view_window.transient(self.winfo_toplevel())
         
-        # Position it over the current popup
         if self.popup:
             popup_x = self.popup.winfo_rootx()
             popup_y = self.popup.winfo_rooty()
@@ -265,23 +211,18 @@ class DateEntry(tk.Frame):
             
             self.year_view_window.geometry(f"{popup_width}x{popup_height}+{popup_x}+{popup_y}")
         else:
-            # Fallback position and size
             self.year_view_window.geometry("223x161+135+194")
             
-        # Create year view calendar with year view mode enabled
         year_view_config = self.calendar_config.copy()
-        year_view_config['year_view_mode'] = True  # Enable year view mode
-        self.year_view_calendar = Calendar(self.year_view_window, **year_view_config, date_callback=self._on_year_view_month_selected)
+        year_view_config['year_view_mode'] = True
+        self.year_view_calendar = Calendar(self.year_view_window, **year_view_config, 
+                                         date_callback=self._on_year_view_month_selected)
         
-        # Pack the year view calendar to fill the window
         self.year_view_calendar.pack(fill='both', expand=True)
         
-        # Show the year view window
         self.year_view_window.deiconify()
         self.year_view_window.lift()
         self.year_view_window.focus_force()
-        
-        # Force update to ensure window is visible and on top
         self.year_view_window.update()
         self.year_view_window.lift()
             
@@ -295,29 +236,23 @@ class DateEntry(tk.Frame):
     def _update_year_view_position(self):
         """Update the year view window position relative to the DateEntry widget."""
         if self.year_view_window:
-            # Get DateEntry widget position
             entry_x = self.winfo_rootx()
             entry_y = self.winfo_rooty() + self.winfo_height()
             entry_width = self.winfo_width()
             entry_height = self.winfo_height()
             
-            # Use the same size as the popup would have
-            popup_width = 237  # Default popup width
-            popup_height = 175  # Default popup height
+            popup_width = 237
+            popup_height = 175
             
             self.year_view_window.geometry(f"{popup_width}x{popup_height}+{entry_x}+{entry_y}")
             
     def _on_parent_configure(self, event):
-        """Handle parent window configuration changes (movement, resize, etc.)."""
-        
-        # Check if year view is active
+        """Handle parent window configuration changes."""
         year_view_active = hasattr(self, 'year_view_window') and self.year_view_window and self.year_view_window.winfo_exists()
         
-        # Update popup position if it exists and is visible, and year view is not active
         if self.popup and self.popup.winfo_exists() and not year_view_active:
             self._update_popup_position()
             
-        # Update year view position if it exists and is visible
         if year_view_active:
             self._update_year_view_position()
             
@@ -331,13 +266,8 @@ class DateEntry(tk.Frame):
     def _bind_parent_movement_events(self):
         """Bind events to monitor parent window movement."""
         if self.popup or (hasattr(self, 'year_view_window') and self.year_view_window):
-            # Get the main window (toplevel)
             main_window = self.winfo_toplevel()
-            
-            # Bind window movement events
             main_window.bind('<Configure>', self._on_parent_configure)
-            
-            # Store the binding for cleanup
             self._parent_configure_binding = main_window.bind('<Configure>', self._on_parent_configure)
             
     def _unbind_parent_movement_events(self):
@@ -362,72 +292,49 @@ class DateEntry(tk.Frame):
         if self.popup:
             return
             
-        # Create popup window
         self.popup = tk.Toplevel(self)
-        
-        # Hide window before setting properties
         self.popup.withdraw()
-        
-        # Use overrideredirect for all environments
-        self.popup.overrideredirect(True)  # Remove title bar and borders
+        self.popup.overrideredirect(True)
         self.popup.resizable(False, False)
         
-        # Set popup background color to match calendar theme
         if hasattr(self, 'calendar_config') and 'theme' in self.calendar_config:
             theme = self.calendar_config['theme']
             try:
                 theme_colors = get_calendar_theme(theme)
                 self.popup.configure(bg=theme_colors['background'])
             except ValueError:
-                # Use light theme as fallback
                 theme_colors = get_calendar_theme('light')
                 self.popup.configure(bg=theme_colors['background'])
         
-        # Make popup modal (unified macOS logic for all platforms)
         self.popup.transient(self.winfo_toplevel())
-        
-        # Use macOS focus management for all platforms
         self.popup.after(100, self._setup_focus)
         
-        # Create calendar in popup
-        self.calendar = Calendar(self.popup, **self.calendar_config, date_callback=self._on_calendar_month_selected, year_view_callback=self._on_calendar_year_view_request)
+        self.calendar = Calendar(self.popup, **self.calendar_config, 
+                               date_callback=self._on_calendar_month_selected, 
+                               year_view_callback=self._on_calendar_year_view_request)
         self.calendar.bind_date_selected(self._on_date_selected)
         
-        # Bind events to all child widgets in calendar (unified for all platforms)
         self._bind_calendar_events(self.calendar)
         
-        # Set today color if specified
         if self.today_color:
             self.calendar.set_today_color(self.today_color)
         
         self.calendar.pack(expand=True, fill='both', padx=2, pady=2)
         
-        # Update popup to calculate proper size
         self.popup.update_idletasks()
-        
-        # Position popup near the entry
         self._update_popup_position()
         
-        # Show window
         self.popup.deiconify()
         self.popup.lift()
         
-        # Bind popup close events
         self.popup.bind('<Escape>', lambda e: self.hide_calendar())
-        
-        # Enable close-on-click-outside feature
         self._setup_click_outside_handling()
-        
-        # Bind parent window movement events to update popup position
         self._bind_parent_movement_events()
-        
-        # Focus popup
         self.popup.focus_set()
         
     def hide_calendar(self):
         """Hide the popup calendar."""
         if self.popup:
-            # Unbind parent window movement events
             self._unbind_parent_movement_events()
             self.popup.destroy()
             self.popup = None
@@ -442,10 +349,7 @@ class DateEntry(tk.Frame):
         self.selected_date = date
         if self.calendar:
             self.calendar.set_selected_date(date)
-        self.entry.config(state='normal')
-        self.entry.delete(0, tk.END)
-        self.entry.insert(0, date.strftime(self.date_format))
-        self.entry.config(state='readonly')
+        self._update_entry_text(date.strftime(self.date_format))
         
     def get_date_string(self) -> str:
         """Get the selected date as a string."""
@@ -486,3 +390,122 @@ class DateEntry(tk.Frame):
     def set_show_week_numbers(self, show: bool):
         """Set whether to show week numbers."""
         self._update_config_and_delegate('show_week_numbers', show, 'set_show_week_numbers')
+
+
+class DateFrame(tk.Frame, _DatePickerBase):
+    """A DateFrame widget that shows a popup calendar with custom button."""
+    
+    def __init__(self, parent, date_format: str = "%Y-%m-%d", 
+                 year: Optional[int] = None, month: Optional[int] = None,
+                 show_week_numbers: bool = False, week_start: str = "Sunday",
+                 day_colors: Optional[Dict[str, str]] = None,
+                 holidays: Optional[Dict[str, str]] = None,
+                 selectmode: str = "single", theme: str = "light", 
+                 language: str = "en", today_color: str = "yellow", 
+                 date_callback: Optional[callable] = None, button_text: str = "📅", **kwargs):
+        tk.Frame.__init__(self, parent)
+        _DatePickerBase.__init__(self, parent, date_format, year, month, show_week_numbers,
+                                week_start, day_colors, holidays, selectmode, theme, 
+                                language, today_color, date_callback, **kwargs)
+        
+        # Create entry and button
+        self.entry = tk.Entry(self, state='readonly', width=15)
+        self.entry.pack(side='left', fill='x', expand=True)
+        
+        self.button = tk.Button(self, text=button_text, command=self.show_calendar)
+        self.button.pack(side='right')
+        
+    def _update_entry_text(self, text: str):
+        """Update the entry text."""
+        self.entry.config(state='normal')
+        self.entry.delete(0, tk.END)
+        self.entry.insert(0, text)
+        self.entry.config(state='readonly')
+        
+    def set_button_text(self, text: str):
+        """Set the button text."""
+        self.button.config(text=text)
+
+
+class DateEntry(ttk.Entry, _DatePickerBase):
+    """A DateEntry widget that looks like a Combobox with drop-down calendar."""
+    
+    def __init__(self, parent, date_format: str = "%Y-%m-%d", 
+                 year: Optional[int] = None, month: Optional[int] = None,
+                 show_week_numbers: bool = False, week_start: str = "Sunday",
+                 day_colors: Optional[Dict[str, str]] = None,
+                 holidays: Optional[Dict[str, str]] = None,
+                 selectmode: str = "single", theme: str = "light", 
+                 language: str = "en", today_color: str = "yellow", 
+                 date_callback: Optional[callable] = None, button_text: str = None, **kwargs):
+        
+        # Remove button_text from kwargs as it's not supported for DateEntry
+        if 'button_text' in kwargs:
+            del kwargs['button_text']
+        
+        # Setup style to look like a combobox
+        self.style = ttk.Style(parent)
+        self._setup_style()
+        
+        # Initialize ttk.Entry with combobox-like style
+        ttk.Entry.__init__(self, parent, style='DateEntryCombobox', **kwargs)
+        _DatePickerBase.__init__(self, parent, date_format, year, month, show_week_numbers,
+                                week_start, day_colors, holidays, selectmode, theme, 
+                                language, today_color, date_callback, **kwargs)
+        
+        # Set readonly state
+        self.configure(state='readonly')
+        
+        # Bind events for combobox-like behavior
+        self.bind('<Button-1>', self._on_click)
+        self.bind('<Key>', self._on_key)
+        
+        # Determine downarrow button name
+        self._determine_downarrow_name_after_id = None
+        self.bind('<Configure>', self._determine_downarrow_name)
+        self.bind('<Map>', self._determine_downarrow_name)
+        
+    def _setup_style(self):
+        """Setup style to make DateEntry look like a Combobox."""
+        self.style.layout('DateEntryCombobox', self.style.layout('TCombobox'))
+        
+        conf = self.style.configure('TCombobox')
+        if conf:
+            self.style.configure('DateEntryCombobox', **conf)
+        
+        maps = self.style.map('TCombobox')
+        if maps:
+            self.style.map('DateEntryCombobox', **maps)
+            
+    def _determine_downarrow_name(self, event=None):
+        """Determine the name of the downarrow button."""
+        if self._determine_downarrow_name_after_id:
+            self.after_cancel(self._determine_downarrow_name_after_id)
+            
+        if self.winfo_ismapped():
+            self.update_idletasks()
+            y = self.winfo_height() // 2
+            x = self.winfo_width() - 10
+            name = self.identify(x, y)
+            if name:
+                self._downarrow_name = name
+            else:
+                self._determine_downarrow_name_after_id = self.after(10, self._determine_downarrow_name)
+                
+    def _on_click(self, event):
+        """Handle click events."""
+        x, y = event.x, event.y
+        if hasattr(self, '_downarrow_name') and self.identify(x, y) == self._downarrow_name:
+            self.show_calendar()
+            
+    def _on_key(self, event):
+        """Handle key events."""
+        if event.keysym in ('Down', 'space'):
+            self.show_calendar()
+            
+    def _update_entry_text(self, text: str):
+        """Update the entry text."""
+        self.configure(state='normal')
+        self.delete(0, tk.END)
+        self.insert(0, text)
+        self.configure(state='readonly')

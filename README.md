@@ -102,6 +102,8 @@ colors = tkface.simpledialog.askfromlistbox("Choose colors:", choices=["Red", "G
 
 #### Usage Examples
 
+**Initial Date Behavior**: When no `year` and `month` parameters are specified, both `DateEntry` and `DateFrame` automatically use the current date as the initial value. You can also explicitly set the initial date using the `year` and `month` parameters.
+
 ```python
 import tkinter as tk
 import tkface
@@ -109,15 +111,17 @@ import tkface
 root = tk.Tk()
 root.title("DateEntry Demo")
 
-# Basic DateEntry
-date_entry = tkface.DateEntry(root, year=2025, month=8)
+# Basic DateEntry (uses current date by default)
+date_entry = tkface.DateEntry(root)
 date_entry.pack(padx=10, pady=10)
+
+# DateFrame with custom button text
+date_frame = tkface.DateFrame(root, button_text="📅")
+date_frame.pack(padx=10, pady=10)
 
 # Advanced DateEntry with features
 date_entry = tkface.DateEntry(
     root,
-    year=2025,
-    month=8,
     show_week_numbers=True,      # Show week numbers
     week_start="Monday",         # Start week on Monday
     day_colors={                 # Color weekends
@@ -131,6 +135,14 @@ date_entry = tkface.DateEntry(
     theme="light",               # Light theme
     language="ja"                # Japanese language
 )
+
+# DateEntry with specific initial date
+date_entry_with_date = tkface.DateEntry(
+    root,
+    year=2025,                   # Set initial year
+    month=8,                     # Set initial month
+    date_format="%Y年%m月%d日"    # Japanese date format
+)
 date_entry.pack(padx=10, pady=10)
 
 # Get selected date
@@ -139,6 +151,22 @@ print(f"Selected date: {selected_date}")
 
 root.mainloop()
 ```
+
+#### Key Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `year` | `int` | `None` (current year) | Initial year to display |
+| `month` | `int` | `None` (current month) | Initial month to display |
+| `date_format` | `str` | `"%Y-%m-%d"` | Date format string |
+| `button_text` | `str` | `"📅"` | Button text (DateFrame only) |
+| `theme` | `str` | `"light"` | Theme: "light" or "dark" |
+| `language` | `str` | `"en"` | Language: "en" or "ja" |
+
+#### DateFrame vs DateEntry
+
+- **DateFrame**: Customizable button text, more flexible layout
+- **DateEntry**: Combobox-style appearance, standard system look
 
 ### Windows-Specific Features
 

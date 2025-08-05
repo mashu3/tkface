@@ -6,7 +6,7 @@ import datetime
 class DateEntryDemo:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("tkface.calendar DateEntry Demo")
+        self.root.title("tkface.calendar DatePicker Demo")
         
         # Enable DPI-aware geometry (automatically adjusts window size)
         tkface.win.dpi(self.root)
@@ -38,10 +38,16 @@ class DateEntryDemo:
         # Initialize week start variable
         self.week_start_var = tk.StringVar(value="Sunday")
         
+        # Initialize button text variable
+        self.button_text_var = tk.StringVar(value="📅")
+        
+        # Initialize DateEntry type variable
+        self.dateentry_type_var = tk.StringVar(value="DateFrame")
+        
         self.create_widgets()
         
     def create_widgets(self):
-        """Create the DateEntry demo interface."""
+        """Create the DatePicker demo interface."""
         # Initialize year and month variables
         current_date = datetime.date.today()
         self.year_var = tk.IntVar(value=current_date.year)
@@ -58,7 +64,7 @@ class DateEntryDemo:
         main_frame.pack(expand=True, fill='both', padx=10, pady=10)
         
         # Title
-        title = tk.Label(main_frame, text="tkface.calendar DateEntry Demo", 
+        title = tk.Label(main_frame, text="tkface.calendar DatePicker Demo", 
                         font=('TkDefaultFont', 16, 'bold'))
         title.pack(pady=(0, 20))
         
@@ -70,19 +76,36 @@ class DateEntryDemo:
         entry_row = tk.Frame(date_frame)
         entry_row.pack(fill='x', pady=(0, 10))
         
-        tk.Label(entry_row, text="Sample Date Entry:").pack(side='left')
-        self.dateentry = tkface.DateEntry(
-            entry_row, 
-            date_format=self.date_formats[self.format_var.get()],
-            day_colors=self.weekend_colors,
-            holidays={},
-            theme="light",
-            language=self.lang_var.get(),
-            today_color=self.today_color_var.get(),
-            year=self.year_var.get(),
-            month=self.month_var.get(),
-            week_start=self.week_start_var.get()
-        )
+        tk.Label(entry_row, text="Sample Date Picker:").pack(side='left')
+        
+        # Create DatePicker based on type
+        if self.dateentry_type_var.get() == "DateFrame":
+            self.dateentry = tkface.DateFrame(
+                entry_row, 
+                date_format=self.date_formats[self.format_var.get()],
+                day_colors=self.weekend_colors,
+                holidays={},
+                theme="light",
+                language=self.lang_var.get(),
+                today_color=self.today_color_var.get(),
+                year=self.year_var.get(),
+                month=self.month_var.get(),
+                week_start=self.week_start_var.get(),
+                button_text=self.button_text_var.get()
+            )
+        else:  # DateEntry
+            self.dateentry = tkface.DateEntry(
+                entry_row, 
+                date_format=self.date_formats[self.format_var.get()],
+                day_colors=self.weekend_colors,
+                holidays={},
+                theme="light",
+                language=self.lang_var.get(),
+                today_color=self.today_color_var.get(),
+                year=self.year_var.get(),
+                month=self.month_var.get(),
+                week_start=self.week_start_var.get()
+            )
         self.dateentry.pack(side='left', padx=(5, 10))
         
         # Set initial date to current date
@@ -95,6 +118,13 @@ class DateEntryDemo:
         # Configuration controls - Row 1
         config_row1 = tk.Frame(config_frame)
         config_row1.pack(fill='x', pady=(0, 10))
+        
+        # DatePicker type selection
+        tk.Label(config_row1, text="DatePicker Type:").pack(side='left')
+        type_combo = ttk.Combobox(config_row1, textvariable=self.dateentry_type_var, 
+                                values=["DateFrame", "DateEntry"], state="readonly", width=10)
+        type_combo.pack(side='left', padx=(5, 20))
+        type_combo.bind('<<ComboboxSelected>>', lambda e: self.change_dateentry_type())
         
         # Date format selection
         tk.Label(config_row1, text="Date Format:").pack(side='left')
@@ -170,6 +200,15 @@ class DateEntryDemo:
                                   command=self.toggle_week_numbers)
         week_check.pack(side='left')
         
+        # Button text entry (only for DateFrame type)
+        tk.Label(config_row4, text="Button Text:").pack(side='left', padx=(20, 5))
+        self.button_text_entry = tk.Entry(config_row4, textvariable=self.button_text_var, width=8)
+        self.button_text_entry.pack(side='left', padx=(0, 5))
+        self.button_text_entry.bind('<KeyRelease>', lambda e: self.change_button_text())
+        
+        # Update button text entry state based on type
+        self._update_button_text_state()
+        
         # Configuration controls - Row 5 (Calendar Initial Date)
         config_row5 = tk.Frame(config_frame)
         config_row5.pack(fill='x', pady=(0, 5))
@@ -182,6 +221,7 @@ class DateEntryDemo:
             theme=self.theme_var.get(),
             language=self.lang_var.get(),
             week_start=self.week_start_var.get(),
+            button_text="📅",
             date_callback=self._on_initial_date_selected
         )
         self.initial_dateentry.pack(side='left', padx=(5, 20))
@@ -251,20 +291,36 @@ class DateEntryDemo:
         # Destroy old DateEntry
         self.dateentry.destroy()
         
-        # Create new DateEntry with updated year and month
-        self.dateentry = tkface.DateEntry(
-            parent, 
-            date_format=self.date_formats[self.format_var.get()],
-            day_colors=self.weekend_colors,
-            holidays={},
-            theme=self.theme_var.get(),
-            language=self.lang_var.get(),
-            today_color=self.today_color_var.get(),
-            year=self.year_var.get(),
-            month=self.month_var.get(),
-            show_week_numbers=self.show_week_var.get(),
-            week_start=self.week_start_var.get()
-        )
+        # Create new DatePicker with updated year and month
+        if self.dateentry_type_var.get() == "DateFrame":
+            self.dateentry = tkface.DateFrame(
+                parent, 
+                date_format=self.date_formats[self.format_var.get()],
+                day_colors=self.weekend_colors,
+                holidays={},
+                theme=self.theme_var.get(),
+                language=self.lang_var.get(),
+                today_color=self.today_color_var.get(),
+                year=self.year_var.get(),
+                month=self.month_var.get(),
+                show_week_numbers=self.show_week_var.get(),
+                week_start=self.week_start_var.get(),
+                button_text=self.button_text_var.get()
+            )
+        else:  # DateEntry
+            self.dateentry = tkface.DateEntry(
+                parent, 
+                date_format=self.date_formats[self.format_var.get()],
+                day_colors=self.weekend_colors,
+                holidays={},
+                theme=self.theme_var.get(),
+                language=self.lang_var.get(),
+                today_color=self.today_color_var.get(),
+                year=self.year_var.get(),
+                month=self.month_var.get(),
+                show_week_numbers=self.show_week_var.get(),
+                week_start=self.week_start_var.get()
+            )
         
         # Set the selected date from initial dateentry
         if initial_selected_date:
@@ -287,21 +343,37 @@ class DateEntryDemo:
         # Destroy old DateEntry
         self.dateentry.destroy()
         
-        # Create new DateEntry
+        # Create new DatePicker
         new_format = self.date_formats[self.format_var.get()]
-        self.dateentry = tkface.DateEntry(
-            parent, 
-            date_format=new_format,
-            day_colors=self.weekend_colors,
-            holidays={},
-            theme=self.theme_var.get(),
-            language=self.lang_var.get(),
-            today_color=self.today_color_var.get(),
-            year=self.year_var.get(),
-            month=self.month_var.get(),
-            show_week_numbers=self.show_week_var.get(),
-            week_start=self.week_start_var.get()
-        )
+        if self.dateentry_type_var.get() == "DateFrame":
+            self.dateentry = tkface.DateFrame(
+                parent, 
+                date_format=new_format,
+                day_colors=self.weekend_colors,
+                holidays={},
+                theme=self.theme_var.get(),
+                language=self.lang_var.get(),
+                today_color=self.today_color_var.get(),
+                year=self.year_var.get(),
+                month=self.month_var.get(),
+                show_week_numbers=self.show_week_var.get(),
+                week_start=self.week_start_var.get(),
+                button_text=self.button_text_var.get()
+            )
+        else:  # DateEntry
+            self.dateentry = tkface.DateEntry(
+                parent, 
+                date_format=new_format,
+                day_colors=self.weekend_colors,
+                holidays={},
+                theme=self.theme_var.get(),
+                language=self.lang_var.get(),
+                today_color=self.today_color_var.get(),
+                year=self.year_var.get(),
+                month=self.month_var.get(),
+                show_week_numbers=self.show_week_var.get(),
+                week_start=self.week_start_var.get()
+            )
         
         # Set the selected date if it exists
         if current_selected_date:
@@ -366,16 +438,46 @@ class DateEntryDemo:
         show_week = self.show_week_var.get()
         self.dateentry.set_show_week_numbers(show_week)
         self.generate_code()
+        
+    def change_button_text(self):
+        """Change the button text."""
+        if self.dateentry_type_var.get() == "DateFrame":
+            button_text = self.button_text_var.get()
+            self.dateentry.set_button_text(button_text)
+        self.generate_code()
+        
+    def change_dateentry_type(self):
+        """Change the DatePicker type."""
+        # Store current selected date
+        current_selected_date = self.dateentry.get_date() if hasattr(self, 'dateentry') else None
+        
+        # Recreate DateEntry with new type
+        self.update_dateentry()
+        
+        # Restore selected date
+        if current_selected_date:
+            self.dateentry.set_selected_date(current_selected_date)
+            
+        # Update button text entry state
+        self._update_button_text_state()
+        
+    def _update_button_text_state(self):
+        """Update button text entry state based on DatePicker type."""
+        if self.dateentry_type_var.get() == "DateFrame":
+            self.button_text_entry.config(state='normal')
+        else:  # DateEntry
+            self.button_text_entry.config(state='disabled')
             
     def generate_code(self):
-        """Generate Python code for the current DateEntry configuration."""
+        """Generate Python code for the current DatePicker configuration."""
         # Build the code string
+        dateentry_class = "DateEntry" if self.dateentry_type_var.get() == "DateEntry" else "DateFrame"
         code_lines = [
             "import tkinter as tk",
             "import tkface",
             "",
-            "# Create DateEntry with current settings:",
-            "dateentry = tkface.DateEntry(",
+            f"# Create {dateentry_class} with current settings:",
+            f"dateentry = tkface.{dateentry_class}(",
             f"    parent,  # Replace 'parent' with your parent widget",
             f"    date_format='{self.date_formats[self.format_var.get()]}',",
         ]
@@ -415,6 +517,10 @@ class DateEntryDemo:
         # Add week numbers if enabled
         if self.show_week_var.get():
             code_lines.append("    show_week_numbers=True,")
+            
+        # Add button text if not default (only for DateFrame type)
+        if self.dateentry_type_var.get() == "DateFrame" and self.button_text_var.get() != "📅":
+            code_lines.append(f"    button_text='{self.button_text_var.get()}',")
             
         code_lines.extend([
             ")",

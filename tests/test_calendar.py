@@ -1,11 +1,11 @@
 """
-Tests for tkface Calendar and DateEntry widgets
+Tests for tkface Calendar and DatePicker widgets
 """
 
 import pytest
 import tkinter as tk
 import datetime
-from tkface import Calendar, DateEntry
+from tkface import Calendar, DateFrame, DateEntry
 from tkface import lang
 
 
@@ -492,6 +492,163 @@ class TestCalendar:
         
         assert callback_called
         assert callback_value == datetime.date(2024, 1, 15)
+
+
+class TestDateFrame:
+    """Test cases for DateFrame widget."""
+    
+    @pytest.fixture
+    def dateframe_widget(self, root):
+        """Create a DateFrame widget for testing."""
+        return DateFrame(root)
+        
+    def test_dateframe_creation(self, root):
+        """Test basic DateFrame creation."""
+        df = DateFrame(root)
+        assert df is not None
+        assert hasattr(df, 'entry')
+        assert hasattr(df, 'button')
+        
+    def test_dateframe_with_custom_button_text(self, root):
+        """Test DateFrame with custom button text."""
+        df = DateFrame(root, button_text="📆")
+        assert df.button.cget('text') == "📆"
+        
+    def test_dateframe_set_button_text(self, root):
+        """Test DateFrame set_button_text method."""
+        df = DateFrame(root)
+        df.set_button_text("📅")
+        assert df.button.cget('text') == "📅"
+        
+    def test_dateframe_with_custom_format(self, root):
+        """Test DateFrame with custom date format."""
+        df = DateFrame(root, date_format="%d/%m/%Y")
+        assert df.date_format == "%d/%m/%Y"
+        
+    def test_dateframe_with_specific_date(self, root):
+        """Test DateFrame with specific year and month."""
+        df = DateFrame(root, year=2024, month=3)
+        assert df.calendar_config['year'] == 2024
+        assert df.calendar_config['month'] == 3
+        
+    def test_dateframe_with_theme(self, root):
+        """Test DateFrame with theme setting."""
+        df = DateFrame(root, theme="dark")
+        assert df.calendar_config['theme'] == "dark"
+        
+    def test_dateframe_with_language(self, root):
+        """Test DateFrame with language setting."""
+        df = DateFrame(root, language="ja")
+        # Language is passed to Calendar widget, not stored in calendar_config
+        # Just verify the widget was created successfully
+        assert df is not None
+        
+    def test_dateframe_with_today_color(self, root):
+        """Test DateFrame with today color setting."""
+        df = DateFrame(root, today_color="red")
+        assert df.today_color == "red"
+        
+    def test_dateframe_with_day_colors(self, root):
+        """Test DateFrame with day colors setting."""
+        day_colors = {"Sunday": "red", "Saturday": "blue"}
+        df = DateFrame(root, day_colors=day_colors)
+        assert df.calendar_config['day_colors'] == day_colors
+        
+    def test_dateframe_with_holidays(self, root):
+        """Test DateFrame with holidays setting."""
+        holidays = {"2024-01-01": "red", "2024-01-15": "blue"}
+        df = DateFrame(root, holidays=holidays)
+        assert df.calendar_config['holidays'] == holidays
+        
+    def test_dateframe_with_week_start(self, root):
+        """Test DateFrame with week start setting."""
+        df = DateFrame(root, week_start="Monday")
+        assert df.calendar_config['week_start'] == "Monday"
+        
+        df = DateFrame(root, week_start="Saturday")
+        assert df.calendar_config['week_start'] == "Saturday"
+        
+    def test_dateframe_with_show_week_numbers(self, root):
+        """Test DateFrame with week numbers setting."""
+        df = DateFrame(root, show_week_numbers=True)
+        assert df.calendar_config['show_week_numbers'] is True
+        
+    def test_dateframe_with_selectmode(self, root):
+        """Test DateFrame with select mode setting."""
+        df = DateFrame(root, selectmode="range")
+        assert df.calendar_config['selectmode'] == "range"
+        
+    def test_get_date_none(self, dateframe_widget):
+        """Test get_date returns None when no date is selected."""
+        assert dateframe_widget.get_date() is None
+        
+    def test_get_date_string_none(self, dateframe_widget):
+        """Test get_date_string returns empty string when no date is selected."""
+        assert dateframe_widget.get_date_string() == ""
+        
+    def test_set_date(self, dateframe_widget):
+        """Test setting date."""
+        test_date = datetime.date(2024, 3, 15)
+        dateframe_widget.set_selected_date(test_date)
+        assert dateframe_widget.selected_date == test_date
+        assert dateframe_widget.get_date_string() == "2024-03-15"
+        
+    def test_set_date_with_custom_format(self, root):
+        """Test setting date with custom format."""
+        df = DateFrame(root, date_format="%d/%m/%Y")
+        test_date = datetime.date(2024, 3, 15)
+        df.set_selected_date(test_date)
+        assert df.get_date_string() == "15/03/2024"
+        
+    def test_date_callback(self, root):
+        """Test date callback functionality."""
+        callback_called = False
+        callback_date = None
+        
+        def callback(date):
+            nonlocal callback_called, callback_date
+            callback_called = True
+            callback_date = date
+            
+        df = DateFrame(root, date_callback=callback)
+        test_date = datetime.date(2024, 3, 15)
+        df._on_date_selected(test_date)
+        assert callback_called
+        assert callback_date == test_date
+        
+    def test_refresh_language(self, dateframe_widget):
+        """Test refresh_language method."""
+        # This should not raise an exception
+        dateframe_widget.refresh_language()
+        
+    def test_set_today_color(self, dateframe_widget):
+        """Test set_today_color method."""
+        dateframe_widget.set_today_color("red")
+        assert dateframe_widget.today_color == "red"
+        
+    def test_set_theme(self, dateframe_widget):
+        """Test set_theme method."""
+        dateframe_widget.set_theme("dark")
+        assert dateframe_widget.calendar_config['theme'] == "dark"
+        
+    def test_set_day_colors(self, dateframe_widget):
+        """Test set_day_colors method."""
+        day_colors = {"Friday": "green"}
+        dateframe_widget.set_day_colors(day_colors)
+        assert dateframe_widget.calendar_config['day_colors'] == day_colors
+        
+    def test_set_week_start(self, dateframe_widget):
+        """Test set_week_start method."""
+        dateframe_widget.set_week_start("Monday")
+        assert dateframe_widget.calendar_config['week_start'] == "Monday"
+        
+        dateframe_widget.set_week_start("Saturday")
+        assert dateframe_widget.calendar_config['week_start'] == "Saturday"
+        
+    def test_set_show_week_numbers(self, dateframe_widget):
+        """Test set_show_week_numbers method."""
+        dateframe_widget.set_show_week_numbers(True)
+        assert dateframe_widget.calendar_config['show_week_numbers'] is True
 
 
 class TestDateEntry:

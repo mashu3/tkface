@@ -1,4 +1,4 @@
 # Dialog module for tkface
-from .dateentry import DateEntry
+# DatePicker widgets moved to widget module
 
-__all__ = ["DateEntry"] 
+__all__ = [] 
