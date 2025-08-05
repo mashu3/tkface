@@ -6,6 +6,11 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 from .. import lang
 
+# Default popup dimensions
+DEFAULT_POPUP_WIDTH = 235
+DEFAULT_POPUP_HEIGHT = 175
+WEEK_NUMBERS_WIDTH_OFFSET = 20
+
 
 class Calendar(tk.Frame):
     """
@@ -31,6 +36,8 @@ class Calendar(tk.Frame):
                  show_navigation: bool = True, theme: str = "light",
                  date_callback: Optional[callable] = None,
                  year_view_callback: Optional[callable] = None,
+                 popup_width: Optional[int] = None,
+                 popup_height: Optional[int] = None,
                  **kwargs):
         """
         Initialize the Calendar widget.
@@ -85,6 +92,10 @@ class Calendar(tk.Frame):
         self.show_month_headers = show_month_headers
         self.selectmode = selectmode
         self.show_navigation = show_navigation
+        
+        # Popup size settings
+        self.popup_width = popup_width if popup_width is not None else DEFAULT_POPUP_WIDTH
+        self.popup_height = popup_height if popup_height is not None else DEFAULT_POPUP_HEIGHT
         
         # Selection state
         self.selected_date = None
@@ -917,6 +928,30 @@ class Calendar(tk.Frame):
         """Get the currently selected date range (if any)."""
         return self.selected_range
         
+    def get_popup_geometry(self, parent_widget: tk.Widget) -> str:
+        """
+        Calculate the optimal geometry for popup windows (calendar and year view).
+        
+        Args:
+            parent_widget: The widget to which the popup is anchored.
+        
+        Returns:
+            str: The geometry string for the popup window.
+        """
+        parent_widget.update_idletasks()
+        x = parent_widget.winfo_rootx()
+        y = parent_widget.winfo_rooty() + parent_widget.winfo_height()
+        
+        # Calculate width and height
+        width = self.popup_width
+        if self.show_week_numbers:
+            width += WEEK_NUMBERS_WIDTH_OFFSET
+        width *= self.months
+        
+        height = self.popup_height
+        
+        return f"{width}x{height}+{x}+{y}"
+        
     def bind_date_selected(self, callback):
         """Bind a callback function to date selection events."""
         self.selection_callback = callback
@@ -1082,10 +1117,23 @@ class Calendar(tk.Frame):
 
 
             
-    def set_show_week_numbers(self, show: bool):
-        """Set whether to show week numbers."""
-        self.show_week_numbers = show
-        self._recreate_widgets() 
+    def set_popup_size(self, width: Optional[int] = None, height: Optional[int] = None):
+        """
+        Set the popup size for both calendar and year view.
+        
+        Args:
+            width: Width in pixels (None to use default)
+            height: Height in pixels (None to use default)
+        """
+        if width is not None:
+            self.popup_width = width
+        else:
+            self.popup_width = DEFAULT_POPUP_WIDTH
+            
+        if height is not None:
+            self.popup_height = height
+        else:
+            self.popup_height = DEFAULT_POPUP_HEIGHT
 
 
 # Theme loading functions

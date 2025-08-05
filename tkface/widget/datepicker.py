@@ -57,6 +57,10 @@ class _DatePickerBase:
             # Call the callback if provided
             if self.date_callback:
                 self.date_callback(date)
+            
+            # Reset pressed state for DateEntry
+            if hasattr(self, 'state'):
+                self.state(['!pressed'])
                 
     def _update_entry_text(self, text: str):
         """Update the entry text (to be implemented by subclasses)."""
@@ -116,9 +120,8 @@ class _DatePickerBase:
         
         if focus_widget is not None:
             if focus_widget == self:
-                x, y = event.x, event.y
-                if (type(x) != int or type(y) != int):
-                    self.hide_calendar()
+                # Don't hide calendar when focus is on the DateEntry itself
+                return "break"
             else:
                 self.hide_calendar()
         else:
@@ -203,20 +206,15 @@ class _DatePickerBase:
         self.year_view_window.configure(bg=theme_colors['background'])
         self.year_view_window.transient(self.winfo_toplevel())
         
-        if self.popup:
-            popup_x = self.popup.winfo_rootx()
-            popup_y = self.popup.winfo_rooty()
-            popup_width = self.popup.winfo_width()
-            popup_height = self.popup.winfo_height()
-            
-            self.year_view_window.geometry(f"{popup_width}x{popup_height}+{popup_x}+{popup_y}")
-        else:
-            self.year_view_window.geometry("223x161+135+194")
-            
         year_view_config = self.calendar_config.copy()
         year_view_config['year_view_mode'] = True
         self.year_view_calendar = Calendar(self.year_view_window, **year_view_config, 
                                          date_callback=self._on_year_view_month_selected)
+        
+        # Position the year view using geometry from Calendar
+        self.year_view_window.update_idletasks()
+        year_view_geometry = self.year_view_calendar.get_popup_geometry(self)
+        self.year_view_window.geometry(year_view_geometry)
         
         self.year_view_calendar.pack(fill='both', expand=True)
         
@@ -233,35 +231,19 @@ class _DatePickerBase:
             self.year_view_window = None
             self.year_view_calendar = None
             
-    def _update_year_view_position(self):
-        """Update the year view window position relative to the DateEntry widget."""
-        if self.year_view_window:
-            entry_x = self.winfo_rootx()
-            entry_y = self.winfo_rooty() + self.winfo_height()
-            entry_width = self.winfo_width()
-            entry_height = self.winfo_height()
-            
-            popup_width = 237
-            popup_height = 175
-            
-            self.year_view_window.geometry(f"{popup_width}x{popup_height}+{entry_x}+{entry_y}")
-            
     def _on_parent_configure(self, event):
         """Handle parent window configuration changes."""
         year_view_active = hasattr(self, 'year_view_window') and self.year_view_window and self.year_view_window.winfo_exists()
         
         if self.popup and self.popup.winfo_exists() and not year_view_active:
-            self._update_popup_position()
+            # Recalculate and set geometry
+            popup_geometry = self.calendar.get_popup_geometry(self)
+            self.popup.geometry(popup_geometry)
             
-        if year_view_active:
-            self._update_year_view_position()
-            
-    def _update_popup_position(self):
-        """Update the popup position relative to the entry widget."""
-        if self.popup:
-            x = self.winfo_rootx()
-            y = self.winfo_rooty() + self.winfo_height()
-            self.popup.geometry(f"+{x}+{y}")
+        if year_view_active and hasattr(self, 'year_view_calendar'):
+            # Recalculate and set geometry for year view
+            year_view_geometry = self.year_view_calendar.get_popup_geometry(self)
+            self.year_view_window.geometry(year_view_geometry)
             
     def _bind_parent_movement_events(self):
         """Bind events to monitor parent window movement."""
@@ -321,8 +303,10 @@ class _DatePickerBase:
         
         self.calendar.pack(expand=True, fill='both', padx=2, pady=2)
         
+        # Position the popup using geometry from Calendar
         self.popup.update_idletasks()
-        self._update_popup_position()
+        popup_geometry = self.calendar.get_popup_geometry(self)
+        self.popup.geometry(popup_geometry)
         
         self.popup.deiconify()
         self.popup.lift()
@@ -330,7 +314,7 @@ class _DatePickerBase:
         self.popup.bind('<Escape>', lambda e: self.hide_calendar())
         self._setup_click_outside_handling()
         self._bind_parent_movement_events()
-        self.popup.focus_set()
+        self.calendar.focus_set()
         
     def hide_calendar(self):
         """Hide the popup calendar."""
@@ -339,6 +323,10 @@ class _DatePickerBase:
             self.popup.destroy()
             self.popup = None
             self.calendar = None
+            
+        # Reset pressed state for DateEntry
+        if hasattr(self, 'state'):
+            self.state(['!pressed'])
             
     def get_date(self) -> Optional[datetime.date]:
         """Get the selected date."""
@@ -390,6 +378,10 @@ class _DatePickerBase:
     def set_show_week_numbers(self, show: bool):
         """Set whether to show week numbers."""
         self._update_config_and_delegate('show_week_numbers', show, 'set_show_week_numbers')
+        
+    def set_popup_size(self, width: Optional[int] = None, height: Optional[int] = None):
+        """Set the popup size for both calendar and year view."""
+        self._delegate_to_calendar('set_popup_size', width, height)
 
 
 class DateFrame(tk.Frame, _DatePickerBase):
@@ -457,13 +449,13 @@ class DateEntry(ttk.Entry, _DatePickerBase):
         self.configure(state='readonly')
         
         # Bind events for combobox-like behavior
-        self.bind('<Button-1>', self._on_click)
+        self.bind('<ButtonPress-1>', self._on_b1_press)
         self.bind('<Key>', self._on_key)
         
-        # Determine downarrow button name
-        self._determine_downarrow_name_after_id = None
-        self.bind('<Configure>', self._determine_downarrow_name)
-        self.bind('<Map>', self._determine_downarrow_name)
+
+        
+        # Bind focus out event for calendar
+        self.bind('<FocusOut>', self._on_focus_out_entry)
         
     def _setup_style(self):
         """Setup style to make DateEntry look like a Combobox."""
@@ -477,26 +469,34 @@ class DateEntry(ttk.Entry, _DatePickerBase):
         if maps:
             self.style.map('DateEntryCombobox', **maps)
             
-    def _determine_downarrow_name(self, event=None):
-        """Determine the name of the downarrow button."""
-        if self._determine_downarrow_name_after_id:
-            self.after_cancel(self._determine_downarrow_name_after_id)
-            
-        if self.winfo_ismapped():
-            self.update_idletasks()
-            y = self.winfo_height() // 2
-            x = self.winfo_width() - 10
-            name = self.identify(x, y)
-            if name:
-                self._downarrow_name = name
-            else:
-                self._determine_downarrow_name_after_id = self.after(10, self._determine_downarrow_name)
+
                 
-    def _on_click(self, event):
-        """Handle click events."""
+    def _on_b1_press(self, event):
+        """Handle button press events (like tkcalendar)."""
         x, y = event.x, event.y
-        if hasattr(self, '_downarrow_name') and self.identify(x, y) == self._downarrow_name:
+        width = self.winfo_width()
+        right_area = x > width - 20
+        
+        # Check if click is in the right area (dropdown button area)
+        if right_area:
+            self.state(['pressed'])
+            self.drop_down()
+            return "break"  # Consume the event
+            
+    def drop_down(self):
+        """Display or withdraw the drop-down calendar depending on its current state."""
+        if self.popup and self.popup.winfo_ismapped():
+            self.hide_calendar()
+        else:
             self.show_calendar()
+            
+    def _on_focus_out_entry(self, event):
+        """Handle focus out event for the entry."""
+        # Only hide if focus is not on the calendar
+        if self.popup and self.popup.winfo_ismapped():
+            focused_widget = self.focus_get()
+            if focused_widget != self and not self._is_child_of_calendar(focused_widget, self.calendar):
+                self.hide_calendar()
             
     def _on_key(self, event):
         """Handle key events."""

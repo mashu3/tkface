@@ -134,12 +134,7 @@ class DateEntryDemo:
         format_combo.pack(side='left', padx=(5, 20))
         format_combo.bind('<<ComboboxSelected>>', lambda e: self.update_dateentry())
         
-        # Theme selection
-        tk.Label(config_row1, text="Theme:").pack(side='left')
-        theme_combo = ttk.Combobox(config_row1, textvariable=self.theme_var, 
-                                 values=["light", "dark"], state="readonly", width=8)
-        theme_combo.pack(side='left', padx=(5, 20))
-        theme_combo.bind('<<ComboboxSelected>>', lambda e: self.change_theme())
+
         
         # Configuration controls - Row 2 (Language and Week Start)
         config_row2 = tk.Frame(config_frame)
@@ -151,6 +146,13 @@ class DateEntryDemo:
                                 values=["en", "ja"], state="readonly", width=8)
         lang_combo.pack(side='left', padx=(5, 20))
         lang_combo.bind('<<ComboboxSelected>>', lambda e: self.change_language())
+        
+        # Theme selection
+        tk.Label(config_row2, text="Theme:").pack(side='left')
+        theme_combo = ttk.Combobox(config_row2, textvariable=self.theme_var, 
+                                 values=["light", "dark"], state="readonly", width=8)
+        theme_combo.pack(side='left', padx=(5, 20))
+        theme_combo.bind('<<ComboboxSelected>>', lambda e: self.change_theme())
         
         # Week start selection
         tk.Label(config_row2, text="Week Start:").pack(side='left')
