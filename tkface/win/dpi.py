@@ -676,8 +676,60 @@ def calculate_dpi_sizes(base_sizes, root=None, max_scale=None):
     return _dpi_manager.calculate_dpi_sizes(base_sizes, root=root, max_scale=max_scale)
 
 
-def scale_icon(icon_name, parent, base_size=24, max_scale=None):
-    """Placeholder for icon scaling (returns original icon name)."""
+def scale_icon(icon_name, parent, base_size=24, max_scale=3.0):
+    """
+    Create a scaled version of a Tkinter icon for DPI-aware sizing.
+    
+    Args:
+        icon_name (str): Icon identifier (e.g., "error", "info")
+        parent: Parent widget
+        base_size (int): Base icon size
+        max_scale (float): Maximum scaling factor
+        
+    Returns:
+        str: Scaled icon name or original icon name if scaling fails
+    """
+    if not is_windows():
+        return icon_name
+    
+    try:
+        scaling = get_scaling_factor(parent)
+        if scaling > 1.0:
+            # Map icon names to actual Tkinter icon names
+            icon_mapping = {
+                "error": "::tk::icons::error",
+                "info": "::tk::icons::information",
+                "warning": "::tk::icons::warning",
+                "question": "::tk::icons::question"
+            }
+            
+            # Get the actual Tkinter icon name
+            original_icon = icon_mapping.get(icon_name, f"::tk::icons::{icon_name}")
+            scaled_icon = f"scaled_{icon_name}_large"
+            
+            # Get original icon dimensions
+            original_width = parent.tk.call('image', 'width', original_icon)
+            original_height = parent.tk.call('image', 'height', original_icon)
+            
+            # Calculate new dimensions
+            # Only scale if DPI scaling is significantly higher than 1.0
+            if scaling >= 1.25:  # Only scale for 125% DPI or higher
+                scale_factor = min(scaling, max_scale)  # Cap at max_scale
+            else:
+                scale_factor = 1.0  # No scaling for 100% DPI
+            
+            new_width = int(original_width * scale_factor)
+            new_height = int(original_height * scale_factor)
+            
+            # Create scaled image using Tcl's image scaling
+            parent.tk.call('image', 'create', 'photo', scaled_icon)
+            parent.tk.call(scaled_icon, 'copy', original_icon, 
+                         '-zoom', int(scale_factor), int(scale_factor))
+            
+            return scaled_icon
+    except Exception:
+        pass
+    
     return icon_name
 
 
