@@ -170,6 +170,8 @@ root.mainloop()
 
 ### Windows-Specific Features
 
+Tkface provides Windows-specific enhancements that automatically detect the platform and gracefully degrade on non-Windows systems. These features include DPI awareness, Windows 11 corner rounding control, and system sound integration.
+
 #### DPI Awareness and Scaling
 
 ```python
@@ -198,14 +200,28 @@ import tkinter as tk
 import tkface
 
 root = tk.Tk()
+root.title("Windows Features Demo")
+
+# Enable DPI awareness and automatic scaling
 tkface.win.dpi(root)         # Enable DPI awareness (Windows only)
+
+# Set window geometry
+root.geometry("600x400")
+
+# Create your widgets here
+button = tkface.Button(root, text="Flat Button", command=callback)  # Flat styling on Windows
+button.pack()
+
+# Disable corner rounding (Windows 11 only) - call after all widgets are created
 tkface.win.unround(root)     # Disable corner rounding (Windows 11 only)
+
+# Play Windows system sound (Windows only)
 tkface.win.bell("error")     # Play Windows system sound (Windows only)
 
-# Windows-specific flat button styling
-button = tkface.Button(root, text="Flat Button", command=callback)  # Flat styling on Windows
 root.mainloop()
 ```
+
+**Important**: Call `tkface.win.unround(root)` after creating all widgets but before `mainloop()` to ensure the window is fully initialized.
 
 > **Note**: All Windows-specific features gracefully degrade on non-Windows platforms.
 

@@ -18,10 +18,6 @@ def main():
     # Set window size
     root.geometry("600x520+100+100")
     
-    # Disable corner rounding (Windows 11)
-    if sys.platform.startswith("win"):
-        tkface.win.unround(root)
-    
     # Main container
     main_frame = tk.Frame(root, padx=20, pady=20)
     main_frame.pack(expand=True, fill='both')
@@ -82,6 +78,9 @@ def main():
         feature_label = tk.Label(features_frame, text=f"{feature}: {status}", 
                                 font=('Arial', 10))
         feature_label.pack(anchor='w', pady=2)
+    
+    # Disable corner rounding (Windows 11) - after all widgets are created
+    tkface.win.unround(root)
     
     root.mainloop()
 

@@ -16,5 +16,5 @@ from .widget.datepicker import DateFrame, DateEntry
 # Export messagebox and simpledialog for backward compatibility
 from .dialog import messagebox, simpledialog
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 __all__ = ["lang", "win", "widget", "dialog", "Button", "dpi", "Calendar", "DateFrame", "DateEntry", "messagebox", "simpledialog"] 
