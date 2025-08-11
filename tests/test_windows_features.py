@@ -21,7 +21,10 @@ def test_bell_function_exists():
 def test_dpi_function_no_error():
     """Test that dpi function doesn't raise errors."""
     try:
-        win.dpi()
+        result = win.dpi(None)  # Pass None for root to test no-op case
+        assert isinstance(result, dict)
+        assert 'tk_scaling' in result
+        assert 'effective_dpi' in result
     except Exception as e:
         pytest.fail(f"win.dpi() raised {e} unexpectedly!")
 
@@ -62,7 +65,8 @@ def test_bell_with_invalid_sound_type():
 def test_dpi_on_windows():
     """Test DPI function on Windows platform."""
     # This test only runs on Windows
-    win.dpi()
+    result = win.dpi(None)
+    assert isinstance(result, dict)
     # Should not raise any errors on Windows
 
 @patch('sys.platform', 'darwin')
@@ -70,7 +74,9 @@ def test_dpi_on_non_windows():
     """Test DPI function on non-Windows platform."""
     # Should not raise any errors on non-Windows
     try:
-        win.dpi()
+        result = win.dpi(None)
+        assert isinstance(result, dict)
+        assert result.get('platform') == 'non-windows'
     except Exception as e:
         pytest.fail(f"win.dpi() raised {e} on non-Windows platform!")
 
@@ -88,31 +94,26 @@ def test_get_scaling_factor_returns_float(root):
     except Exception as e:
         pytest.fail(f"win.get_scaling_factor() raised {e} unexpectedly!")
 
-def test_calculate_dpi_sizes_function_exists():
-    """Test that calculate_dpi_sizes function exists."""
-    assert hasattr(win, 'calculate_dpi_sizes')
-    assert callable(win.calculate_dpi_sizes)
-
-def test_calculate_dpi_sizes_returns_dict(root):
-    """Test that calculate_dpi_sizes returns a dictionary."""
-    base_sizes = {"width": 100, "height": 200}
+def test_dpi_with_root_parameter(root):
+    """Test that dpi function works with root parameter."""
     try:
-        result = win.calculate_dpi_sizes(base_sizes, root)
+        result = win.dpi(root)
         assert isinstance(result, dict)
-        assert "width" in result
-        assert "height" in result
+        assert 'tk_scaling' in result
+        assert 'effective_dpi' in result
+        assert 'hwnd' in result
+        assert 'applied_to_windows' in result
     except Exception as e:
-        pytest.fail(f"win.calculate_dpi_sizes() raised {e} unexpectedly!")
+        pytest.fail(f"win.dpi(root) raised {e} unexpectedly!")
 
-def test_scale_icon_function_exists():
-    """Test that scale_icon function exists."""
-    assert hasattr(win, 'scale_icon')
-    assert callable(win.scale_icon)
-
-def test_scale_icon_returns_string(root):
-    """Test that scale_icon returns a string."""
+def test_dpi_with_options():
+    """Test that dpi function works with various options."""
     try:
-        result = win.scale_icon("error", root)
-        assert isinstance(result, str)
+        result = win.dpi(None, enable=False)
+        assert isinstance(result, dict)
+        assert result.get('enabled') == False
+        
+        result = win.dpi(None, enable=True)
+        assert isinstance(result, dict)
     except Exception as e:
-        pytest.fail(f"win.scale_icon() raised {e} unexpectedly!") 
+        pytest.fail(f"win.dpi() with options raised {e} unexpectedly!") 
