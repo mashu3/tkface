@@ -136,10 +136,12 @@ class CustomMessageBox:
         self.window.title(lang.get(title, self.window, language=language))
         self.window.transient(master)
         self.window.grab_set()
+        # Hide window initially to prevent flickering
+        self.window.withdraw()
         
         # Cache DPI scaling calculations for performance
         self._scaled_sizes = win.calculate_dpi_sizes({
-            'padding': 20,
+            'padding': 10,
             'wraplength': 300,
             'button_width': 10,
             'button_padding': 5,
@@ -153,6 +155,8 @@ class CustomMessageBox:
         self.result = None
         self._create_buttons(button_set, buttons, default, cancel)
         self._set_window_position(master, x, y, x_offset, y_offset)
+        # Show window after position is set to prevent flickering
+        self.window.deiconify()
         self.window.lift()
         self.window.focus_set()
         if bell:
