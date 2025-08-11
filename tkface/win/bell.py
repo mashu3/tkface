@@ -2,6 +2,14 @@ import sys
 import ctypes
 from typing import Literal, Union
 
+# Import the common Windows check function
+try:
+    from . import is_windows
+except ImportError:
+    # Fallback for when called directly
+    def is_windows():
+        return sys.platform == 'win32'
+
 # Windows MessageBeep sound types
 MB_ICONASTERISK = 0x00000040    # Information sound
 MB_ICONEXCLAMATION = 0x00000030 # Warning sound  
@@ -31,7 +39,7 @@ def bell(sound_type: Union[str, SoundType] = "default") -> bool:
         This function only works on Windows platforms. On other platforms,
         it returns False without playing any sound.
     """
-    if not sys.platform.startswith("win"):
+    if not is_windows():
         return False
     
     try:

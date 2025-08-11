@@ -1,6 +1,14 @@
 import sys
 import tkinter as tk
 
+# Import the common Windows check function
+try:
+    from . import is_windows
+except ImportError:
+    # Fallback for when called directly
+    def is_windows():
+        return sys.platform == 'win32'
+
 def configure_button_for_windows(button):
     """
     Configure button appearance for Windows (disable shadow but keep border).
@@ -8,7 +16,7 @@ def configure_button_for_windows(button):
     Args:
         button: Tkinter Button widget
     """
-    if sys.platform.startswith("win"):
+    if is_windows() and button is not None:
         button.configure(relief="solid", bd=1)
 
 def get_button_label_with_shortcut(button_value, translated_text):
@@ -22,7 +30,11 @@ def get_button_label_with_shortcut(button_value, translated_text):
     Returns:
         str: Button text with shortcut (e.g., "はい(Y)" for Windows, original text for others)
     """
-    if not sys.platform.startswith("win"):
+    # Handle None inputs
+    if button_value is None or translated_text is None:
+        return translated_text if translated_text is not None else ""
+    
+    if not is_windows():
         return translated_text
     
     # Map button values to keyboard shortcuts

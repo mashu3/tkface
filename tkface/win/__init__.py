@@ -12,15 +12,50 @@ Available features:
 - Windows 11 corner rounding control
 """
 
-from .dpi import dpi, get_scaling_factor, calculate_dpi_sizes, scale_icon, adjust_window_size, dpi_with_window_size, enable_dpi_geometry
+import sys
+
+def is_windows():
+    """
+    Check if running on Windows platform.
+    
+    Returns:
+        bool: True if running on Windows, False otherwise
+    """
+    return sys.platform == 'win32'
+
+from .dpi import (
+    dpi,
+    get_scaling_factor,
+    enable_dpi_geometry,
+    get_actual_window_size,
+    enable_dpi_awareness,
+    calculate_dpi_sizes,
+    scale_icon,
+    scale_font_size,
+    get_effective_dpi,
+    logical_to_physical,
+    physical_to_logical,
+    enable_auto_dpi_scaling,
+    disable_auto_dpi_scaling,
+    is_auto_dpi_scaling_enabled,
+    scale_widget_dimensions,
+    scale_widget_tree,
+    get_scalable_properties,
+    add_scalable_property,
+    remove_scalable_property,
+)
 from .button import configure_button_for_windows, get_button_label_with_shortcut, FlatButton, create_flat_button
-from .unround import unround
+from .unround import unround, enable_auto_unround, disable_auto_unround, is_auto_unround_enabled
 from .bell import bell
 
 __all__ = [
-    'dpi', 'get_scaling_factor', 'calculate_dpi_sizes', 'scale_icon', 
-    'adjust_window_size', 'dpi_with_window_size', 'enable_dpi_geometry',
+    'is_windows',
+    'dpi', 'get_scaling_factor', 'enable_dpi_geometry', 'get_actual_window_size', 'enable_dpi_awareness', 'calculate_dpi_sizes', 'scale_icon', 'scale_font_size',
+    'get_effective_dpi', 'logical_to_physical', 'physical_to_logical',
+    'enable_auto_dpi_scaling', 'disable_auto_dpi_scaling', 'is_auto_dpi_scaling_enabled',
+    'scale_widget_dimensions', 'scale_widget_tree', 'get_scalable_properties', 'add_scalable_property', 'remove_scalable_property',
     'configure_button_for_windows', 'get_button_label_with_shortcut', 
     'FlatButton', 'create_flat_button',
-    'unround', 'bell'
+    'unround', 'enable_auto_unround', 'disable_auto_unround', 'is_auto_unround_enabled', 
+    'bell'
 ]
