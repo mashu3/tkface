@@ -472,7 +472,7 @@ class DateEntry(ttk.Entry, _DatePickerBase):
 
                 
     def _on_b1_press(self, event):
-        """Handle button press events (like tkcalendar)."""
+        """Handle button press events."""
         x, y = event.x, event.y
         width = self.winfo_width()
         right_area = x > width - 20
