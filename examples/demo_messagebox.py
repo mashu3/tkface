@@ -14,6 +14,9 @@ def main():
     # Enable DPI-aware geometry (automatically adjusts window size)
     tkface.win.dpi(root)
     
+    # Get scaling factor for custom positioning
+    scaling = tkface.win.get_scaling_factor(root)
+    
     # Set window size (will be automatically adjusted for DPI if enabled)
     root.geometry("650x500")
     root.resizable(False, False)

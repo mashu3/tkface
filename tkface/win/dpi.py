@@ -160,21 +160,33 @@ class DPIManager:
             if "padx" in scaled_kwargs:
                 padx = scaled_kwargs["padx"]
                 if isinstance(padx, (int, float)):
-                    scaled_kwargs["padx"] = int(padx * scaling_factor)
+                    # Only scale if the value is reasonable (not already scaled)
+                    if 0 <= abs(padx) <= 50:  # Normal padding range
+                        scaled_kwargs["padx"] = int(padx * scaling_factor)
+                    # Otherwise use as-is to avoid double scaling
                 elif isinstance(padx, (list, tuple)) and len(padx) == 2:
-                    scaled_kwargs["padx"] = (
-                        int(padx[0] * scaling_factor),
-                        int(padx[1] * scaling_factor),
-                    )
+                    # Only scale if values are reasonable (not already scaled)
+                    if all(0 <= abs(val) <= 50 for val in padx):
+                        scaled_kwargs["padx"] = (
+                            int(padx[0] * scaling_factor),
+                            int(padx[1] * scaling_factor),
+                        )
+                    # Otherwise use as-is to avoid double scaling
             if "pady" in scaled_kwargs:
                 pady = scaled_kwargs["pady"]
                 if isinstance(pady, (int, float)):
-                    scaled_kwargs["pady"] = int(pady * scaling_factor)
+                    # Only scale if the value is reasonable (not already scaled)
+                    if 0 <= abs(pady) <= 50:  # Normal padding range
+                        scaled_kwargs["pady"] = int(pady * scaling_factor)
+                    # Otherwise use as-is to avoid double scaling
                 elif isinstance(pady, (list, tuple)) and len(pady) == 2:
-                    scaled_kwargs["pady"] = (
-                        int(pady[0] * scaling_factor),
-                        int(pady[1] * scaling_factor),
-                    )
+                    # Only scale if values are reasonable (not already scaled)
+                    if all(0 <= abs(val) <= 50 for val in pady):
+                        scaled_kwargs["pady"] = (
+                            int(pady[0] * scaling_factor),
+                            int(pady[1] * scaling_factor),
+                        )
+                    # Otherwise use as-is to avoid double scaling
             return original_pack(self, **scaled_kwargs)
 
         # Patch grid method to scale padx/pady
@@ -283,18 +295,14 @@ class DPIManager:
                 )
             return original_button(self, parent, **scaled_kwargs)
 
-        # Patch Entry constructor to scale bd and width
-        # (width is character units but should be scaled for consistency)
+        # Patch Entry constructor to scale bd only
+        # (width is character units and should not be scaled)
         original_entry = tk.Entry.__init__
 
         def scaled_entry_init(self, parent=None, **kwargs):
             scaled_kwargs = kwargs.copy()
-            # Scale width for consistency with datepicker widgets
-            if "width" in scaled_kwargs:
-                scaled_kwargs["width"] = int(
-                    scaled_kwargs["width"] * scaling_factor
-                )
-            # Scale border width
+            # Note: width is character units, not pixels - do not scale
+            # Only scale border width
             if "bd" in scaled_kwargs:
                 scaled_kwargs["bd"] = int(
                     scaled_kwargs["bd"] * scaling_factor

@@ -626,8 +626,8 @@ class _DatePickerBase:
 
             # Only update if scaling factor has changed significantly
             if abs(old_scaling - self.dpi_scaling_factor) > 0.01:
-                # Entry width is now handled automatically by DPI system
-                # No manual scaling needed
+                # Entry width is handled automatically by DPI system
+                # No manual scaling needed for Entry widgets
 
                 # Update calendar if it exists
                 if self.calendar and hasattr(
@@ -714,7 +714,7 @@ class DateFrame(tk.Frame, _DatePickerBase):
         )
 
         # Create entry and button
-        # Entry width will be automatically scaled by DPI system
+        # Entry width is character units and will be handled by DPI system
         self.entry = tk.Entry(self, state="readonly", width=15)
         self.entry.pack(side="left", fill="x", expand=True)
 
