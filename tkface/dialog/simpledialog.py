@@ -1,4 +1,5 @@
 import tkinter as tk
+import logging
 from tkface import lang
 from typing import Optional, Callable
 
@@ -32,6 +33,8 @@ class CustomSimpleDialog:
                  x=None, y=None, x_offset=0, y_offset=0, language=None, 
                  custom_translations=None, validate_func: Optional[Callable[[str], bool]] = None,
                  choices=None, multiple=False, initial_selection=None):
+        
+        self.logger = logging.getLogger(__name__)
         """
         Initialize the CustomSimpleDialog.
         
@@ -430,7 +433,9 @@ def askinteger(master=None, message="", title=None, initialvalue=None,
             if maxvalue is not None and ival > maxvalue:
                 return False
             return True
-        except Exception:
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Failed to validate integer input '{val}': {e}")
             return False
     
     result = CustomSimpleDialog.show(
@@ -484,7 +489,7 @@ def askfloat(master=None, message="", title=None, initialvalue=None,
         
     Example:
         >>> height = askfloat(message="Enter height (m):", minvalue=0.0, maxvalue=3.0, language="ja")
-        >>> price = askfloat(message="Enter price:", minvalue=0.0, language="en")
+        >>> price = askfloatfloat(message="Enter price:", minvalue=0.0, language="en")
     """
     def validate(val):
         try:
@@ -494,7 +499,9 @@ def askfloat(master=None, message="", title=None, initialvalue=None,
             if maxvalue is not None and fval > maxvalue:
                 return False
             return True
-        except Exception:
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Failed to validate float input '{val}': {e}")
             return False
     
     result = CustomSimpleDialog.show(

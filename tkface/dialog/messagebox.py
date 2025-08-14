@@ -1,4 +1,5 @@
 import tkinter as tk
+import logging
 from tkface import win
 from tkface import lang
 from typing import Optional
@@ -107,6 +108,8 @@ class CustomMessageBox:
     """
     
     def __init__(self, master=None, title: Optional[str] = "Message", message="", icon=None, button_set: Optional[str] = "ok", buttons=None, default=None, cancel=None, x=None, y=None, x_offset=0, y_offset=0, language=None, custom_translations=None, bell=False):
+        
+        self.logger = logging.getLogger(__name__)
         """
         Initialize a custom message box.
         
@@ -222,7 +225,8 @@ class CustomMessageBox:
         try:
             icon_image = tk.PhotoImage(file=icon)
             return tk.Label(parent, image=icon_image)
-        except Exception:
+        except Exception as e:
+            self.logger.debug(f"Failed to load icon from file {icon}: {e}")
             return None
 
     def _create_buttons(self, button_set, buttons, default, cancel):
@@ -375,7 +379,8 @@ class CustomMessageBox:
         # Use Windows-specific bell sounds or fallback to standard bell
         try:
             win.bell(icon)
-        except Exception:
+        except Exception as e:
+            self.logger.debug(f"Failed to use Windows bell sound: {e}")
             # Fallback to standard bell with some variation
             if icon == ERROR:
                 # Error: Multiple bells for urgent attention

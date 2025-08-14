@@ -8,11 +8,20 @@ class DateEntryDemo:
         self.root = tk.Tk()
         self.root.title("tkface.calendar DatePicker Demo")
         
+        # Hide window initially until setup is complete
+        self.root.withdraw()
+        
         # Enable DPI-aware geometry (automatically adjusts window size)
         tkface.win.dpi(self.root)
         
+        # Force update to ensure DPI scaling is applied before setting geometry
+        self.root.update_idletasks()
+        
         # Set window size (will be automatically adjusted for DPI if enabled)
         self.root.geometry("600x700")
+        
+        # Force another update to ensure geometry is properly applied
+        self.root.update_idletasks()
         
         # Weekend colors (will be set based on theme)
         self.weekend_colors = {}
@@ -45,6 +54,12 @@ class DateEntryDemo:
         self.dateentry_type_var = tk.StringVar(value="DateFrame")
         
         self.create_widgets()
+        
+        # Final update to ensure all widgets are properly sized
+        self.root.update_idletasks()
+        
+        # Show window after all setup is complete
+        self.root.deiconify()
         
     def create_widgets(self):
         """Create the DatePicker demo interface."""
@@ -257,6 +272,9 @@ class DateEntryDemo:
         
         # Generate initial code
         self.generate_code()
+        
+        # Ensure all widgets are properly initialized
+        self.root.update_idletasks()
         
     def reset_to_current_date(self):
         """Reset the calendar to current date."""
@@ -484,9 +502,10 @@ class DateEntryDemo:
             f"    date_format='{self.date_formats[self.format_var.get()]}',",
         ]
         
-        # Add year and month if initial date is set
+        # Add year and month if initial date is set and different from current date
         initial_date = self.initial_dateentry.get_date()
-        if initial_date:
+        current_date = datetime.date.today()
+        if initial_date and (initial_date.year != current_date.year or initial_date.month != current_date.month):
             code_lines.append(f"    year={initial_date.year},")
             code_lines.append(f"    month={initial_date.month},")
         
@@ -530,8 +549,8 @@ class DateEntryDemo:
             "# Additional setup if needed:",
         ])
         
-        # Add initial date setting if available
-        if initial_date:
+        # Add initial date setting if available and different from current date
+        if initial_date and initial_date != current_date:
             code_lines.extend([
                 f"# Set initial date",
                 f"dateentry.set_selected_date(datetime.date({initial_date.year}, {initial_date.month}, {initial_date.day}))",
