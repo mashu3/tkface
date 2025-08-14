@@ -1,5 +1,6 @@
 import sys
 import ctypes
+import logging
 from ctypes import wintypes, pointer
 import re
 import tkinter as tk
@@ -19,6 +20,7 @@ class DPIManager:
     
     def __init__(self):
         self._dpi_awareness_set = False
+        self.logger = logging.getLogger(__name__)
     
     def _get_hwnd_dpi(self, window_handle):
         """Get DPI information for a window handle."""
@@ -29,8 +31,8 @@ class DPIManager:
             # Set process DPI awareness
             try:
                 ctypes.windll.shcore.SetProcessDpiAwareness(1)  # PROCESS_SYSTEM_DPI_AWARE
-            except Exception:
-                pass
+            except Exception as e:
+                self.logger.debug(f"Failed to set process DPI awareness: {e}")
             
             dpi_100pc = 96  # DPI 96 is 100% scaling
             dpi_type = 0    # MDT_EFFECTIVE_DPI = 0
@@ -52,7 +54,8 @@ class DPIManager:
                     scale_factor = ctypes.windll.shcore.GetScaleFactorForDevice(0)
                     # Convert percentage to decimal (e.g., 200 -> 2.0, 250 -> 2.5)
                     windows_scale = scale_factor / 100.0
-                except Exception:
+                except Exception as e:
+                    self.logger.debug(f"Failed to get Windows scale factor: {e}")
                     windows_scale = None
                 
                 # Calculate scaling factor: current DPI / 96 DPI (100% scaling)
@@ -67,9 +70,11 @@ class DPIManager:
                     scaling_factor = dpi_scaling
                 
                 return x_dpi.value, y_dpi.value, scaling_factor
-            except Exception:
+            except Exception as e:
+                self.logger.debug(f"Failed to get DPI for monitor: {e}")
                 return 96, 96, 1.0  # Assume standard Windows DPI & scaling
-        except Exception:
+        except Exception as e:
+            self.logger.debug(f"Failed to get DPI information: {e}")
             return 96, 96, 1.0
     
     def _scale_geometry_string(self, geometry_string, scale_func):
@@ -95,8 +100,8 @@ class DPIManager:
                 w = scale_func(int(match.group("W")))
                 h = scale_func(int(match.group("H")))
                 return f"{w}x{h}"
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.debug(f"Failed to scale geometry string: {e}")
         
         return geometry_string
     
@@ -114,8 +119,8 @@ class DPIManager:
                     size = int(font["size"])
                     if size < 0:  # Pixel size - scale proportionally
                         font["size"] = round(size * scaling)
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.debug(f"Failed to fix scaling: {e}")
     
     def _patch_widget_methods(self, root):
         """Patch widget methods to handle pad/padding scaling."""
@@ -127,7 +132,8 @@ class DPIManager:
         try:
             tk_scaling = float(root.tk.call("tk", "scaling"))
             scaling_factor = tk_scaling
-        except Exception:
+        except Exception as e:
+            self.logger.debug(f"Failed to get tk scaling: {e}")
             scaling_factor = root.DPI_scaling
         
         # Patch pack method to scale padx/pady
@@ -223,12 +229,14 @@ class DPIManager:
                 scaled_kwargs['bd'] = int(scaled_kwargs['bd'] * scaling_factor)
             return original_button(self, parent, **scaled_kwargs)
         
-        # Patch Entry constructor to scale bd only (width is character units)
+        # Patch Entry constructor to scale bd and width (width is character units but should be scaled for consistency)
         original_entry = tk.Entry.__init__
         def scaled_entry_init(self, parent=None, **kwargs):
             scaled_kwargs = kwargs.copy()
-            # Note: width is character units, not pixels
-            # Only scale border width
+            # Scale width for consistency with datepicker widgets
+            if 'width' in scaled_kwargs:
+                scaled_kwargs['width'] = int(scaled_kwargs['width'] * scaling_factor)
+            # Scale border width
             if 'bd' in scaled_kwargs:
                 scaled_kwargs['bd'] = int(scaled_kwargs['bd'] * scaling_factor)
             return original_entry(self, parent, **scaled_kwargs)
@@ -243,19 +251,115 @@ class DPIManager:
                 scaled_kwargs['bd'] = int(scaled_kwargs['bd'] * scaling_factor)
             if 'wraplength' in scaled_kwargs:
                 scaled_kwargs['wraplength'] = int(scaled_kwargs['wraplength'] * scaling_factor)
+            # For calendar widgets, don't scale width/height as they are character units
+            # and should remain consistent across DPI settings
             return original_label(self, parent, **scaled_kwargs)
         
-        # Patch Text constructor to scale bd/wraplength (width/height are character units)
+        # Patch Text constructor to scale bd only (width/height are character units)
         original_text = tk.Text.__init__
         def scaled_text_init(self, parent=None, **kwargs):
             scaled_kwargs = kwargs.copy()
             # Note: width and height are character units, not pixels
-            # Only scale border width and wraplength
+            # Only scale border width (Text widget doesn't support wraplength)
             if 'bd' in scaled_kwargs:
                 scaled_kwargs['bd'] = int(scaled_kwargs['bd'] * scaling_factor)
-            if 'wraplength' in scaled_kwargs:
-                scaled_kwargs['wraplength'] = int(scaled_kwargs['wraplength'] * scaling_factor)
             return original_text(self, parent, **scaled_kwargs)
+        
+        # Patch Checkbutton constructor to scale bd (width/height are character units)
+        original_checkbutton = tk.Checkbutton.__init__
+        def scaled_checkbutton_init(self, parent=None, **kwargs):
+            scaled_kwargs = kwargs.copy()
+            # Note: width and height are character units, not pixels
+            # Only scale border width
+            if 'bd' in scaled_kwargs:
+                scaled_kwargs['bd'] = int(scaled_kwargs['bd'] * scaling_factor)
+            return original_checkbutton(self, parent, **scaled_kwargs)
+        
+        # Patch Radiobutton constructor to scale bd (width/height are character units)
+        original_radiobutton = tk.Radiobutton.__init__
+        def scaled_radiobutton_init(self, parent=None, **kwargs):
+            scaled_kwargs = kwargs.copy()
+            # Note: width and height are character units, not pixels
+            # Only scale border width
+            if 'bd' in scaled_kwargs:
+                scaled_kwargs['bd'] = int(scaled_kwargs['bd'] * scaling_factor)
+            return original_radiobutton(self, parent, **scaled_kwargs)
+        
+        # Patch Listbox constructor to scale bd (width/height are character units)
+        original_listbox = tk.Listbox.__init__
+        def scaled_listbox_init(self, parent=None, **kwargs):
+            scaled_kwargs = kwargs.copy()
+            # Note: width and height are character units, not pixels
+            # Only scale border width
+            if 'bd' in scaled_kwargs:
+                scaled_kwargs['bd'] = int(scaled_kwargs['bd'] * scaling_factor)
+            return original_listbox(self, parent, **scaled_kwargs)
+        
+        # Patch Spinbox constructor to scale bd (width is character units)
+        original_spinbox = tk.Spinbox.__init__
+        def scaled_spinbox_init(self, parent=None, **kwargs):
+            scaled_kwargs = kwargs.copy()
+            # Note: width is character units, not pixels
+            # Only scale border width
+            if 'bd' in scaled_kwargs:
+                scaled_kwargs['bd'] = int(scaled_kwargs['bd'] * scaling_factor)
+            return original_spinbox(self, parent, **scaled_kwargs)
+        
+        # Patch Scale constructor to scale bd (width/height are character units)
+        original_scale = tk.Scale.__init__
+        def scaled_scale_init(self, parent=None, **kwargs):
+            scaled_kwargs = kwargs.copy()
+            # Note: width and height are character units, not pixels
+            # Only scale border width
+            if 'bd' in scaled_kwargs:
+                scaled_kwargs['bd'] = int(scaled_kwargs['bd'] * scaling_factor)
+            return original_scale(self, parent, **scaled_kwargs)
+        
+        # Patch Scrollbar constructor to scale bd (width/height are character units)
+        original_scrollbar = tk.Scrollbar.__init__
+        def scaled_scrollbar_init(self, parent=None, **kwargs):
+            scaled_kwargs = kwargs.copy()
+            # Note: width and height are character units, not pixels
+            # Only scale border width
+            if 'bd' in scaled_kwargs:
+                scaled_kwargs['bd'] = int(scaled_kwargs['bd'] * scaling_factor)
+            return original_scrollbar(self, parent, **scaled_kwargs)
+        
+        # Patch Canvas constructor to scale bd (width/height are pixels)
+        original_canvas = tk.Canvas.__init__
+        def scaled_canvas_init(self, parent=None, **kwargs):
+            scaled_kwargs = kwargs.copy()
+            # Canvas width and height are pixels, so scale them
+            if 'width' in scaled_kwargs:
+                scaled_kwargs['width'] = int(scaled_kwargs['width'] * scaling_factor)
+            if 'height' in scaled_kwargs:
+                scaled_kwargs['height'] = int(scaled_kwargs['height'] * scaling_factor)
+            # Scale border width
+            if 'bd' in scaled_kwargs:
+                scaled_kwargs['bd'] = int(scaled_kwargs['bd'] * scaling_factor)
+            return original_canvas(self, parent, **scaled_kwargs)
+        
+        # Patch Menu constructor to scale bd
+        original_menu = tk.Menu.__init__
+        def scaled_menu_init(self, parent=None, **kwargs):
+            scaled_kwargs = kwargs.copy()
+            # Scale border width
+            if 'bd' in scaled_kwargs:
+                scaled_kwargs['bd'] = int(scaled_kwargs['bd'] * scaling_factor)
+            return original_menu(self, parent, **scaled_kwargs)
+        
+        # Patch Menubutton constructor to scale bd (width/height are character units)
+        original_menubutton = tk.Menubutton.__init__
+        def scaled_menubutton_init(self, parent=None, **kwargs):
+            scaled_kwargs = kwargs.copy()
+            # Note: width and height are character units, not pixels
+            # Only scale border width
+            if 'bd' in scaled_kwargs:
+                scaled_kwargs['bd'] = int(scaled_kwargs['bd'] * scaling_factor)
+            return original_menubutton(self, parent, **scaled_kwargs)
+        
+        # Note: ttk widgets generally handle DPI scaling automatically
+        # so we don't patch them to avoid conflicts
         
         # Apply patches
         tk.Widget.pack = scaled_pack
@@ -267,6 +371,15 @@ class DPIManager:
         tk.Entry.__init__ = scaled_entry_init
         tk.Label.__init__ = scaled_label_init
         tk.Text.__init__ = scaled_text_init
+        tk.Checkbutton.__init__ = scaled_checkbutton_init
+        tk.Radiobutton.__init__ = scaled_radiobutton_init
+        tk.Listbox.__init__ = scaled_listbox_init
+        tk.Spinbox.__init__ = scaled_spinbox_init
+        tk.Scale.__init__ = scaled_scale_init
+        tk.Scrollbar.__init__ = scaled_scrollbar_init
+        tk.Canvas.__init__ = scaled_canvas_init
+        tk.Menu.__init__ = scaled_menu_init
+        tk.Menubutton.__init__ = scaled_menubutton_init
     
     def fix_dpi(self, root):
         """Adjust scaling for high DPI displays on Windows."""
@@ -281,12 +394,14 @@ class DPIManager:
                 ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PROCESS_PER_MONITOR_DPI_AWARE
                 scale_factor = ctypes.windll.shcore.GetScaleFactorForDevice(0)
                 shcore = True
-            except Exception:
+            except Exception as e:
+                self.logger.debug(f"Failed to set process DPI awareness (shcore): {e}")
                 # For Windows older than 8.1
                 try:
                     ctypes.windll.user32.SetProcessDPIAware()
                     shcore = False
-                except Exception:
+                except Exception as e2:
+                    self.logger.debug(f"Failed to set process DPI awareness (user32): {e2}")
                     return
             
             if shcore:
@@ -306,8 +421,8 @@ class DPIManager:
                         tk_scaling = windows_scale * (96 / 72)
                         root.tk.call("tk", "scaling", tk_scaling)
                         print(f"DPI: Adjusted Tk scaling to {tk_scaling} based on Windows scale {windows_scale}")
-                except Exception:
-                    pass
+                except Exception as e:
+                    self.logger.debug(f"Failed to get Windows scale factor for verification: {e}")
                 
                 # Get DPI for the monitor
                 win_handle = wintypes.HWND(root.winfo_id())
@@ -338,11 +453,13 @@ class DPIManager:
                         print(f"DPI: Using Windows scale {windows_scale} instead of DPI-based {dpi_scaling}")
                     else:
                         root.DPI_scaling = dpi_scaling
-                except Exception:
+                except Exception as e:
+                    self.logger.debug(f"Failed to get Windows scale factor for DPI scaling: {e}")
                     root.DPI_scaling = dpi_scaling
             else:
                 root.DPI_X, root.DPI_Y, root.DPI_scaling = self._get_hwnd_dpi(root.winfo_id())
-        except Exception:
+        except Exception as e:
+            self.logger.warning(f"Failed to fix DPI: {e}, using fallback")
             # Fallback
             root.DPI_X, root.DPI_Y, root.DPI_scaling = self._get_hwnd_dpi(root.winfo_id())
         
@@ -449,8 +566,8 @@ class DPIManager:
                 return True
             except (AttributeError, OSError):
                 pass
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.debug(f"Failed to enable DPI awareness: {e}")
         
         return False
     
@@ -465,7 +582,8 @@ class DPIManager:
             else:
                 _, _, scaling_factor = self._get_hwnd_dpi(root.winfo_id())
                 return scaling_factor
-        except Exception:
+        except Exception as e:
+            self.logger.debug(f"Failed to get scaling factor: {e}")
             return 1.0
     
     def get_effective_dpi(self, root):
@@ -479,7 +597,8 @@ class DPIManager:
             else:
                 dpi_x, dpi_y, _ = self._get_hwnd_dpi(root.winfo_id())
                 return (dpi_x + dpi_y) / 2
-        except Exception:
+        except Exception as e:
+            self.logger.debug(f"Failed to get effective DPI: {e}")
             return 96
     
     def logical_to_physical(self, value, *, root=None, scaling_factor=None):
@@ -497,7 +616,8 @@ class DPIManager:
                     _, _, scaling_factor = self._get_hwnd_dpi(root.winfo_id())
             
             return type(value)(round(float(value) * float(scaling_factor)))
-        except Exception:
+        except Exception as e:
+            self.logger.debug(f"Failed to convert logical to physical pixels: {e}")
             return value
     
     def physical_to_logical(self, value, *, root=None, scaling_factor=None):
@@ -518,7 +638,8 @@ class DPIManager:
                 return value
             
             return type(value)(round(float(value) / float(scaling_factor)))
-        except Exception:
+        except Exception as e:
+            self.logger.debug(f"Failed to convert physical to logical pixels: {e}")
             return value
     
     def scale_font_size(self, original_size, root=None, *, scaling_factor=None):
@@ -533,7 +654,8 @@ class DPIManager:
                 # Use tk_scaling instead of DPI_scaling for font scaling
                 try:
                     scaling_factor = float(root.tk.call("tk", "scaling"))
-                except Exception:
+                except Exception as e:
+                    self.logger.debug(f"Failed to get tk scaling for font: {e}")
                     if hasattr(root, 'DPI_scaling'):
                         scaling_factor = root.DPI_scaling
                     else:
@@ -546,7 +668,8 @@ class DPIManager:
             else:
                 # Positive size = point size - scale proportionally
                 return round(original_size * scaling_factor)
-        except Exception:
+        except Exception as e:
+            self.logger.debug(f"Failed to scale font size: {e}")
             return original_size
     
     def get_actual_window_size(self, root):
@@ -617,7 +740,9 @@ class DPIManager:
                 scaling_factor = max_scale
             
             return {key: int(value * scaling_factor) for key, value in base_sizes.items()}
-        except Exception:
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Failed to calculate DPI sizes: {e}")
             return base_sizes
 
 
@@ -727,8 +852,9 @@ def scale_icon(icon_name, parent, base_size=24, max_scale=3.0):
                          '-zoom', int(scale_factor), int(scale_factor))
             
             return scaled_icon
-    except Exception:
-        pass
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Failed to scale icon {icon_name}: {e}")
     
     return icon_name
 

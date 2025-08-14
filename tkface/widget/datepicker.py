@@ -1,9 +1,21 @@
 import sys
 import datetime
+import logging
 import tkinter as tk
 from tkinter import ttk
 from typing import Dict, Optional
 from ..widget.calendar import Calendar, get_calendar_theme
+
+# Import DPI functions for scaling support
+try:
+    from ..win.dpi import get_scaling_factor, scale_font_size
+except ImportError:
+    # Fallback functions if DPI module is not available
+    def get_scaling_factor(root):
+        return 1.0
+    
+    def scale_font_size(original_size, root=None, scaling_factor=None):
+        return original_size
 
 
 class _DatePickerBase:
@@ -18,8 +30,17 @@ class _DatePickerBase:
                  language: str = "en", today_color: str = "yellow", 
                  date_callback: Optional[callable] = None, **kwargs):
         
+        self.logger = logging.getLogger(__name__)
+        
         # Get platform information once
         self.platform = sys.platform
+        
+        # DPI scaling support
+        try:
+            self.dpi_scaling_factor = get_scaling_factor(parent)
+        except Exception as e:
+            self.logger.debug(f"Failed to get DPI scaling factor: {e}, using 1.0")
+            self.dpi_scaling_factor = 1.0
         
         self.date_format = date_format
         self.selected_date = None
@@ -66,16 +87,16 @@ class _DatePickerBase:
         """Update the entry text (to be implemented by subclasses)."""
         raise NotImplementedError
         
-    def _on_popup_click(self, event):
+    def _on_popup_click(self, event, popup_window, calendar_widget, hide_callback):
         """Handle click events in the popup to detect clicks outside the calendar."""
         if isinstance(event.widget, str):
-            self.hide_calendar()
+            hide_callback()
             return "break"
             
-        if not self._is_child_of_calendar(event.widget, self.calendar):
-            self.hide_calendar()
+        if not self._is_child_of_calendar(event.widget, calendar_widget):
+            hide_callback()
         else:
-            self.calendar.focus_set()
+            calendar_widget.focus_set()
         return "break"
         
     def _bind_calendar_events(self, widget):
@@ -86,14 +107,14 @@ class _DatePickerBase:
             for child in widget.winfo_children():
                 self._bind_calendar_events(child)
         except Exception as e:
-            pass
+            self.logger.debug(f"Failed to bind calendar events: {e}")
             
     def _setup_click_outside_handling(self):
-        """Setup click outside handling."""
+        """Setup click outside handling for regular calendar."""
         self.calendar.bind('<FocusOut>', self._on_focus_out)
-        self.popup.bind('<Button-1>', self._on_popup_click)
-        self.popup.bind('<ButtonRelease-1>', self._on_popup_click)
-        self.winfo_toplevel().bind('<Button-1>', self._on_main_window_click)
+        self.popup.bind('<Button-1>', lambda e: self._on_popup_click(e, self.popup, self.calendar, self.hide_calendar))
+        self.popup.bind('<ButtonRelease-1>', lambda e: self._on_popup_click(e, self.popup, self.calendar, self.hide_calendar))
+        self.winfo_toplevel().bind('<Button-1>', lambda e: self._on_main_window_click(e, self.popup, self.hide_calendar))
             
     def _is_child_of_popup(self, widget):
         """Check if widget is a child of the popup window."""
@@ -153,25 +174,31 @@ class _DatePickerBase:
             current = current.master
         return False
         
-    def _on_main_window_click(self, event):
+    def _on_main_window_click(self, event, popup_window, hide_callback):
         """Handle click events on the main window."""
         if isinstance(event.widget, str):
             return "break"
             
-        if self.popup and self.popup.winfo_exists():
-            popup_x = self.popup.winfo_rootx()
-            popup_y = self.popup.winfo_rooty()
-            popup_w = self.popup.winfo_width()
-            popup_h = self.popup.winfo_height()
+        if popup_window and popup_window.winfo_exists():
+            popup_x = popup_window.winfo_rootx()
+            popup_y = popup_window.winfo_rooty()
+            popup_w = popup_window.winfo_width()
+            popup_h = popup_window.winfo_height()
             
             root_x = self.winfo_toplevel().winfo_rootx() + event.x
             root_y = self.winfo_toplevel().winfo_rooty() + event.y
             
             if (root_x < popup_x or root_x > popup_x + popup_w or 
                 root_y < popup_y or root_y > popup_y + popup_h):
-                self.hide_calendar()
+                hide_callback()
                 
         return "break"
+        
+    def _setup_year_view_click_outside_handling(self):
+        """Setup click outside handling for year view."""
+        self.year_view_window.bind('<Button-1>', lambda e: self._on_popup_click(e, self.year_view_window, self.year_view_calendar, self.hide_year_view))
+        self.year_view_window.bind('<ButtonRelease-1>', lambda e: self._on_popup_click(e, self.year_view_window, self.year_view_calendar, self.hide_year_view))
+        self.winfo_toplevel().bind('<Button-1>', lambda e: self._on_main_window_click(e, self.year_view_window, self.hide_year_view))
             
     def _on_calendar_month_selected(self, year, month):
         """Handle month selection in calendar."""
@@ -214,9 +241,31 @@ class _DatePickerBase:
         # Position the year view using geometry from Calendar
         self.year_view_window.update_idletasks()
         year_view_geometry = self.year_view_calendar.get_popup_geometry(self)
+        
+        # Scale year view geometry based on DPI (only scale size, not position)
+        try:
+            if self.dpi_scaling_factor > 1.0:
+                # Parse geometry string and scale only dimensions, not position
+                import re
+                match = re.match(r'(\d+)x(\d+)\+(\d+)\+(\d+)', year_view_geometry)
+                if match:
+                    width, height, x, y = map(int, match.groups())
+                    scaled_width = int(width * self.dpi_scaling_factor)
+                    scaled_height = int(height * self.dpi_scaling_factor)
+                    # Don't scale position coordinates (x, y) - keep them as is
+                    year_view_geometry = f"{scaled_width}x{scaled_height}+{x}+{y}"
+        except Exception as e:
+            self.logger.debug(f"Failed to scale year view geometry: {e}, using original geometry")
+        
         self.year_view_window.geometry(year_view_geometry)
         
         self.year_view_calendar.pack(fill='both', expand=True)
+        
+        # Setup click outside handling for year view
+        self._setup_year_view_click_outside_handling()
+        
+        # Bind Escape key to close year view
+        self.year_view_window.bind('<Escape>', lambda e: self.hide_year_view())
         
         self.year_view_window.deiconify()
         self.year_view_window.lift()
@@ -227,6 +276,13 @@ class _DatePickerBase:
     def hide_year_view(self):
         """Hide year view calendar."""
         if hasattr(self, 'year_view_window') and self.year_view_window:
+            # Unbind events to prevent memory leaks
+            try:
+                self.year_view_window.unbind('<Button-1>')
+                self.year_view_window.unbind('<ButtonRelease-1>')
+                self.year_view_window.unbind('<Escape>')
+            except Exception as e:
+                self.logger.debug(f"Failed to unbind year view events: {e}")
             self.year_view_window.destroy()
             self.year_view_window = None
             self.year_view_calendar = None
@@ -238,11 +294,41 @@ class _DatePickerBase:
         if self.popup and self.popup.winfo_exists() and not year_view_active:
             # Recalculate and set geometry
             popup_geometry = self.calendar.get_popup_geometry(self)
+            
+            # Scale popup geometry based on DPI (only scale size, not position)
+            try:
+                if self.dpi_scaling_factor > 1.0:
+                    import re
+                    match = re.match(r'(\d+)x(\d+)\+(\d+)\+(\d+)', popup_geometry)
+                    if match:
+                        width, height, x, y = map(int, match.groups())
+                        scaled_width = int(width * self.dpi_scaling_factor)
+                        scaled_height = int(height * self.dpi_scaling_factor)
+                        # Don't scale position coordinates (x, y) - keep them as is
+                        popup_geometry = f"{scaled_width}x{scaled_height}+{x}+{y}"
+            except Exception as e:
+                self.logger.debug(f"Failed to scale popup geometry: {e}, using original geometry")
+            
             self.popup.geometry(popup_geometry)
             
         if year_view_active and hasattr(self, 'year_view_calendar'):
             # Recalculate and set geometry for year view
             year_view_geometry = self.year_view_calendar.get_popup_geometry(self)
+            
+            # Scale year view geometry based on DPI (only scale size, not position)
+            try:
+                if self.dpi_scaling_factor > 1.0:
+                    import re
+                    match = re.match(r'(\d+)x(\d+)\+(\d+)\+(\d+)', year_view_geometry)
+                    if match:
+                        width, height, x, y = map(int, match.groups())
+                        scaled_width = int(width * self.dpi_scaling_factor)
+                        scaled_height = int(height * self.dpi_scaling_factor)
+                        # Don't scale position coordinates (x, y) - keep them as is
+                        year_view_geometry = f"{scaled_width}x{scaled_height}+{x}+{y}"
+            except Exception as e:
+                self.logger.debug(f"Failed to scale year view geometry in parent configure: {e}, using original geometry")
+            
             self.year_view_window.geometry(year_view_geometry)
             
     def _bind_parent_movement_events(self):
@@ -258,8 +344,8 @@ class _DatePickerBase:
             main_window = self.winfo_toplevel()
             try:
                 main_window.unbind('<Configure>', self._parent_configure_binding)
-            except:
-                pass
+            except Exception as e:
+                self.logger.debug(f"Failed to unbind parent configure events: {e}")
             delattr(self, '_parent_configure_binding')
             
     def _on_year_view_month_selected(self, year, month):
@@ -306,6 +392,22 @@ class _DatePickerBase:
         # Position the popup using geometry from Calendar
         self.popup.update_idletasks()
         popup_geometry = self.calendar.get_popup_geometry(self)
+        
+        # Scale popup geometry based on DPI (only scale size, not position)
+        try:
+            if self.dpi_scaling_factor > 1.0:
+                # Parse geometry string and scale only dimensions, not position
+                import re
+                match = re.match(r'(\d+)x(\d+)\+(\d+)\+(\d+)', popup_geometry)
+                if match:
+                    width, height, x, y = map(int, match.groups())
+                    scaled_width = int(width * self.dpi_scaling_factor)
+                    scaled_height = int(height * self.dpi_scaling_factor)
+                    # Don't scale position coordinates (x, y) - keep them as is
+                    popup_geometry = f"{scaled_width}x{scaled_height}+{x}+{y}"
+        except Exception as e:
+            self.logger.debug(f"Failed to scale popup geometry in show_calendar: {e}, using original geometry")
+        
         self.popup.geometry(popup_geometry)
         
         self.popup.deiconify()
@@ -382,6 +484,41 @@ class _DatePickerBase:
     def set_popup_size(self, width: Optional[int] = None, height: Optional[int] = None):
         """Set the popup size for both calendar and year view."""
         self._delegate_to_calendar('set_popup_size', width, height)
+    
+    def update_dpi_scaling(self):
+        """Update DPI scaling factor and refresh display."""
+        try:
+            old_scaling = self.dpi_scaling_factor
+            self.dpi_scaling_factor = get_scaling_factor(self)
+            
+            # Only update if scaling factor has changed significantly
+            if abs(old_scaling - self.dpi_scaling_factor) > 0.01:
+                # Entry width is now handled automatically by DPI system
+                # No manual scaling needed
+                
+                # Update calendar if it exists
+                if self.calendar and hasattr(self.calendar, 'update_dpi_scaling'):
+                    self.calendar.update_dpi_scaling()
+                
+                # Update popup geometry if popup exists
+                if self.popup and self.popup.winfo_exists():
+                    popup_geometry = self.calendar.get_popup_geometry(self)
+                    try:
+                        if self.dpi_scaling_factor > 1.0:
+                            import re
+                            match = re.match(r'(\d+)x(\d+)\+(\d+)\+(\d+)', popup_geometry)
+                            if match:
+                                width, height, x, y = map(int, match.groups())
+                                scaled_width = int(width * self.dpi_scaling_factor)
+                                scaled_height = int(height * self.dpi_scaling_factor)
+                                # Don't scale position coordinates (x, y) - keep them as is
+                                popup_geometry = f"{scaled_width}x{scaled_height}+{x}+{y}"
+                    except Exception as e:
+                        self.logger.debug(f"Failed to scale popup geometry in update_dpi_scaling: {e}")
+                    self.popup.geometry(popup_geometry)
+        except Exception as e:
+            self.logger.warning(f"Failed to update DPI scaling: {e}, using 1.0 as fallback")
+            self.dpi_scaling_factor = 1.0
 
 
 class DateFrame(tk.Frame, _DatePickerBase):
@@ -401,11 +538,18 @@ class DateFrame(tk.Frame, _DatePickerBase):
                                 language, today_color, date_callback, **kwargs)
         
         # Create entry and button
+        # Entry width will be automatically scaled by DPI system
         self.entry = tk.Entry(self, state='readonly', width=15)
         self.entry.pack(side='left', fill='x', expand=True)
         
         self.button = tk.Button(self, text=button_text, command=self.show_calendar)
         self.button.pack(side='right')
+        
+        # Update DPI scaling after widget creation
+        try:
+            self.update_dpi_scaling()
+        except Exception as e:
+            self.logger.debug(f"Failed to update DPI scaling during DateFrame initialization: {e}")
         
     def _update_entry_text(self, text: str):
         """Update the entry text."""
@@ -457,6 +601,12 @@ class DateEntry(ttk.Entry, _DatePickerBase):
         # Bind focus out event for calendar
         self.bind('<FocusOut>', self._on_focus_out_entry)
         
+        # Update DPI scaling after widget creation
+        try:
+            self.update_dpi_scaling()
+        except Exception as e:
+            self.logger.debug(f"Failed to update DPI scaling during DateEntry initialization: {e}")
+        
     def _setup_style(self):
         """Setup style to make DateEntry look like a Combobox."""
         self.style.layout('DateEntryCombobox', self.style.layout('TCombobox'))
@@ -469,8 +619,6 @@ class DateEntry(ttk.Entry, _DatePickerBase):
         if maps:
             self.style.map('DateEntryCombobox', **maps)
             
-
-                
     def _on_b1_press(self, event):
         """Handle button press events."""
         x, y = event.x, event.y

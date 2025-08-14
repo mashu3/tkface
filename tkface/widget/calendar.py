@@ -2,9 +2,21 @@ import tkinter as tk
 import calendar
 import datetime
 import configparser
+import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 from .. import lang
+
+# Import DPI functions for scaling support
+try:
+    from ..win.dpi import get_scaling_factor, scale_font_size
+except ImportError:
+    # Fallback functions if DPI module is not available
+    def get_scaling_factor(root):
+        return 1.0
+    
+    def scale_font_size(original_size, root=None, scaling_factor=None):
+        return original_size
 
 # Default popup dimensions
 DEFAULT_POPUP_WIDTH = 235
@@ -64,6 +76,8 @@ class Calendar(tk.Frame):
         
         super().__init__(parent, **kwargs)
         
+        self.logger = logging.getLogger(__name__)
+        
         # Set default values
         if year is None:
             year = datetime.date.today().year
@@ -96,6 +110,13 @@ class Calendar(tk.Frame):
         # Popup size settings
         self.popup_width = popup_width if popup_width is not None else DEFAULT_POPUP_WIDTH
         self.popup_height = popup_height if popup_height is not None else DEFAULT_POPUP_HEIGHT
+        
+        # DPI scaling support
+        try:
+            self.dpi_scaling_factor = get_scaling_factor(self)
+        except Exception as e:
+            self.logger.debug(f"Failed to get DPI scaling factor: {e}, using 1.0")
+            self.dpi_scaling_factor = 1.0
         
         # Selection state
         self.selected_date = None
@@ -141,6 +162,12 @@ class Calendar(tk.Frame):
             # Create normal calendar widgets
             self._create_widgets()
             self._update_display()
+        
+        # Update DPI scaling after widget creation
+        try:
+            self.update_dpi_scaling()
+        except Exception as e:
+            self.logger.debug(f"Failed to update DPI scaling during initialization: {e}")
         
     def _update_calendar_week_start(self):
         """Update calendar week start setting efficiently."""
@@ -244,7 +271,7 @@ class Calendar(tk.Frame):
                 for item_type, prev_text, next_text, prev_cmd, next_cmd in nav_items:
                     # Previous button
                     prev_btn = tk.Label(center_frame, text=prev_text,
-                                      font=self.theme_colors['navigation_font'],
+                                      font=self._get_scaled_font(self.theme_colors['navigation_font']),
                                       bg=self.theme_colors['navigation_bg'],
                                       fg=self.theme_colors['navigation_fg'],
                                       cursor='hand2')
@@ -255,7 +282,7 @@ class Calendar(tk.Frame):
                     
                     # Label
                     is_year = item_type == 'year'
-                    label = tk.Label(center_frame, font=('TkDefaultFont', 9, 'bold'),
+                    label = tk.Label(center_frame, font=self._get_scaled_font(('TkDefaultFont', 9, 'bold')),
                                    relief='flat', bd=0,
                                    bg=self.theme_colors['month_header_bg'],
                                    fg=self.theme_colors['month_header_fg'],
@@ -274,7 +301,7 @@ class Calendar(tk.Frame):
                     
                     # Next button
                     next_btn = tk.Label(center_frame, text=next_text,
-                                      font=self.theme_colors['navigation_font'],
+                                      font=self._get_scaled_font(self.theme_colors['navigation_font']),
                                       bg=self.theme_colors['navigation_bg'],
                                       fg=self.theme_colors['navigation_fg'],
                                       cursor='hand2')
@@ -312,16 +339,16 @@ class Calendar(tk.Frame):
         if self.show_week_numbers:
             # Empty header for week number column
             empty_header = tk.Label(grid_frame, text="", 
-                                  font=('TkDefaultFont', 8), 
-                                  width=2, height=1, relief='flat', bd=0,
+                                  font=self._get_scaled_font(('TkDefaultFont', 8)), 
+                                  relief='flat', bd=0,
                                   bg=self.theme_colors['day_header_bg'],
                                   fg=self.theme_colors['day_header_fg'])
             empty_header.grid(row=0, column=0, sticky='nsew', padx=1, pady=1)
         
         for day, day_name in enumerate(day_names):
             day_header = tk.Label(grid_frame, text=day_name, 
-                                font=self.theme_colors['day_header_font'], 
-                                width=3, height=1, relief='flat', bd=0,
+                                font=self._get_scaled_font(self.theme_colors['day_header_font']), 
+                                relief='flat', bd=0,
                                 bg=self.theme_colors['day_header_bg'],
                                 fg=self.theme_colors['day_header_fg'])
             col = day + 1 if self.show_week_numbers else day
@@ -333,7 +360,7 @@ class Calendar(tk.Frame):
             # Week number label
             if self.show_week_numbers:
                 week_label = tk.Label(grid_frame, 
-                                    font=self.theme_colors['week_number_font'], 
+                                    font=self._get_scaled_font(self.theme_colors['week_number_font']), 
                                     relief='flat', bd=0, 
                                     bg=self.theme_colors['week_number_bg'], 
                                     fg=self.theme_colors['week_number_fg'])
@@ -343,12 +370,11 @@ class Calendar(tk.Frame):
             # Day labels (clickable)
             for day in range(7):
                 day_label = tk.Label(grid_frame, 
-                                   font=self.theme_colors['day_font'], 
+                                   font=self._get_scaled_font(self.theme_colors['day_font']), 
                                    relief='flat', bd=0, anchor='center',
                                    bg=self.theme_colors['day_bg'],
                                    fg=self.theme_colors['day_fg'],
-                                   cursor='hand2',
-                                   width=3, height=1)
+                                   cursor='hand2')
                 col = day + 1 if self.show_week_numbers else day
                 day_label.grid(row=week + 1, column=col, sticky='nsew', padx=1, pady=1)
                 
@@ -397,6 +423,18 @@ class Calendar(tk.Frame):
         
         return day_names
         
+    def _get_scaled_font(self, base_font):
+        """Get font with DPI scaling applied."""
+        try:
+            if isinstance(base_font, tuple):
+                family, size, *style = base_font
+                scaled_size = scale_font_size(size, self, self.dpi_scaling_factor)
+                return (family, scaled_size, *style)
+            return base_font
+        except Exception as e:
+            self.logger.debug(f"Failed to scale font: {e}, using original font")
+            return base_font
+    
     def _get_month_name(self, month: int, short: bool = False) -> str:
         """Get localized month name."""
         # Define base month names
@@ -433,8 +471,8 @@ class Calendar(tk.Frame):
                 return True
             
             return False
-        except:
-            # Default to year first on any error
+        except Exception as e:
+            self.logger.debug(f"Failed to determine year position in format: {e}, defaulting to year first")
             return True
         
     def _get_display_date(self, month_index: int) -> datetime.date:
@@ -792,6 +830,12 @@ class Calendar(tk.Frame):
         else:
             self._update_display()
         
+        # Update DPI scaling after theme change
+        try:
+            self.update_dpi_scaling()
+        except Exception as e:
+            self.logger.debug(f"Failed to update DPI scaling during theme change: {e}")
+        
     def set_today_color(self, color: str):
         """Set the today color."""
         if color == "none":
@@ -839,6 +883,12 @@ class Calendar(tk.Frame):
             self._create_widgets()
             self._update_display()
         
+        # Update DPI scaling after recreation
+        try:
+            self.update_dpi_scaling()
+        except Exception as e:
+            self.logger.debug(f"Failed to update DPI scaling during recreation: {e}")
+        
     def set_week_start(self, week_start: str):
         """Set the week start day."""
         if week_start not in ["Sunday", "Monday", "Saturday"]:
@@ -864,6 +914,13 @@ class Calendar(tk.Frame):
             self._create_year_view()
         else:
             self._update_display()
+        
+        # Update DPI scaling after language change
+        try:
+            self.update_dpi_scaling()
+        except Exception:
+            # Ignore DPI scaling errors during language change
+            pass
         
     def set_months(self, months: int):
         """Set the number of months to display."""
@@ -920,6 +977,13 @@ class Calendar(tk.Frame):
             self._create_widgets()
             self._update_display()
         
+        # Update DPI scaling after recreation
+        try:
+            self.update_dpi_scaling()
+        except Exception:
+            # Ignore DPI scaling errors during recreation
+            pass
+        
     def get_selected_date(self) -> Optional[datetime.date]:
         """Get the currently selected date (if any)."""
         return self.selected_date
@@ -949,6 +1013,27 @@ class Calendar(tk.Frame):
         width *= self.months
         
         height = self.popup_height
+        
+        # Adjust position to ensure popup stays within screen bounds
+        try:
+            # Get screen dimensions
+            screen_width = parent_widget.winfo_screenwidth()
+            screen_height = parent_widget.winfo_screenheight()
+            
+            # Adjust x position if popup would go off the right edge
+            if x + width > screen_width:
+                x = max(0, screen_width - width)
+            
+            # Adjust y position if popup would go off the bottom edge
+            if y + height > screen_height:
+                # Try to show popup above the widget instead
+                y = max(0, parent_widget.winfo_rooty() - height)
+                
+                # If still off screen, adjust to fit
+                if y + height > screen_height:
+                    y = max(0, screen_height - height)
+        except Exception as e:
+            self.logger.debug(f"Failed to adjust popup position: {e}, using original position")
         
         return f"{width}x{height}+{x}+{y}"
         
@@ -993,7 +1078,7 @@ class Calendar(tk.Frame):
             
             # Previous year button
             prev_btn = tk.Label(center_frame, text="<<",
-                              font=self.theme_colors['navigation_font'],
+                              font=self._get_scaled_font(self.theme_colors['navigation_font']),
                               bg=self.theme_colors['navigation_bg'],
                               fg=self.theme_colors['navigation_fg'],
                               cursor='hand2')
@@ -1004,7 +1089,7 @@ class Calendar(tk.Frame):
             
             # Year label
             self.year_view_year_label = tk.Label(center_frame, text=str(self.year),
-                                               font=('TkDefaultFont', 12, 'bold'),
+                                               font=self._get_scaled_font(('TkDefaultFont', 12, 'bold')),
                                                relief='flat', bd=0,
                                                bg=self.theme_colors['month_header_bg'],
                                                fg=self.theme_colors['month_header_fg'])
@@ -1012,7 +1097,7 @@ class Calendar(tk.Frame):
             
             # Next year button
             next_btn = tk.Label(center_frame, text=">>",
-                              font=self.theme_colors['navigation_font'],
+                              font=self._get_scaled_font(self.theme_colors['navigation_font']),
                               bg=self.theme_colors['navigation_bg'],
                               fg=self.theme_colors['navigation_fg'],
                               cursor='hand2')
@@ -1041,12 +1126,11 @@ class Calendar(tk.Frame):
             
             month_label = tk.Label(month_grid_frame,
                                  text=month_name,
-                                 font=('TkDefaultFont', 10, 'bold'),
+                                 font=self._get_scaled_font(('TkDefaultFont', 10, 'bold')),
                                  relief='flat', bd=1,
                                  bg=self.theme_colors['day_bg'],
                                  fg=self.theme_colors['day_fg'],
-                                 cursor='hand2',
-                                 width=6, height=2)
+                                 cursor='hand2')
             month_label.grid(row=row, column=col, padx=2, pady=2, sticky='nsew')
             
             # Highlight current month
@@ -1134,6 +1218,22 @@ class Calendar(tk.Frame):
             self.popup_height = height
         else:
             self.popup_height = DEFAULT_POPUP_HEIGHT
+    
+    def update_dpi_scaling(self):
+        """Update DPI scaling factor and refresh display."""
+        try:
+            old_scaling = self.dpi_scaling_factor
+            self.dpi_scaling_factor = get_scaling_factor(self)
+            
+            # Only update if scaling factor has changed
+            if abs(old_scaling - self.dpi_scaling_factor) > 0.01:
+                if not self.year_view_mode:
+                    self._update_display()
+                else:
+                    self._update_year_view()
+        except Exception as e:
+            self.logger.warning(f"Failed to update DPI scaling: {e}, using 1.0 as fallback")
+            self.dpi_scaling_factor = 1.0
 
 
 # Theme loading functions
@@ -1216,6 +1316,8 @@ def get_calendar_themes() -> Dict[str, Dict[str, Any]]:
             themes[theme_name] = _load_theme_file(theme_name)
         except (FileNotFoundError, configparser.Error) as e:
             # Skip malformed theme files
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to load theme file {theme_file}: {e}")
             continue
     
     return themes
