@@ -33,7 +33,6 @@ def test_version_matches_pyproject():
     """Test that version matches pyproject.toml."""
     if not TOML_AVAILABLE:
         pytest.skip("toml not available")
-
     try:
         with open("pyproject.toml", "r", encoding="utf-8") as f:
             pyproject = toml.load(f)

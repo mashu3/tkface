@@ -16,7 +16,6 @@ _tk_initialized = False
 def _cleanup_tkinter():
     """Clean up Tkinter resources safely."""
     global _tk_root, _tk_initialized
-
     if _tk_root is not None:
         try:
             # Destroy all child windows
@@ -25,7 +24,6 @@ def _cleanup_tkinter():
                     widget.destroy()
                 except (tk.TclError, AttributeError):
                     pass
-
             # Destroy the main window
             _tk_root.destroy()
         except tk.TclError:
@@ -35,10 +33,8 @@ def _cleanup_tkinter():
         finally:
             _tk_root = None
             _tk_initialized = False
-
     # Force garbage collection
     gc.collect()
-
     # Short wait for resource cleanup
     time.sleep(0.1)
 
@@ -47,29 +43,22 @@ def _cleanup_tkinter():
 def root():
     """Create a root window for the tests with session scope for better parallel execution."""
     global _tk_root, _tk_initialized
-
     with _tk_lock:
         try:
             # Set environment variables
             os.environ["TK_SILENCE_DEPRECATION"] = "1"
             os.environ["PYTHONUNBUFFERED"] = "1"
-
             # Clean up existing instance
             if _tk_initialized:
                 _cleanup_tkinter()
-
             # Create new root window
             _tk_root = tk.Tk()
             _tk_root.withdraw()  # Hide the main window
-
             # Force window updates
             _tk_root.update()
             _tk_root.update_idletasks()
-
             _tk_initialized = True
-
             yield _tk_root
-
         except tk.TclError as e:
             error_str = str(e)
             if any(
@@ -111,20 +100,16 @@ def root_function():
     try:
         # Set environment variables
         os.environ["TK_SILENCE_DEPRECATION"] = "1"
-
         # Create new root window
         temp_root = tk.Tk()
         temp_root.withdraw()
         temp_root.update()
-
         yield temp_root
-
         # Cleanup
         try:
             temp_root.destroy()
         except tk.TclError:
             pass
-
     except tk.TclError as e:
         error_str = str(e)
         if any(
@@ -187,27 +172,26 @@ def calendar_mock_patches():
         patch("tkinter.Label.bind"),
         patch("tkinter.Button.bind"),
     ]
-
     # Start all patches
     for p in patches:
         p.start()
-
     yield patches
-
     # Stop all patches
     for p in patches:
         p.stop()
 
 
 # Configuration for parallel testing
+
+
 def pytest_configure(config):
     """Configure pytest for parallel execution."""
     # Suppress warnings during parallel execution
     config.addinivalue_line(
-        "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+        "markers",
+        "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     )
     config.addinivalue_line("markers", "gui: marks tests as GUI tests")
-
     # Configure logging for tests
     logging.basicConfig(
         level=logging.WARNING,  # Only show warnings and errors during tests

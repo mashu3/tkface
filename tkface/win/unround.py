@@ -1,6 +1,5 @@
 import sys
 import logging
-
 # Import Windows-specific modules only when needed
 if sys.platform.startswith("win"):
     try:
@@ -11,17 +10,13 @@ if sys.platform.startswith("win"):
         ctypes = None
         wintypes = None
         tk = None
-
 logger = logging.getLogger(__name__)
-
 # DwmSetWindowAttribute constants
 DWMWA_WINDOW_CORNER_PREFERENCE = 33
 DWMWCP_DONOTROUND = 1
-
 # Global state for auto-unround feature
 _auto_unround_enabled = False
 _original_toplevel_init = None
-
 
 def disable_window_corner_round(hwnd):
     """
@@ -34,11 +29,9 @@ def disable_window_corner_round(hwnd):
         or wintypes is None
     ):
         return False
-
     try:
         # Load dwmapi.dll
         dwmapi = ctypes.WinDLL("dwmapi")
-
         preference = ctypes.c_int(DWMWCP_DONOTROUND)
         result = dwmapi.DwmSetWindowAttribute(
             wintypes.HWND(hwnd),
@@ -51,43 +44,34 @@ def disable_window_corner_round(hwnd):
         logger.debug("Failed to disable window corner rounding: %s", e)
         return False
 
-
 def unround(root, auto_toplevel=True):
     """
     Disable window corner rounding for all windows under the given Tk root
     (Windows 11 only).
     Does nothing on other OSes.
-
     Args:
         root: Tkinter root window
         auto_toplevel (bool): If True, enables automatic unrounding
             for future Toplevel windows
-
     Returns:
         bool: True if successful, False otherwise
     """
     if not sys.platform.startswith("win") or ctypes is None:
         return True  # Consider success on non-Windows platforms
-
     try:
         # Enable auto-unround for future Toplevel windows (like messageboxes)
         if auto_toplevel:
             enable_auto_unround()
-
         # Ensure window is fully created before applying unround
         root.update_idletasks()
-
         # Get the actual window handle using GetParent
         hwnd = ctypes.windll.user32.GetParent(root.winfo_id())
         success = disable_window_corner_round(hwnd)
-
         # Also handle existing Toplevel windows
         for w in root.winfo_children():
             if hasattr(w, "winfo_id"):
                 try:
-                    child_hwnd = ctypes.windll.user32.GetParent(
-                        w.winfo_id()
-                    )
+                    child_hwnd = ctypes.windll.user32.GetParent(w.winfo_id())
                     disable_window_corner_round(child_hwnd)
                 except (OSError, AttributeError) as e:
                     logger.debug(
@@ -95,30 +79,22 @@ def unround(root, auto_toplevel=True):
                         "window: %s",
                         e,
                     )
-
         return success
     except (OSError, AttributeError) as e:
         logger.warning("Failed to unround windows: %s", e)
         return False
 
-
 def _patched_toplevel_init(self, master=None, **kw):
     """Patched Toplevel.__init__ that automatically applies unround."""
     logger.debug("Creating Toplevel window with auto-unround...")
-
     # Call original __init__
     _original_toplevel_init(self, master, **kw)
-
     # Apply unround after window is created
     try:
         # Schedule multiple attempts at unround application
         self.after_idle(_apply_unround_to_toplevel, self)
-        self.after(
-            100, _apply_unround_to_toplevel, self
-        )  # Retry after 100ms
-        self.after(
-            500, _apply_unround_to_toplevel, self
-        )  # Retry after 500ms
+        self.after(100, _apply_unround_to_toplevel, self)  # Retry after 100ms
+        self.after(500, _apply_unround_to_toplevel, self)  # Retry after 500ms
         logger.debug(
             "Scheduled multiple unround application attempts for Toplevel"
         )
@@ -129,23 +105,18 @@ def _patched_toplevel_init(self, master=None, **kw):
         # If scheduling fails, try to apply immediately
         _apply_unround_to_toplevel(self)
 
-
 def _apply_unround_to_toplevel(toplevel):
     """Apply unround to a Toplevel window."""
     if not sys.platform.startswith("win") or ctypes is None:
         return
-
     # Avoid duplicate applications
     if hasattr(toplevel, "_tkface_unround_applied"):
         return
-
     try:
         # Ensure window is fully created
         toplevel.update_idletasks()
-
         # Get window handle - try multiple methods
         hwnd = None
-
         # Method 1: Direct winfo_id (for Toplevel windows)
         try:
             hwnd = toplevel.winfo_id()
@@ -156,15 +127,12 @@ def _apply_unround_to_toplevel(toplevel):
         except (OSError, AttributeError) as e:
             logger.debug("Failed to get Toplevel hwnd via winfo_id: %s", e)
             hwnd = None
-
         # Method 2: GetParent (for embedded windows)
         if hwnd is None or hwnd == 0:
             try:
                 hwnd = ctypes.windll.user32.GetParent(toplevel.winfo_id())
                 if hwnd and hwnd != 0:
-                    logger.debug(
-                        "Got Toplevel hwnd via GetParent: %s", hwnd
-                    )
+                    logger.debug("Got Toplevel hwnd via GetParent: %s", hwnd)
                 else:
                     hwnd = None
             except (OSError, AttributeError) as e:
@@ -172,7 +140,6 @@ def _apply_unround_to_toplevel(toplevel):
                     "Failed to get Toplevel hwnd via GetParent: %s", e
                 )
                 hwnd = None
-
         # Method 3: FindWindow by title (last resort)
         if hwnd is None or hwnd == 0:
             try:
@@ -190,7 +157,6 @@ def _apply_unround_to_toplevel(toplevel):
                     "Failed to get Toplevel hwnd via FindWindow: %s", e
                 )
                 hwnd = None
-
         if hwnd and hwnd != 0:
             result = disable_window_corner_round(hwnd)
             logger.debug(
@@ -201,36 +167,28 @@ def _apply_unround_to_toplevel(toplevel):
                 toplevel._tkface_unround_applied = True
         else:
             logger.warning("Failed to get valid hwnd for Toplevel window")
-
     except (OSError, AttributeError) as e:
         logger.warning("Failed to apply unround to Toplevel: %s", e)
-
 
 def enable_auto_unround():
     """
     Enable automatic unrounding for all future Toplevel windows.
     This affects messageboxes, dialogs, and other popup windows.
-
     Returns:
         bool: True if auto-unround was enabled, False otherwise
     """
     global _auto_unround_enabled, _original_toplevel_init
-
     if not sys.platform.startswith("win") or ctypes is None or tk is None:
         logger.info("Auto-unround: Not on Windows or missing dependencies")
         return False
-
     if _auto_unround_enabled:
         logger.debug("Auto-unround: Already enabled")
         return True  # Already enabled
-
     try:
         # Store original Toplevel.__init__
         _original_toplevel_init = tk.Toplevel.__init__
-
         # Replace with patched version
         tk.Toplevel.__init__ = _patched_toplevel_init
-
         _auto_unround_enabled = True
         logger.info(
             "Auto-unround: Successfully enabled, Toplevel.__init__ patched"
@@ -240,24 +198,19 @@ def enable_auto_unround():
         logger.warning("Auto-unround: Failed to enable: %s", e)
         return False
 
-
 def disable_auto_unround():
     """
     Disable automatic unrounding for Toplevel windows.
-
     Returns:
         bool: True if auto-unround was disabled, False otherwise
     """
     global _auto_unround_enabled, _original_toplevel_init
-
     if not _auto_unround_enabled or _original_toplevel_init is None:
         return True  # Already disabled or never enabled
-
     try:
         # Restore original Toplevel.__init__
         if tk is not None:
             tk.Toplevel.__init__ = _original_toplevel_init
-
         _auto_unround_enabled = False
         _original_toplevel_init = None
         return True
@@ -265,11 +218,9 @@ def disable_auto_unround():
         logger.warning("Auto-unround: Failed to disable: %s", e)
         return False
 
-
 def is_auto_unround_enabled():
     """
     Check if automatic unrounding is enabled.
-
     Returns:
         bool: True if auto-unround is enabled, False otherwise
     """

@@ -4,21 +4,18 @@ import logging
 import tkinter as tk
 from tkinter import TclError
 
-
 class LanguageManager:
     def __init__(self):
         self.user_dicts = {}
         self.current_lang = "en"
         self.msgcat_loaded = set()
         self.logger = logging.getLogger(__name__)
-
     def register(self, lang_code, dictionary, root):
         if lang_code not in self.user_dicts:
             self.user_dicts[lang_code] = {}
         self.user_dicts[lang_code].update(dictionary)
         for key, value in dictionary.items():
             root.tk.call("msgcat::mcset", lang_code, key, value)
-
     def _determine_language(self, lang_code, root):
         """Determine the actual language code, handling 'auto' case."""
         if lang_code == "auto":
@@ -34,7 +31,6 @@ class LanguageManager:
                 )
                 lang_code = "en"
         return lang_code
-
     def _load_tk_msgcat(self, lang_code, root):
         """Load tk standard msgcat file if available."""
         try:
@@ -59,12 +55,10 @@ class LanguageManager:
             self.logger.debug(
                 "Failed to load tk msgcat file for %s: %s", lang_code, e
             )
-
     def _parse_msg_file(self, file_path, lang_code, root):
         """Parse a .msg file and load translations."""
         if lang_code not in self.user_dicts:
             self.user_dicts[lang_code] = {}
-
         with open(file_path, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
@@ -78,7 +72,6 @@ class LanguageManager:
                     self.user_dicts[lang_code][key] = val
                     # Also set in msgcat
                     root.tk.call("msgcat::mcset", lang_code, key, val)
-
     def _load_custom_msgcat(self, lang_code, root):
         """Load custom msgcat files from locales directory."""
         try:
@@ -109,30 +102,22 @@ class LanguageManager:
                 lang_code,
                 e,
             )
-
     def _set_final_locale(self, lang_code, root):
         """Set the final locale for the language."""
         try:
             root.tk.call("msgcat::mclocale", lang_code)
         except TclError as e:
-            self.logger.debug(
-                "Failed to set locale to %s: %s", lang_code, e
-            )
-
+            self.logger.debug("Failed to set locale to %s: %s", lang_code, e)
     def set(self, lang_code, root):
         """Set the language for the application."""
         lang_code = self._determine_language(lang_code, root)
         self.current_lang = lang_code
-
         # Load tk standard msgcat file (optional, but keep for fallback)
         self._load_tk_msgcat(lang_code, root)
-
         # Load custom msgcat files
         self._load_custom_msgcat(lang_code, root)
-
         # Set final locale
         self._set_final_locale(lang_code, root)
-
     def get(self, key, root=None, language=None):
         if root is None:
             root = getattr(tk, "_default_root", None)
@@ -142,10 +127,7 @@ class LanguageManager:
                     "or pass root explicitly."
                 )
         lang_code = language or self.current_lang
-        if (
-            lang_code in self.user_dicts
-            and key in self.user_dicts[lang_code]
-        ):
+        if lang_code in self.user_dicts and key in self.user_dicts[lang_code]:
             result = self.user_dicts[lang_code][key]
             return result
         try:
@@ -174,9 +156,7 @@ class LanguageManager:
             )
             # Return key as final fallback
         return key
-
     mc = get  # alias
-
     def available(self):
         """
         Return a sorted list of available language codes (user, msgcat, and
@@ -189,7 +169,6 @@ class LanguageManager:
             langs.update(self.msgcat_loaded)
         langs.add("en")
         return sorted(langs)
-
     def load_msg(self, lang_code, msg_path, root):
         """
         Load a .msg file into msgcat for the specified language code.
@@ -206,25 +185,20 @@ class LanguageManager:
             )
             return False
         return True
-
     def clear(self, lang_code):
         """
         Remove the user dictionary for the specified language code.
         """
         if lang_code in self.user_dicts:
             del self.user_dicts[lang_code]
-
     def current(self):
         """
         Return the current language code in use.
         """
         return self.current_lang
-
     def get_dict(self, lang_code):
         """
         Return the user dictionary for the specified language code.
         """
         return self.user_dicts.get(lang_code, {})
-
-
 __all__ = ["LanguageManager"]

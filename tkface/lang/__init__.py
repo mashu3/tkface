@@ -1,5 +1,4 @@
 from .lang import LanguageManager
-
 _lang_instance = LanguageManager()
 set = _lang_instance.set
 get = _lang_instance.get

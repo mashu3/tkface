@@ -1,5 +1,4 @@
 """Tests for Windows-specific features of tkface library.
-
 This module contains tests for Windows-specific functionality including
 DPI scaling, window unrounding, and system bell sounds.
 """
@@ -134,7 +133,6 @@ def test_dpi_with_options():
         result = win.dpi(None, enable=False)
         assert isinstance(result, dict)
         assert result.get("enabled") is False
-
         result = win.dpi(None, enable=True)
         assert isinstance(result, dict)
     except (AttributeError, TypeError, ValueError) as e:

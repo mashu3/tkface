@@ -1,19 +1,15 @@
 """
 Windows-specific features for tkface.
-
 This module provides Windows-specific enhancements for Tkinter applications.
 All functions in this module are designed to work on Windows platforms and
 will gracefully degrade or do nothing on other platforms.
-
 Available features:
 - DPI awareness and scaling
 - Windows-specific button styling (flat buttons)
 - Windows system sounds
 - Windows 11 corner rounding control
 """
-
 import sys
-
 from .bell import bell
 from .button import (
     FlatButton,
@@ -49,17 +45,13 @@ from .unround import (
     unround,
 )
 
-
 def is_windows():
     """
     Check if running on Windows platform.
-
     Returns:
         bool: True if running on Windows, False otherwise
     """
     return sys.platform == "win32"
-
-
 __all__ = [
     "is_windows",
     "dpi",

@@ -19,10 +19,11 @@ DIALOG_CONFIG = {
     "func_name, expected_title, expected_icon",
     [(k, v[0], v[1]) for k, v in DIALOG_CONFIG.items()],
 )
-def test_dialog_creation_with_defaults(root, func_name, expected_title, expected_icon):
+def test_dialog_creation_with_defaults(
+    root, func_name, expected_title, expected_icon
+):
     """Test that dialogs are created by calling CustomMessageBox with correct defaults."""
     dialog_func = getattr(messagebox, func_name)
-
     # We patch the underlying show method to prevent actual dialog creation
     with patch("tkface.messagebox.CustomMessageBox.show") as mock_show:
         # We need to test the wrapper functions, not the class directly
@@ -52,11 +53,14 @@ def test_dialog_creation_with_defaults(root, func_name, expected_title, expected
         ("askyesnocancel", "cancel", None),
     ],
 )
-def test_dialog_return_values(root, func_name, mocked_return, expected_final_return):
+def test_dialog_return_values(
+    root, func_name, mocked_return, expected_final_return
+):
     """Test the final return value of dialogs, including boolean/None conversion."""
     dialog_func = getattr(messagebox, func_name)
-
-    with patch("tkface.messagebox.CustomMessageBox.show", return_value=mocked_return):
+    with patch(
+        "tkface.messagebox.CustomMessageBox.show", return_value=mocked_return
+    ):
         final_result = dialog_func(master=root, message="Test")
         assert final_result == expected_final_return
 
@@ -83,7 +87,6 @@ def test_language_passed_to_show(root, lang):
 def test_dialog_positioning_kwargs_passed(root, x, y, x_offset, y_offset):
     """Test that geometry-related kwargs are passed correctly."""
     root.geometry("800x600+0+0")
-
     with patch("tkface.messagebox.CustomMessageBox.show") as mock_show:
         messagebox.showinfo(
             master=root,
@@ -93,10 +96,8 @@ def test_dialog_positioning_kwargs_passed(root, x, y, x_offset, y_offset):
             x_offset=x_offset,
             y_offset=y_offset,
         )
-
         mock_show.assert_called_once()
         _, kwargs = mock_show.call_args
-
         assert kwargs.get("x") == x
         assert kwargs.get("y") == y
         assert kwargs.get("x_offset") == x_offset
@@ -109,12 +110,11 @@ def test_messagebox_translation_calls(root, lang):
     with patch("tkface.lang.get") as mock_lang_get:
         # Assume translated text to be returned
         mock_lang_get.side_effect = lambda key, *a, **kw: f"{key}_{lang}"
-
         from tkface.dialog.messagebox import CustomMessageBox
 
-        with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
-            "tkinter.Button"
-        ):
+        with patch("tkinter.Toplevel.wait_window"), patch(
+            "tkinter.Label"
+        ), patch("tkinter.Button"):
             CustomMessageBox(
                 master=root,
                 title="Test Title",
@@ -122,10 +122,8 @@ def test_messagebox_translation_calls(root, lang):
                 button_set="okcancel",
                 language=lang,
             )
-
     # Check if lang.get was called as expected
     calls = mock_lang_get.call_args_list
-
     # Check for calls for Title, ok, and cancel
     assert any(c.args[0] == "Test Title" for c in calls)
     assert any(c.args[0] == "ok" for c in calls)
@@ -168,10 +166,8 @@ def test_bell_parameter_default_false(root):
 def test_bell_parameter_all_functions(root, func_name):
     """Test that bell parameter works for all messagebox functions."""
     dialog_func = getattr(messagebox, func_name)
-
     with patch("tkface.messagebox.CustomMessageBox.show") as mock_show:
         dialog_func(master=root, message="Test", bell=True)
-
         mock_show.assert_called_once()
         _, kwargs = mock_show.call_args
         assert kwargs["bell"] is True
@@ -216,7 +212,6 @@ def test_get_or_create_root():
             assert root == mock_root
             mock_tk.assert_called_once()
             mock_root.withdraw.assert_called_once()
-
     # Test when root already exists
     mock_root = MagicMock()
     with patch("tkinter._default_root", mock_root):
@@ -231,7 +226,6 @@ def test_get_button_labels():
 
     with patch("tkface.lang.get") as mock_lang_get:
         mock_lang_get.side_effect = lambda key, *a, **kw: key.upper()
-
         # Test different button sets
         result = _get_button_labels("ok", None, "en")
         assert len(result) == 1
@@ -239,7 +233,6 @@ def test_get_button_labels():
         assert result[0][1] == "ok"
         assert result[0][2] is True  # is_default
         assert result[0][3] is False  # is_cancel
-
         result = _get_button_labels("okcancel", None, "en")
         assert len(result) == 2
         assert result[0][1] == "ok"
@@ -263,12 +256,13 @@ def test_custom_messagebox_icon_file_error(root):
 
     with patch("tkinter.PhotoImage") as mock_photo:
         mock_photo.side_effect = Exception("File not found")
-
-        with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
-            "tkinter.Button"
-        ):
+        with patch("tkinter.Toplevel.wait_window"), patch(
+            "tkinter.Label"
+        ), patch("tkinter.Button"):
             # Should not raise exception, should handle gracefully
-            CustomMessageBox(master=root, message="Test", icon="/invalid/path/icon.png")
+            CustomMessageBox(
+                master=root, message="Test", icon="/invalid/path/icon.png"
+            )
 
 
 def test_custom_messagebox_custom_buttons(root):
@@ -280,7 +274,6 @@ def test_custom_messagebox_custom_buttons(root):
         ("Don't Save", "dont_save"),
         ("Cancel", "cancel"),
     ]
-
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ):
@@ -300,7 +293,9 @@ def test_custom_messagebox_keyboard_shortcuts(root):
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ):
-        dialog = CustomMessageBox(master=root, message="Test", button_set="yesno")
+        dialog = CustomMessageBox(
+            master=root, message="Test", button_set="yesno"
+        )
         # Test that keyboard shortcuts are bound
         assert hasattr(dialog, "button_widgets")
 
@@ -310,7 +305,6 @@ def test_custom_messagebox_window_positioning(root):
     from tkface.dialog.messagebox import CustomMessageBox
 
     root.geometry("800x600+100+100")
-
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ), patch("tkinter.Toplevel.geometry") as mock_geometry:
@@ -325,11 +319,14 @@ def test_custom_messagebox_bell_error(root):
 
     with patch("tkface.win.bell") as mock_win_bell:
         mock_win_bell.side_effect = Exception("Bell error")
-
-        with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
-            "tkinter.Button"
-        ), patch("tkinter.Toplevel.bell") as mock_bell:
-            CustomMessageBox(master=root, message="Test", bell=True, icon="error")
+        with patch("tkinter.Toplevel.wait_window"), patch(
+            "tkinter.Label"
+        ), patch("tkinter.Button"), patch(
+            "tkinter.Toplevel.bell"
+        ) as mock_bell:
+            CustomMessageBox(
+                master=root, message="Test", bell=True, icon="error"
+            )
             # Should fallback to standard bell
             mock_bell.assert_called()
 
@@ -340,11 +337,9 @@ def test_askabortretryignore(root):
         mock_show.return_value = "retry"
         result = messagebox.askabortretryignore(master=root, message="Test")
         assert result == "retry"
-
         mock_show.return_value = "abort"
         result = messagebox.askabortretryignore(master=root, message="Test")
         assert result == "abort"
-
         mock_show.return_value = "ignore"
         result = messagebox.askabortretryignore(master=root, message="Test")
         assert result == "ignore"
@@ -357,8 +352,9 @@ def test_custom_messagebox_focus_next(root):
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ):
-        dialog = CustomMessageBox(master=root, message="Test", button_set="yesno")
-
+        dialog = CustomMessageBox(
+            master=root, message="Test", button_set="yesno"
+        )
         # Test focus navigation
         if len(dialog.button_widgets) >= 2:
             dialog._focus_next(0)
@@ -373,7 +369,6 @@ def test_custom_messagebox_set_result(root):
         "tkinter.Button"
     ), patch("tkinter.Toplevel.destroy") as mock_destroy:
         dialog = CustomMessageBox(master=root, message="Test")
-
         dialog.set_result("test_result")
         assert dialog.result == "test_result"
         mock_destroy.assert_called()
@@ -387,7 +382,6 @@ def test_custom_messagebox_close(root):
         "tkinter.Button"
     ), patch("tkinter.Toplevel.destroy") as mock_destroy:
         dialog = CustomMessageBox(master=root, message="Test")
-
         dialog.close()
         mock_destroy.assert_called()
 
@@ -422,12 +416,13 @@ def test_custom_messagebox_with_custom_translations(root):
     from tkface.dialog.messagebox import CustomMessageBox
 
     custom_translations = {"ja": {"ok": "OK", "cancel": "キャンセル"}}
-
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ), patch("tkface.lang.register") as mock_register:
         CustomMessageBox(
-            master=root, message="Test", custom_translations=custom_translations
+            master=root,
+            message="Test",
+            custom_translations=custom_translations,
         )
         mock_register.assert_called()
 
@@ -457,7 +452,6 @@ def test_custom_messagebox_button_default_cancel_logic(root):
     from tkface.dialog.messagebox import CustomMessageBox
 
     custom_buttons = [("Button1", "btn1"), ("Button2", "btn2")]
-
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ):
@@ -476,5 +470,7 @@ def test_custom_messagebox_bell_with_different_icons(root):
     ) as mock_bell:
         mock_win_bell.side_effect = Exception("Bell error")
         # Test with warning icon
-        CustomMessageBox(master=root, message="Test", bell=True, icon="warning")
+        CustomMessageBox(
+            master=root, message="Test", bell=True, icon="warning"
+        )
         mock_bell.assert_called()
