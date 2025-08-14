@@ -62,7 +62,8 @@ tkface.messagebox.showerror("Error", "An error has occurred!", bell=True)
 
 # Confirmation dialog
 if tkface.messagebox.askyesno("Confirm", "Do you want to save?"):
-    save_file()
+    # Handle save operation
+    tkface.messagebox.showinfo("Success", "File saved successfully!")
 ```
 
 ### Screenshots
@@ -147,7 +148,10 @@ date_entry.pack(padx=10, pady=10)
 
 # Get selected date
 selected_date = date_entry.get_date()
-print(f"Selected date: {selected_date}")
+# Process the selected date as needed
+if selected_date:
+    # Handle the selected date
+    pass
 
 root.mainloop()
 ```
@@ -209,7 +213,10 @@ tkface.win.dpi(root)         # Enable DPI awareness (Windows only)
 root.geometry("600x400")
 
 # Create your widgets here
-button = tkface.Button(root, text="Flat Button", command=callback)  # Flat styling on Windows
+def on_button_click():
+    tkface.messagebox.showinfo("Info", "Button clicked!")
+
+button = tkface.Button(root, text="Flat Button", command=on_button_click)  # Flat styling on Windows
 button.pack()
 
 # Disable corner rounding (Windows 11 only) - call after all widgets are created

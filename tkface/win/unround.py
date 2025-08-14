@@ -28,7 +28,11 @@ def disable_window_corner_round(hwnd):
     Disable window corner rounding for a specific window handle.
     Returns True if successful, False otherwise.
     """
-    if not sys.platform.startswith("win") or ctypes is None or wintypes is None:
+    if (
+        not sys.platform.startswith("win")
+        or ctypes is None
+        or wintypes is None
+    ):
         return False
 
     try:
@@ -40,7 +44,7 @@ def disable_window_corner_round(hwnd):
             wintypes.HWND(hwnd),
             ctypes.c_uint(DWMWA_WINDOW_CORNER_PREFERENCE),
             ctypes.byref(preference),
-            ctypes.sizeof(preference)
+            ctypes.sizeof(preference),
         )
         return result == 0
     except (OSError, AttributeError) as e:
@@ -50,12 +54,14 @@ def disable_window_corner_round(hwnd):
 
 def unround(root, auto_toplevel=True):
     """
-    Disable window corner rounding for all windows under the given Tk root (Windows 11 only).
+    Disable window corner rounding for all windows under the given Tk root
+    (Windows 11 only).
     Does nothing on other OSes.
 
     Args:
         root: Tkinter root window
-        auto_toplevel (bool): If True, enables automatic unrounding for future Toplevel windows
+        auto_toplevel (bool): If True, enables automatic unrounding
+            for future Toplevel windows
 
     Returns:
         bool: True if successful, False otherwise
@@ -77,12 +83,18 @@ def unround(root, auto_toplevel=True):
 
         # Also handle existing Toplevel windows
         for w in root.winfo_children():
-            if hasattr(w, 'winfo_id'):
+            if hasattr(w, "winfo_id"):
                 try:
-                    child_hwnd = ctypes.windll.user32.GetParent(w.winfo_id())
+                    child_hwnd = ctypes.windll.user32.GetParent(
+                        w.winfo_id()
+                    )
                     disable_window_corner_round(child_hwnd)
                 except (OSError, AttributeError) as e:
-                    logger.debug("Failed to disable corner rounding for child window: %s", e)
+                    logger.debug(
+                        "Failed to disable corner rounding for child "
+                        "window: %s",
+                        e,
+                    )
 
         return success
     except (OSError, AttributeError) as e:
@@ -101,11 +113,19 @@ def _patched_toplevel_init(self, master=None, **kw):
     try:
         # Schedule multiple attempts at unround application
         self.after_idle(_apply_unround_to_toplevel, self)
-        self.after(100, _apply_unround_to_toplevel, self)  # Retry after 100ms
-        self.after(500, _apply_unround_to_toplevel, self)  # Retry after 500ms
-        logger.debug("Scheduled multiple unround application attempts for Toplevel")
+        self.after(
+            100, _apply_unround_to_toplevel, self
+        )  # Retry after 100ms
+        self.after(
+            500, _apply_unround_to_toplevel, self
+        )  # Retry after 500ms
+        logger.debug(
+            "Scheduled multiple unround application attempts for Toplevel"
+        )
     except (OSError, AttributeError) as e:
-        logger.warning("Failed to schedule unround, applying immediately: %s", e)
+        logger.warning(
+            "Failed to schedule unround, applying immediately: %s", e
+        )
         # If scheduling fails, try to apply immediately
         _apply_unround_to_toplevel(self)
 
@@ -116,7 +136,7 @@ def _apply_unround_to_toplevel(toplevel):
         return
 
     # Avoid duplicate applications
-    if hasattr(toplevel, '_tkface_unround_applied'):
+    if hasattr(toplevel, "_tkface_unround_applied"):
         return
 
     try:
@@ -142,11 +162,15 @@ def _apply_unround_to_toplevel(toplevel):
             try:
                 hwnd = ctypes.windll.user32.GetParent(toplevel.winfo_id())
                 if hwnd and hwnd != 0:
-                    logger.debug("Got Toplevel hwnd via GetParent: %s", hwnd)
+                    logger.debug(
+                        "Got Toplevel hwnd via GetParent: %s", hwnd
+                    )
                 else:
                     hwnd = None
             except (OSError, AttributeError) as e:
-                logger.debug("Failed to get Toplevel hwnd via GetParent: %s", e)
+                logger.debug(
+                    "Failed to get Toplevel hwnd via GetParent: %s", e
+                )
                 hwnd = None
 
         # Method 3: FindWindow by title (last resort)
@@ -156,16 +180,22 @@ def _apply_unround_to_toplevel(toplevel):
                 if title:
                     hwnd = ctypes.windll.user32.FindWindowW(None, title)
                     if hwnd and hwnd != 0:
-                        logger.debug("Got Toplevel hwnd via FindWindow: %s", hwnd)
+                        logger.debug(
+                            "Got Toplevel hwnd via FindWindow: %s", hwnd
+                        )
                     else:
                         hwnd = None
             except (OSError, AttributeError) as e:
-                logger.debug("Failed to get Toplevel hwnd via FindWindow: %s", e)
+                logger.debug(
+                    "Failed to get Toplevel hwnd via FindWindow: %s", e
+                )
                 hwnd = None
 
         if hwnd and hwnd != 0:
             result = disable_window_corner_round(hwnd)
-            logger.debug("Applied unround to Toplevel (hwnd: %s): %s", hwnd, result)
+            logger.debug(
+                "Applied unround to Toplevel (hwnd: %s): %s", hwnd, result
+            )
             if result:
                 # Mark as successfully applied to avoid duplicate attempts
                 toplevel._tkface_unround_applied = True
@@ -202,7 +232,9 @@ def enable_auto_unround():
         tk.Toplevel.__init__ = _patched_toplevel_init
 
         _auto_unround_enabled = True
-        logger.info("Auto-unround: Successfully enabled, Toplevel.__init__ patched")
+        logger.info(
+            "Auto-unround: Successfully enabled, Toplevel.__init__ patched"
+        )
         return True
     except (OSError, AttributeError) as e:
         logger.warning("Auto-unround: Failed to enable: %s", e)
