@@ -1,11 +1,12 @@
-import sys
 import logging
+import sys
+
 # Import Windows-specific modules only when needed
 if sys.platform.startswith("win"):
     try:
         import ctypes
-        from ctypes import wintypes
         import tkinter as tk
+        from ctypes import wintypes
     except ImportError:
         ctypes = None
         wintypes = None
@@ -15,8 +16,9 @@ logger = logging.getLogger(__name__)
 DWMWA_WINDOW_CORNER_PREFERENCE = 33
 DWMWCP_DONOTROUND = 1
 # Global state for auto-unround feature
-_auto_unround_enabled = False
-_original_toplevel_init = None
+_AUTO_UNROUND_ENABLED = False
+_ORIGINAL_TOPLEVEL_INIT = None
+
 
 def disable_window_corner_round(hwnd):
     """
@@ -43,6 +45,7 @@ def disable_window_corner_round(hwnd):
     except (OSError, AttributeError) as e:
         logger.debug("Failed to disable window corner rounding: %s", e)
         return False
+
 
 def unround(root, auto_toplevel=True):
     """
@@ -84,11 +87,12 @@ def unround(root, auto_toplevel=True):
         logger.warning("Failed to unround windows: %s", e)
         return False
 
+
 def _patched_toplevel_init(self, master=None, **kw):
     """Patched Toplevel.__init__ that automatically applies unround."""
     logger.debug("Creating Toplevel window with auto-unround...")
     # Call original __init__
-    _original_toplevel_init(self, master, **kw)
+    _ORIGINAL_TOPLEVEL_INIT(self, master, **kw)
     # Apply unround after window is created
     try:
         # Schedule multiple attempts at unround application
@@ -105,12 +109,28 @@ def _patched_toplevel_init(self, master=None, **kw):
         # If scheduling fails, try to apply immediately
         _apply_unround_to_toplevel(self)
 
+
+def _is_unround_applied(toplevel):
+    """Check if unround has been applied to a Toplevel window."""
+    try:
+        # pylint: disable=protected-access
+        return toplevel._tkface_unround_applied
+    except AttributeError:
+        return False
+
+
+def _mark_unround_applied(toplevel):
+    """Mark that unround has been applied to a Toplevel window."""
+    # pylint: disable=protected-access
+    toplevel._tkface_unround_applied = True
+
+
 def _apply_unround_to_toplevel(toplevel):
     """Apply unround to a Toplevel window."""
     if not sys.platform.startswith("win") or ctypes is None:
         return
     # Avoid duplicate applications
-    if hasattr(toplevel, "_tkface_unround_applied"):
+    if _is_unround_applied(toplevel):
         return
     try:
         # Ensure window is fully created
@@ -164,11 +184,12 @@ def _apply_unround_to_toplevel(toplevel):
             )
             if result:
                 # Mark as successfully applied to avoid duplicate attempts
-                toplevel._tkface_unround_applied = True
+                _mark_unround_applied(toplevel)
         else:
             logger.warning("Failed to get valid hwnd for Toplevel window")
     except (OSError, AttributeError) as e:
         logger.warning("Failed to apply unround to Toplevel: %s", e)
+
 
 def enable_auto_unround():
     """
@@ -177,26 +198,28 @@ def enable_auto_unround():
     Returns:
         bool: True if auto-unround was enabled, False otherwise
     """
-    global _auto_unround_enabled, _original_toplevel_init
+    global _AUTO_UNROUND_ENABLED, _ORIGINAL_TOPLEVEL_INIT  # noqa: E501 pylint: disable=global-statement
     if not sys.platform.startswith("win") or ctypes is None or tk is None:
         logger.info("Auto-unround: Not on Windows or missing dependencies")
         return False
-    if _auto_unround_enabled:
+    if _AUTO_UNROUND_ENABLED:
         logger.debug("Auto-unround: Already enabled")
         return True  # Already enabled
     try:
         # Store original Toplevel.__init__
-        _original_toplevel_init = tk.Toplevel.__init__
+        _ORIGINAL_TOPLEVEL_INIT = tk.Toplevel.__init__
         # Replace with patched version
         tk.Toplevel.__init__ = _patched_toplevel_init
-        _auto_unround_enabled = True
+        _AUTO_UNROUND_ENABLED = True
         logger.info(
-            "Auto-unround: Successfully enabled, Toplevel.__init__ patched"
+            "Auto-unround: Successfully enabled, "
+            "Toplevel.__init__ patched"
         )
         return True
     except (OSError, AttributeError) as e:
         logger.warning("Auto-unround: Failed to enable: %s", e)
         return False
+
 
 def disable_auto_unround():
     """
@@ -204,19 +227,22 @@ def disable_auto_unround():
     Returns:
         bool: True if auto-unround was disabled, False otherwise
     """
-    global _auto_unround_enabled, _original_toplevel_init
-    if not _auto_unround_enabled or _original_toplevel_init is None:
+    global _AUTO_UNROUND_ENABLED, _ORIGINAL_TOPLEVEL_INIT  # noqa: E501 pylint: disable=global-statement
+    if not _AUTO_UNROUND_ENABLED or _ORIGINAL_TOPLEVEL_INIT is None:
         return True  # Already disabled or never enabled
     try:
         # Restore original Toplevel.__init__
         if tk is not None:
-            tk.Toplevel.__init__ = _original_toplevel_init
-        _auto_unround_enabled = False
-        _original_toplevel_init = None
+            tk.Toplevel.__init__ = _ORIGINAL_TOPLEVEL_INIT
+        _AUTO_UNROUND_ENABLED = False
+        _ORIGINAL_TOPLEVEL_INIT = None
         return True
     except (OSError, AttributeError) as e:
-        logger.warning("Auto-unround: Failed to disable: %s", e)
+        logger.warning(
+            "Auto-unround: Failed to disable: %s", e
+        )
         return False
+
 
 def is_auto_unround_enabled():
     """
@@ -224,4 +250,4 @@ def is_auto_unround_enabled():
     Returns:
         bool: True if auto-unround is enabled, False otherwise
     """
-    return _auto_unround_enabled
+    return _AUTO_UNROUND_ENABLED

@@ -3,9 +3,11 @@
 Simple visual demo for Windows features: DPI awareness and corner rounding.
 Focus on visual appearance only - no debug prints or complex info.
 """
-import tkinter as tk
-import tkface
 import sys
+import tkinter as tk
+
+import tkface
+
 
 def main():
     root = tk.Tk()
@@ -95,5 +97,7 @@ def main():
     # Disable corner rounding (Windows 11) - after all widgets are created
     tkface.win.unround(root)
     root.mainloop()
+
+
 if __name__ == "__main__":
     main()

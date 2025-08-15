@@ -1,6 +1,7 @@
 from .lang import LanguageManager
+
 _lang_instance = LanguageManager()
-set = _lang_instance.set
+set = _lang_instance.set  # pylint: disable=redefined-builtin
 get = _lang_instance.get
 register = _lang_instance.register
 available = _lang_instance.available

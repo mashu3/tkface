@@ -4,35 +4,36 @@ import os
 import threading
 import time
 import tkinter as tk
-import pytest
 from unittest.mock import patch
 
+import pytest
+
 # Global Tkinter instance management
-_tk_root = None
-_tk_lock = threading.Lock()
-_tk_initialized = False
+_TK_ROOT = None
+_TK_LOCK = threading.Lock()
+_TK_INITIALIZED = False
 
 
 def _cleanup_tkinter():
     """Clean up Tkinter resources safely."""
-    global _tk_root, _tk_initialized
-    if _tk_root is not None:
+    global _TK_ROOT, _TK_INITIALIZED  # pylint: disable=global-statement
+    if _TK_ROOT is not None:
         try:
             # Destroy all child windows
-            for widget in _tk_root.winfo_children():
+            for widget in _TK_ROOT.winfo_children():
                 try:
                     widget.destroy()
                 except (tk.TclError, AttributeError):
                     pass
             # Destroy the main window
-            _tk_root.destroy()
+            _TK_ROOT.destroy()
         except tk.TclError:
             pass
-        except Exception:
+        except Exception:  # pylint: disable=W0718
             pass
         finally:
-            _tk_root = None
-            _tk_initialized = False
+            _TK_ROOT = None
+            _TK_INITIALIZED = False
     # Force garbage collection
     gc.collect()
     # Short wait for resource cleanup
@@ -41,24 +42,25 @@ def _cleanup_tkinter():
 
 @pytest.fixture(scope="session")
 def root():
-    """Create a root window for the tests with session scope for better parallel execution."""
-    global _tk_root, _tk_initialized
-    with _tk_lock:
+    """Create a root window for the tests with session scope
+    for better parallel execution."""
+    global _TK_ROOT, _TK_INITIALIZED  # pylint: disable=global-statement
+    with _TK_LOCK:
         try:
             # Set environment variables
             os.environ["TK_SILENCE_DEPRECATION"] = "1"
             os.environ["PYTHONUNBUFFERED"] = "1"
             # Clean up existing instance
-            if _tk_initialized:
+            if _TK_INITIALIZED:
                 _cleanup_tkinter()
             # Create new root window
-            _tk_root = tk.Tk()
-            _tk_root.withdraw()  # Hide the main window
+            _TK_ROOT = tk.Tk()
+            _TK_ROOT.withdraw()  # Hide the main window
             # Force window updates
-            _tk_root.update()
-            _tk_root.update_idletasks()
-            _tk_initialized = True
-            yield _tk_root
+            _TK_ROOT.update()
+            _TK_ROOT.update_idletasks()
+            _TK_INITIALIZED = True
+            yield _TK_ROOT
         except tk.TclError as e:
             error_str = str(e)
             if any(
@@ -76,11 +78,12 @@ def root():
                 ]
             ):
                 pytest.skip(
-                    f"Tkinter not properly installed or Tcl/Tk files missing: {error_str}"
+                    f"Tkinter not properly installed or Tcl/Tk files missing: "
+                    f"{error_str}"
                 )
             else:
                 raise
-        except Exception:
+        except Exception:  # pylint: disable=W0718
             # Try cleanup for unexpected errors
             _cleanup_tkinter()
             raise
@@ -90,7 +93,7 @@ def root():
 def cleanup_session():
     """Clean up Tkinter resources after all tests complete."""
     yield
-    with _tk_lock:
+    with _TK_LOCK:
         _cleanup_tkinter()
 
 
@@ -127,7 +130,8 @@ def root_function():
             ]
         ):
             pytest.skip(
-                f"Tkinter not properly installed or Tcl/Tk files missing: {error_str}"
+                f"Tkinter not properly installed or Tcl/Tk files missing: "
+                f"{error_str}"
             )
         else:
             raise
@@ -184,7 +188,7 @@ def calendar_mock_patches():
 # Configuration for parallel testing
 
 
-def pytest_configure(config):
+def pytest_configure(config):  # pylint: disable=unused-argument
     """Configure pytest for parallel execution."""
     # Suppress warnings during parallel execution
     config.addinivalue_line(
@@ -199,7 +203,7 @@ def pytest_configure(config):
     )
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(config, items):  # pylint: disable=unused-argument
     """Modify test collection for better parallel execution."""
     for item in items:
         # Add gui marker to GUI tests

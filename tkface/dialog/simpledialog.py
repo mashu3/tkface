@@ -1,21 +1,37 @@
-import tkinter as tk
 import logging
-from tkface import lang
-from typing import Optional, Callable
+import tkinter as tk
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional
 
-def _get_or_create_root():
-    """
-    Get the default Tk root window or create a new one if it doesn't exist.
-    Returns:
-        tuple: (root, created) where created is True if a new root was created
-    """
-    root = getattr(tk, "_default_root", None)
-    created = False
-    if root is None:
-        root = tk.Tk()
-        root.withdraw()
-        created = True
-    return root, created
+from tkface import lang
+from tkface.dialog import _position_window, _setup_dialog_base, messagebox
+
+
+@dataclass
+class SimpleDialogConfig:
+    """Configuration for simple dialog dialogs."""
+    title: Optional[str] = "Input"
+    message: str = ""
+    initialvalue: Optional[str] = None
+    show: Optional[str] = None
+    ok_label: Optional[str] = None
+    cancel_label: Optional[str] = None
+    language: Optional[str] = None
+    custom_translations: Optional[Dict[str, Dict[str, str]]] = None
+    validate_func: Optional[Callable[[str], bool]] = None
+    choices: Optional[List[str]] = None
+    multiple: bool = False
+    initial_selection: Optional[List[int]] = None
+
+
+@dataclass
+class WindowPosition:
+    """Window positioning configuration."""
+    x: Optional[int] = None
+    y: Optional[int] = None
+    x_offset: int = 0
+    y_offset: int = 0
+
 
 class CustomSimpleDialog:
     """
@@ -26,82 +42,60 @@ class CustomSimpleDialog:
     enhanced features like internationalization, custom positioning,
     and validation.
     """
+
     def __init__(
         self,
         master=None,
-        title: Optional[str] = "Input",
-        message="",
-        initialvalue=None,
-        show=None,
-        ok_label=None,
-        cancel_label=None,
-        x=None,
-        y=None,
-        x_offset=0,
-        y_offset=0,
-        language=None,
-        custom_translations=None,
-        validate_func: Optional[Callable[[str], bool]] = None,
-        choices=None,
-        multiple=False,
-        initial_selection=None,
+        config: Optional[SimpleDialogConfig] = None,
+        position: Optional[WindowPosition] = None,
     ):
         """
         Initialize the CustomSimpleDialog.
         Args:
             master: Parent window. If None, uses default root or
                 creates one.
-            title: Dialog title. Will be translated if language is set.
-            message: Message text to display above the entry field.
-            initialvalue: Initial value for the entry field.
-            show: Character to show for password input (e.g., "*").
-            ok_label: Custom text for OK button.
-            cancel_label: Custom text for Cancel button.
-            x, y: Absolute position for the dialog.
-            x_offset, y_offset: Offset from parent window center.
-            language: Language code for internationalization.
-            custom_translations: Custom translation dictionary.
-            validate_func: Function to validate input before accepting.
-            choices: List of choices for selection dialog.
-            multiple: Allow multiple selection if True.
-            initial_selection: Initial selection indices for multiple
-                selection.
+            config: SimpleDialogConfig object containing dialog configuration
+            position: WindowPosition object containing window positioning
         """
+        # Set default values
+        if config is None:
+            config = SimpleDialogConfig()
+        if position is None:
+            position = WindowPosition()
+
+        master, _, self.language = _setup_dialog_base(master, config.language)
         self.logger = logging.getLogger(__name__)
-        if master is None:
-            master = getattr(tk, "_default_root", None)
-            if master is None:
-                raise RuntimeError(
-                    "No Tk root window found. Please create a Tk instance "
-                    "or pass master explicitly."
-                )
-        self.language = language
-        self.validate_func = validate_func
-        self.choices = choices
-        self.multiple = multiple
-        self.initial_selection = initial_selection or []
+        self.validate_func = config.validate_func
+        self.choices = config.choices
+        self.multiple = config.multiple
+        self.initial_selection = config.initial_selection or []
+        # Initialize attributes that will be set in _create_content
+        self.listbox = None
         self.window = tk.Toplevel(master)
-        self.window.title(lang.get(title, self.window, language=language))
+        self.window.title(lang.get(config.title, self.window, language=config.language))
         self.window.transient(master)
         self.window.grab_set()
-        if custom_translations:
-            for lang_code, dictionary in custom_translations.items():
+        if config.custom_translations:
+            for lang_code, dictionary in config.custom_translations.items():
                 lang.register(lang_code, dictionary, self.window)
         self.result = None
         # Create body frame
         body = tk.Frame(self.window)
         self.initial_focus = self._create_content(
-            body, message, initialvalue, show
+            body, config.message, config.initialvalue, config.show
         )
         body.pack(padx=5, pady=5)
-        self._create_buttons(ok_label, cancel_label)
-        self._set_window_position(master, x, y, x_offset, y_offset)
+        self._create_buttons(config.ok_label, config.cancel_label)
+        self._set_window_position(
+            master, position.x, position.y, position.x_offset, position.y_offset
+        )
         self.window.lift()
         # Set focus to entry
         if self.initial_focus is None:
             self.initial_focus = self.window
         self.initial_focus.focus_set()
         self.window.wait_window()
+
     def _create_content(self, master, message, initialvalue, show):
         """
         Create the content area with message label and entry field or
@@ -116,22 +110,24 @@ class CustomSimpleDialog:
             tk.Entry or tk.Listbox: The widget that should receive focus.
         """
         if message:
-            message_label = tk.Label(master, text=message, justify="left")
+            # Translate the message
+            translated_message = lang.get(message, master, language=self.language)
+            message_label = tk.Label(master, text=translated_message, justify="left")
             message_label.grid(row=0, padx=5, sticky="w")
         # If choices are provided, create a selection list instead of entry
         # field
         if self.choices:
             return self._create_selection_list(master)
-        else:
-            self.entry_var = tk.StringVar(
-                value=initialvalue if initialvalue is not None else ""
-            )
-            entry = tk.Entry(master, textvariable=self.entry_var, show=show)
-            entry.grid(row=1, padx=5, sticky="ew")
-            self.entry = entry
-            entry.bind("<Return>", lambda e: self._on_ok())
-            entry.bind("<Escape>", lambda e: self._on_cancel())
-            return entry
+        self.entry_var = tk.StringVar(
+            value=initialvalue if initialvalue is not None else ""
+        )
+        entry = tk.Entry(master, textvariable=self.entry_var, show=show)
+        entry.grid(row=1, padx=5, sticky="ew")
+        self.entry = entry
+        entry.bind("<Return>", lambda e: self._on_ok())
+        entry.bind("<Escape>", lambda e: self._on_cancel())
+        return entry
+
     def _create_selection_list(self, parent):
         """
         Create a selection list (Listbox) for choices.
@@ -170,7 +166,8 @@ class CustomSimpleDialog:
         self.listbox.bind("<Return>", lambda e: self._on_ok())
         self.listbox.bind("<Escape>", lambda e: self._on_cancel())
         return self.listbox
-    def _on_double_click(self, event):
+
+    def _on_double_click(self, event):  # pylint: disable=unused-argument
         """
         Handle double-click on listbox item for single selection mode.
         Args:
@@ -179,13 +176,14 @@ class CustomSimpleDialog:
         selection = self.listbox.curselection()
         if selection:
             self.set_result(self.choices[selection[0]])
+
     def _get_selection_result(self):
         """
         Get the current selection result.
         Returns:
             Selected value(s) based on selection mode
         """
-        if not hasattr(self, "listbox"):
+        if not hasattr(self, "listbox") or self.listbox is None:
             return None
         selection = self.listbox.curselection()
         if not selection:
@@ -193,9 +191,9 @@ class CustomSimpleDialog:
         if self.multiple:
             # Return list of selected values
             return [self.choices[i] for i in selection]
-        else:
-            # Return single selected value
-            return self.choices[selection[0]]
+        # Return single selected value
+        return self.choices[selection[0]]
+
     def _create_buttons(self, ok_label, cancel_label):
         """
         Create OK and Cancel buttons with proper layout and bindings.
@@ -235,7 +233,8 @@ class CustomSimpleDialog:
         self.window.bind("<Return>", lambda e: ok_btn.invoke())
         self.window.bind("<Escape>", lambda e: cancel_btn.invoke())
         ok_btn.focus_set()
-    def _set_window_position(
+
+    def _set_window_position(  # pylint: disable=R0917
         self, master, x=None, y=None, x_offset=0, y_offset=0
     ):
         """
@@ -245,23 +244,12 @@ class CustomSimpleDialog:
             x, y: Absolute position (if specified).
             x_offset, y_offset: Offset from parent window center.
         """
-        self.window.update_idletasks()
-        width = self.window.winfo_reqwidth()
-        height = self.window.winfo_reqheight()
-        if x is None or y is None:
-            parent_x = master.winfo_rootx()
-            parent_y = master.winfo_rooty()
-            parent_width = master.winfo_width()
-            parent_height = master.winfo_height()
-            x = parent_x + (parent_width - width) // 2
-            y = parent_y + (parent_height - height) // 2
-        x += x_offset
-        y += y_offset
-        self.window.geometry(f"{width}x{height}+{x}+{y}")
+        _position_window(self.window, master, x, y, x_offset, y_offset)
+
     def _on_ok(self):
         """Handle OK button click with validation if specified."""
         # For selection dialogs, get the selection result
-        if hasattr(self, "listbox"):
+        if hasattr(self, "listbox") and self.listbox is not None:
             self.result = self._get_selection_result()
             self.close()
             return
@@ -279,7 +267,6 @@ class CustomSimpleDialog:
                 illegal_value_msg = lang.get(
                     "Illegal value", None, language=self.language
                 )
-                from tkface import messagebox
                 messagebox.showwarning(
                     master=self.window,
                     message=err_msg + "\n" + try_again_msg,
@@ -289,10 +276,12 @@ class CustomSimpleDialog:
                 return  # Don't close dialog
         self.result = self.entry_var.get()
         self.close()
+
     def _on_cancel(self):
         """Handle Cancel button click."""
         self.result = None
         self.close()
+
     def set_result(self, value):
         """
         Set the dialog result and close the window.
@@ -301,29 +290,17 @@ class CustomSimpleDialog:
         """
         self.result = value
         self.close()
+
     def close(self):
         """Close the dialog window."""
         self.window.destroy()
+
     @classmethod
     def show(
         cls,
         master=None,
-        message="",
-        title=None,
-        initialvalue=None,
-        show=None,
-        ok_label=None,
-        cancel_label=None,
-        language=None,
-        custom_translations=None,
-        x=None,
-        y=None,
-        x_offset=0,
-        y_offset=0,
-        validate_func: Optional[Callable[[str], bool]] = None,
-        choices=None,
-        multiple=False,
-        initial_selection=None,
+        config: Optional[SimpleDialogConfig] = None,
+        position: Optional[WindowPosition] = None,
     ):
         """
         Show the dialog and return the result.
@@ -331,64 +308,42 @@ class CustomSimpleDialog:
         handling root window creation/destruction automatically.
         Args:
             master: Parent window.
-            message: Message text.
-            title: Dialog title.
-            initialvalue: Initial value for entry field.
-            show: Character for password input.
-            ok_label: Custom OK button text.
-            cancel_label: Custom Cancel button text.
-            language: Language code for internationalization.
-            custom_translations: Custom translation
-            dictionary.
-            x, y: Absolute position.
-            x_offset, y_offset: Offset from parent center.
-            validate_func: Validation function.
+            config: SimpleDialogConfig object containing dialog configuration
+            position: WindowPosition object containing window positioning
         Returns:
             str or None: The entered value or None if cancelled.
         """
-        root, created = (
-            _get_or_create_root() if master is None else (master, False)
-        )
-        lang.set(language or "auto", root)
+        if config is None:
+            config = SimpleDialogConfig()
+        if position is None:
+            position = WindowPosition()
+
+        master, created, _ = _setup_dialog_base(master, config.language)
+        lang.set(config.language or "auto", master)
         result = cls(
-            master=root,
-            title=(
-                lang.get(title, root, language=language) if title else None
-            ),
-            message=lang.get(message, root, language=language),
-            initialvalue=initialvalue,
-            show=show,
-            ok_label=ok_label,
-            cancel_label=cancel_label,
-            language=language,
-            custom_translations=custom_translations,
-            x=x,
-            y=y,
-            x_offset=x_offset,
-            y_offset=y_offset,
-            validate_func=validate_func,
-            choices=choices,
-            multiple=multiple,
-            initial_selection=initial_selection,
+            master=master,
+            config=config,
+            position=position,
         ).result
         if created:
-            root.destroy()
+            master.destroy()
         return result
 
-def askstring(
+
+def askstring(  # pylint: disable=R0917
     master=None,
-    message="",
-    title=None,
-    initialvalue=None,
-    show=None,
-    ok_label=None,
-    cancel_label=None,
-    language=None,
-    custom_translations=None,
-    x=None,
-    y=None,
-    x_offset=0,
-    y_offset=0,
+    message: str = "",
+    title: Optional[str] = None,
+    initialvalue: Optional[str] = None,
+    show: Optional[str] = None,
+    ok_label: Optional[str] = None,
+    cancel_label: Optional[str] = None,
+    language: Optional[str] = None,
+    custom_translations: Optional[Dict[str, Dict[str, str]]] = None,
+    x: Optional[int] = None,
+    y: Optional[int] = None,
+    x_offset: int = 0,
+    y_offset: int = 0,
 ):
     """
     Display a string input dialog and return the entered value.
@@ -421,8 +376,7 @@ def askstring(
         ...     message="Enter password:", show="*", language="en"
         ... )
     """
-    return CustomSimpleDialog.show(
-        master=master,
+    config = SimpleDialogConfig(
         message=message,
         title=title or "Input",
         initialvalue=initialvalue,
@@ -431,27 +385,30 @@ def askstring(
         cancel_label=cancel_label,
         language=language,
         custom_translations=custom_translations,
-        x=x,
-        y=y,
-        x_offset=x_offset,
-        y_offset=y_offset,
+    )
+    position = WindowPosition(x=x, y=y, x_offset=x_offset, y_offset=y_offset)
+    return CustomSimpleDialog.show(
+        master=master,
+        config=config,
+        position=position,
     )
 
-def askinteger(
+
+def askinteger(  # pylint: disable=R0917
     master=None,
-    message="",
-    title=None,
-    initialvalue=None,
-    minvalue=None,
-    maxvalue=None,
-    ok_label=None,
-    cancel_label=None,
-    language=None,
-    custom_translations=None,
-    x=None,
-    y=None,
-    x_offset=0,
-    y_offset=0,
+    message: str = "",
+    title: Optional[str] = None,
+    initialvalue: Optional[str] = None,
+    minvalue: Optional[int] = None,
+    maxvalue: Optional[int] = None,
+    ok_label: Optional[str] = None,
+    cancel_label: Optional[str] = None,
+    language: Optional[str] = None,
+    custom_translations: Optional[Dict[str, Dict[str, str]]] = None,
+    x: Optional[int] = None,
+    y: Optional[int] = None,
+    x_offset: int = 0,
+    y_offset: int = 0,
 ):
     """
     Display an integer input dialog with validation.
@@ -485,6 +442,7 @@ def askinteger(
         ...     message="Enter count:", minvalue=1, language="en"
         ... )
     """
+
     def validate(val):
         try:
             ival = int(val)
@@ -493,12 +451,12 @@ def askinteger(
             if maxvalue is not None and ival > maxvalue:
                 return False
             return True
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             logger = logging.getLogger(__name__)
-            logger.debug(f"Failed to validate integer input '{val}': {e}")
+            logger.debug("Failed to validate integer input '%s': %s", val, e)
             return False
-    result = CustomSimpleDialog.show(
-        master=master,
+
+    config = SimpleDialogConfig(
         message=message,
         title=title or "Input",
         initialvalue=initialvalue,
@@ -507,31 +465,34 @@ def askinteger(
         cancel_label=cancel_label,
         language=language,
         custom_translations=custom_translations,
-        x=x,
-        y=y,
-        x_offset=x_offset,
-        y_offset=y_offset,
         validate_func=validate,
+    )
+    position = WindowPosition(x=x, y=y, x_offset=x_offset, y_offset=y_offset)
+    result = CustomSimpleDialog.show(
+        master=master,
+        config=config,
+        position=position,
     )
     if result is None:
         return None
     return int(result)
 
-def askfloat(
+
+def askfloat(  # pylint: disable=R0917
     master=None,
-    message="",
-    title=None,
-    initialvalue=None,
-    minvalue=None,
-    maxvalue=None,
-    ok_label=None,
-    cancel_label=None,
-    language=None,
-    custom_translations=None,
-    x=None,
-    y=None,
-    x_offset=0,
-    y_offset=0,
+    message: str = "",
+    title: Optional[str] = None,
+    initialvalue: Optional[str] = None,
+    minvalue: Optional[float] = None,
+    maxvalue: Optional[float] = None,
+    ok_label: Optional[str] = None,
+    cancel_label: Optional[str] = None,
+    language: Optional[str] = None,
+    custom_translations: Optional[Dict[str, Dict[str, str]]] = None,
+    x: Optional[int] = None,
+    y: Optional[int] = None,
+    x_offset: int = 0,
+    y_offset: int = 0,
 ):
     """
     Display a float input dialog with validation.
@@ -565,6 +526,7 @@ def askfloat(
         ...     message="Enter price:", minvalue=0.0, language="en"
         ... )
     """
+
     def validate(val):
         try:
             fval = float(val)
@@ -573,12 +535,12 @@ def askfloat(
             if maxvalue is not None and fval > maxvalue:
                 return False
             return True
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             logger = logging.getLogger(__name__)
-            logger.debug(f"Failed to validate float input '{val}': {e}")
+            logger.debug("Failed to validate float input '%s': %s", val, e)
             return False
-    result = CustomSimpleDialog.show(
-        master=master,
+
+    config = SimpleDialogConfig(
         message=message,
         title=title or "Input",
         initialvalue=initialvalue,
@@ -587,31 +549,34 @@ def askfloat(
         cancel_label=cancel_label,
         language=language,
         custom_translations=custom_translations,
-        x=x,
-        y=y,
-        x_offset=x_offset,
-        y_offset=y_offset,
         validate_func=validate,
+    )
+    position = WindowPosition(x=x, y=y, x_offset=x_offset, y_offset=y_offset)
+    result = CustomSimpleDialog.show(
+        master=master,
+        config=config,
+        position=position,
     )
     if result is None:
         return None
     return float(result)
 
-def askfromlistbox(
+
+def askfromlistbox(  # pylint: disable=R0917
     master=None,
-    message="",
-    title=None,
-    choices=None,
-    multiple=False,
-    initial_selection=None,
-    ok_label=None,
-    cancel_label=None,
-    language=None,
-    custom_translations=None,
-    x=None,
-    y=None,
-    x_offset=0,
-    y_offset=0,
+    message: str = "",
+    title: Optional[str] = None,
+    choices: Optional[List[str]] = None,
+    multiple: bool = False,
+    initial_selection: Optional[List[int]] = None,
+    ok_label: Optional[str] = None,
+    cancel_label: Optional[str] = None,
+    language: Optional[str] = None,
+    custom_translations: Optional[Dict[str, Dict[str, str]]] = None,
+    x: Optional[int] = None,
+    y: Optional[int] = None,
+    x_offset: int = 0,
+    y_offset: int = 0,
 ):
     """
     Show a list selection dialog.
@@ -642,19 +607,20 @@ def askfromlistbox(
     """
     if not choices:
         raise ValueError("choices parameter is required")
-    return CustomSimpleDialog.show(
-        master=master,
+    config = SimpleDialogConfig(
         message=message,
         title=title or "Select",
         ok_label=ok_label,
         cancel_label=cancel_label,
         language=language,
         custom_translations=custom_translations,
-        x=x,
-        y=y,
-        x_offset=x_offset,
-        y_offset=y_offset,
         choices=choices,
         multiple=multiple,
         initial_selection=initial_selection,
+    )
+    position = WindowPosition(x=x, y=y, x_offset=x_offset, y_offset=y_offset)
+    return CustomSimpleDialog.show(
+        master=master,
+        config=config,
+        position=position,
     )

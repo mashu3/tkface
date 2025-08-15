@@ -1,24 +1,56 @@
-import tkinter as tk
 import calendar
-import datetime
 import configparser
+import datetime
 import logging
+import tkinter as tk
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any, Dict, List, Optional, Tuple
+
 from .. import lang
+
+
+@dataclass
+class CalendarConfig:
+    """Configuration for Calendar widget."""
+
+    year: Optional[int] = None
+    month: Optional[int] = None
+    months: int = 1
+    show_week_numbers: bool = False
+    week_start: str = "Sunday"
+    day_colors: Optional[Dict[str, str]] = None
+    holidays: Optional[Dict[str, str]] = None
+    grid_layout: Optional[Tuple[int, int]] = None
+    show_month_headers: bool = True
+    selectmode: str = "single"
+    show_navigation: bool = True
+    theme: str = "light"
+    date_callback: Optional[callable] = None
+    year_view_callback: Optional[callable] = None
+    popup_width: Optional[int] = None
+    popup_height: Optional[int] = None
+    date_format: str = "%Y-%m-%d"
+    year_view_mode: bool = False
+
+
 # Import DPI functions for scaling support
 try:
     from ..win.dpi import get_scaling_factor, scale_font_size
 except ImportError:
     # Fallback functions if DPI module is not available
-    def get_scaling_factor(root):
+    def get_scaling_factor(_root):
         return 1.0
-    def scale_font_size(original_size, root=None, scaling_factor=None):
+
+    def scale_font_size(original_size, _root=None, _scaling_factor=None):
         return original_size
+
+
 # Default popup dimensions
 DEFAULT_POPUP_WIDTH = 235
 DEFAULT_POPUP_HEIGHT = 175
 WEEK_NUMBERS_WIDTH_OFFSET = 20
+
 
 class Calendar(tk.Frame):
     """
@@ -32,9 +64,11 @@ class Calendar(tk.Frame):
     - Configurable week start (Sunday/Monday)
     - Year view mode (3x4 month grid)
     """
-    def __init__(
+
+    def __init__(  # pylint: disable=R0917
         self,
         parent,
+        config: Optional[CalendarConfig] = None,
         year: Optional[int] = None,
         month: Optional[int] = None,
         months: int = 1,
@@ -57,64 +91,78 @@ class Calendar(tk.Frame):
         Initialize the Calendar widget.
         Args:
             parent: Parent widget
-            year: Year to display (defaults to current year)
-            month: Month to display (defaults to current month)
-            months: Number of months to display horizontally
-            show_week_numbers: Whether to show week numbers
-            week_start: Week start day ("Sunday" or "Monday")
-            day_colors: Dictionary mapping day names to colors
-            holidays: Dictionary mapping date strings (YYYY-MM-DD) to colors
+            config: Calendar configuration object (optional)
             **kwargs: Additional arguments passed to tk.Frame
         """
-        self.date_callback = date_callback
-        self.year_view_callback = year_view_callback
-        # Extract date_format from kwargs before passing to super().__init__
-        self.date_format = kwargs.pop("date_format", "%Y-%m-%d")
-        # Set year view mode if specified
-        self.year_view_mode = kwargs.pop("year_view_mode", False)
+        # Use config if provided, otherwise use individual parameters
+        if config is None:
+            config = CalendarConfig(
+                year=year,
+                month=month,
+                months=months,
+                show_week_numbers=show_week_numbers,
+                week_start=week_start,
+                day_colors=day_colors,
+                holidays=holidays,
+                grid_layout=grid_layout,
+                show_month_headers=show_month_headers,
+                selectmode=selectmode,
+                show_navigation=show_navigation,
+                theme=theme,
+                date_callback=date_callback,
+                year_view_callback=year_view_callback,
+                popup_width=popup_width,
+                popup_height=popup_height,
+                date_format=kwargs.pop("date_format", "%Y-%m-%d"),
+                year_view_mode=kwargs.pop("year_view_mode", False),
+            )
+
+        self.date_callback = config.date_callback
+        self.year_view_callback = config.year_view_callback
+        self.date_format = config.date_format
+        self.year_view_mode = config.year_view_mode
         super().__init__(parent, **kwargs)
         self.logger = logging.getLogger(__name__)
+
         # Set default values
-        if year is None:
-            year = datetime.date.today().year
-        if month is None:
-            month = datetime.date.today().month
+        year = config.year or datetime.date.today().year
+        month = config.month or datetime.date.today().month
         # Validate week_start
-        if week_start not in ["Sunday", "Monday", "Saturday"]:
-            raise ValueError(
-                "week_start must be 'Sunday', 'Monday', or 'Saturday'"
-            )
+        if config.week_start not in ["Sunday", "Monday", "Saturday"]:
+            raise ValueError("week_start must be 'Sunday', 'Monday', or 'Saturday'")
         # Validate theme and initialize theme colors
         try:
-            self.theme_colors = get_calendar_theme(theme)
-            self.theme = theme
-        except ValueError:
+            self.theme_colors = get_calendar_theme(config.theme)
+            self.theme = config.theme
+        except ValueError as exc:
             themes = get_calendar_themes()
-            raise ValueError(f"theme must be one of {list(themes.keys())}")
+            raise ValueError(f"theme must be one of {list(themes.keys())}") from exc
         self.year = year
         self.month = month
-        self.months = months
-        self.show_week_numbers = show_week_numbers
-        self.week_start = week_start
-        self.day_colors = day_colors or {}
-        self.holidays = holidays or {}
-        self.show_month_headers = show_month_headers
-        self.selectmode = selectmode
-        self.show_navigation = show_navigation
+        self.months = config.months
+        self.show_week_numbers = config.show_week_numbers
+        self.week_start = config.week_start
+        self.day_colors = config.day_colors or {}
+        self.holidays = config.holidays or {}
+        self.show_month_headers = config.show_month_headers
+        self.selectmode = config.selectmode
+        self.show_navigation = config.show_navigation
         # Popup size settings
         self.popup_width = (
-            popup_width if popup_width is not None else DEFAULT_POPUP_WIDTH
+            config.popup_width
+            if config.popup_width is not None
+            else DEFAULT_POPUP_WIDTH
         )
         self.popup_height = (
-            popup_height if popup_height is not None else DEFAULT_POPUP_HEIGHT
+            config.popup_height
+            if config.popup_height is not None
+            else DEFAULT_POPUP_HEIGHT
         )
         # DPI scaling support
         try:
             self.dpi_scaling_factor = get_scaling_factor(self)
-        except Exception as e:
-            self.logger.debug(
-                f"Failed to get DPI scaling factor: {e}, using 1.0"
-            )
+        except (OSError, ValueError, AttributeError) as e:
+            self.logger.debug("Failed to get DPI scaling factor: %s, using 1.0", e)
             self.dpi_scaling_factor = 1.0
         # Selection state
         self.selected_date = None
@@ -126,15 +174,15 @@ class Calendar(tk.Frame):
         # Store original colors for hover effect restoration
         self.original_colors = {}
         # Grid layout settings
-        if grid_layout is not None:
-            self.grid_rows, self.grid_cols = grid_layout
+        if config.grid_layout is not None:
+            self.grid_rows, self.grid_cols = config.grid_layout
         else:
             # Auto-calculate grid layout based on number of months
-            if months <= 3:
-                self.grid_rows, self.grid_cols = 1, months
-            elif months <= 6:
+            if config.months <= 3:
+                self.grid_rows, self.grid_cols = 1, config.months
+            elif config.months <= 6:
                 self.grid_rows, self.grid_cols = 2, 3
-            elif months <= 12:
+            elif config.months <= 12:
                 self.grid_rows, self.grid_cols = 3, 4
             else:
                 self.grid_rows, self.grid_cols = 4, 4
@@ -146,6 +194,9 @@ class Calendar(tk.Frame):
         self.day_labels = []
         self.week_labels = []
         self.year_view_labels = []  # For year view mode
+        # Year view attributes
+        self.year_view_window = None
+        self.year_view_year_label = None
         # Create widgets
         if self.year_view_mode:
             # Create year view content
@@ -157,10 +208,11 @@ class Calendar(tk.Frame):
         # Update DPI scaling after widget creation
         try:
             self.update_dpi_scaling()
-        except Exception as e:
+        except (OSError, ValueError, AttributeError) as e:
             self.logger.debug(
-                f"Failed to update DPI scaling during initialization: {e}"
+                "Failed to update DPI scaling during initialization: %s", e
             )
+
     def _update_calendar_week_start(self):
         """Update calendar week start setting efficiently."""
         if self.week_start == "Monday":
@@ -169,14 +221,16 @@ class Calendar(tk.Frame):
             self.cal.setfirstweekday(calendar.SATURDAY)
         else:  # Sunday
             self.cal.setfirstweekday(calendar.SUNDAY)
+
     def _get_week_start_offset(self, date: datetime.date) -> int:
         """Get the offset for week start calculation efficiently."""
         if self.week_start == "Monday":
             return date.weekday()
-        elif self.week_start == "Saturday":
+        if self.week_start == "Saturday":
             return (date.weekday() + 2) % 7
-        else:  # Sunday
-            return (date.weekday() + 1) % 7
+        # Sunday
+        return (date.weekday() + 1) % 7
+
     def _create_widgets(self):
         """Create the calendar widget structure."""
         # Set main frame background color
@@ -187,9 +241,7 @@ class Calendar(tk.Frame):
             self.months_container = tk.Frame(
                 self, relief="flat", bd=1, bg=self.theme_colors["background"]
             )
-            self.months_container.pack(
-                fill="both", expand=True, padx=2, pady=2
-            )
+            self.months_container.pack(fill="both", expand=True, padx=2, pady=2)
         else:
             # Create scrollable container for multiple months
             self.canvas = tk.Canvas(self, bg=self.theme_colors["background"])
@@ -201,13 +253,9 @@ class Calendar(tk.Frame):
             )
             self.scrollable_frame.bind(
                 "<Configure>",
-                lambda e: self.canvas.configure(
-                    scrollregion=self.canvas.bbox("all")
-                ),
+                lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")),
             )
-            self.canvas.create_window(
-                (0, 0), window=self.scrollable_frame, anchor="nw"
-            )
+            self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
             self.canvas.configure(xscrollcommand=self.scrollbar.set)
             # Pack scrollbar and canvas
             self.scrollbar.pack(side="bottom", fill="x")
@@ -239,9 +287,7 @@ class Calendar(tk.Frame):
                     bd=1,
                     bg=self.theme_colors["background"],
                 )
-                month_frame.grid(
-                    row=row, column=col, padx=2, pady=2, sticky="nsew"
-                )
+                month_frame.grid(row=row, column=col, padx=2, pady=2, sticky="nsew")
             self.month_frames.append(month_frame)
             # Month header with navigation
             if self.show_month_headers:
@@ -319,9 +365,7 @@ class Calendar(tk.Frame):
                         cursor="hand2",
                     )
                     prev_btn.pack(side="left", padx=(5, 0))
-                    prev_btn.bind(
-                        "<Button-1>", lambda e, m=i, cmd=prev_cmd: cmd(m)
-                    )
+                    prev_btn.bind("<Button-1>", lambda e, m=i, cmd=prev_cmd: cmd(m))
                     prev_btn.bind(
                         "<Enter>",
                         lambda e, btn=prev_btn: btn.config(
@@ -340,9 +384,7 @@ class Calendar(tk.Frame):
                     is_year = item_type == "year"
                     label = tk.Label(
                         center_frame,
-                        font=self._get_scaled_font(
-                            ("TkDefaultFont", 9, "bold")
-                        ),
+                        font=self._get_scaled_font(("TkDefaultFont", 9, "bold")),
                         relief="flat",
                         bd=0,
                         bg=self.theme_colors["month_header_bg"],
@@ -390,15 +432,12 @@ class Calendar(tk.Frame):
                             0,
                             (
                                 10
-                                if item_type
-                                == ("year" if year_first else "month")
+                                if item_type == ("year" if year_first else "month")
                                 else 5
                             ),
                         ),
                     )
-                    next_btn.bind(
-                        "<Button-1>", lambda e, m=i, cmd=next_cmd: cmd(m)
-                    )
+                    next_btn.bind("<Button-1>", lambda e, m=i, cmd=next_cmd: cmd(m))
                     next_btn.bind(
                         "<Enter>",
                         lambda e, btn=next_btn: btn.config(
@@ -417,6 +456,7 @@ class Calendar(tk.Frame):
                 # above)
             # Calendar grid (including header)
             self._create_calendar_grid(month_frame, i)
+
     def _create_calendar_grid(self, month_frame, month_index):
         """Create the calendar grid for a specific month."""
         grid_frame = tk.Frame(month_frame, bg=self.theme_colors["background"])
@@ -451,9 +491,7 @@ class Calendar(tk.Frame):
             day_header = tk.Label(
                 grid_frame,
                 text=day_name,
-                font=self._get_scaled_font(
-                    self.theme_colors["day_header_font"]
-                ),
+                font=self._get_scaled_font(self.theme_colors["day_header_font"]),
                 relief="flat",
                 bd=0,
                 bg=self.theme_colors["day_header_bg"],
@@ -467,17 +505,13 @@ class Calendar(tk.Frame):
             if self.show_week_numbers:
                 week_label = tk.Label(
                     grid_frame,
-                    font=self._get_scaled_font(
-                        self.theme_colors["week_number_font"]
-                    ),
+                    font=self._get_scaled_font(self.theme_colors["week_number_font"]),
                     relief="flat",
                     bd=0,
                     bg=self.theme_colors["week_number_bg"],
                     fg=self.theme_colors["week_number_fg"],
                 )
-                week_label.grid(
-                    row=week + 1, column=0, sticky="nsew", padx=1, pady=1
-                )
+                week_label.grid(row=week + 1, column=0, sticky="nsew", padx=1, pady=1)
                 self.week_labels.append(week_label)
             # Day labels (clickable)
             for day in range(7):
@@ -492,9 +526,7 @@ class Calendar(tk.Frame):
                     cursor="hand2",
                 )
                 col = day + 1 if self.show_week_numbers else day
-                day_label.grid(
-                    row=week + 1, column=col, sticky="nsew", padx=1, pady=1
-                )
+                day_label.grid(row=week + 1, column=col, sticky="nsew", padx=1, pady=1)
                 # Store original colors for this label
                 self.original_colors[day_label] = {
                     "bg": self.theme_colors["day_bg"],
@@ -516,6 +548,7 @@ class Calendar(tk.Frame):
                     lambda e, label=day_label: self._on_mouse_leave(label),
                 )
                 self.day_labels.append((month_index, week, day, day_label))
+
     def _get_day_names(self, short: bool = False) -> List[str]:
         """Get localized day names."""
         # Define base day names
@@ -555,21 +588,19 @@ class Calendar(tk.Frame):
                 translated = lang.get(day, self.winfo_toplevel())
             day_names.append(translated)
         return day_names
+
     def _get_scaled_font(self, base_font):
         """Get font with DPI scaling applied."""
         try:
             if isinstance(base_font, tuple):
                 family, size, *style = base_font
-                scaled_size = scale_font_size(
-                    size, self, self.dpi_scaling_factor
-                )
+                scaled_size = scale_font_size(size, self, self.dpi_scaling_factor)
                 return (family, scaled_size, *style)
             return base_font
-        except Exception as e:
-            self.logger.debug(
-                f"Failed to scale font: {e}, using original font"
-            )
+        except (ValueError, TypeError, AttributeError) as e:
+            self.logger.debug("Failed to scale font: %s, using original font", e)
             return base_font
+
     def _get_month_name(self, month: int, short: bool = False) -> str:
         """Get localized month name."""
         # Define base month names
@@ -607,14 +638,10 @@ class Calendar(tk.Frame):
             # For short names, get full name translation first, then truncate
             full_name = full_months[month - 1]
             full_translated = lang.get(full_name, self.winfo_toplevel())
-            return (
-                full_translated[:3]
-                if len(full_translated) >= 3
-                else full_translated
-            )
-        else:
-            month_name = full_months[month - 1]
-            return lang.get(month_name, self.winfo_toplevel())
+            return full_translated[:3] if len(full_translated) >= 3 else full_translated
+        month_name = full_months[month - 1]
+        return lang.get(month_name, self.winfo_toplevel())
+
     def _is_year_first_in_format(self) -> bool:
         """
         Determine if year comes first in the date format by analyzing
@@ -633,12 +660,13 @@ class Calendar(tk.Frame):
             if day_pos != -1 and year_pos < day_pos:
                 return True
             return False
-        except Exception as e:
+        except (AttributeError, TypeError) as e:
             self.logger.debug(
-                f"Failed to determine year position in format: "
-                f"{e}, defaulting to year first"
+                "Failed to determine year position in format: "
+                "%s, defaulting to year first", e
             )
             return True
+
     def _get_display_date(self, month_index: int) -> datetime.date:
         """Get the date for a specific month frame, handling overflow."""
         # Use datetime arithmetic for more efficient month overflow handling
@@ -648,42 +676,44 @@ class Calendar(tk.Frame):
         target_year = base_date.year + (target_month - 1) // 12
         target_month = ((target_month - 1) % 12) + 1
         return datetime.date(target_year, target_month, 1)
+
     def _on_prev_month(self, month_index: int):
         """Handle previous month navigation."""
         current_date = self._get_display_date(month_index)
         # Use datetime replace for cleaner arithmetic
         if current_date.month == 1:
-            prev_date = current_date.replace(
-                year=current_date.year - 1, month=12
-            )
+            prev_date = current_date.replace(year=current_date.year - 1, month=12)
         else:
             prev_date = current_date.replace(month=current_date.month - 1)
         self.set_date(prev_date.year, prev_date.month)
+
     def _on_next_month(self, month_index: int):
         """Handle next month navigation."""
         current_date = self._get_display_date(month_index)
         # Use datetime replace for cleaner arithmetic
         if current_date.month == 12:
-            next_date = current_date.replace(
-                year=current_date.year + 1, month=1
-            )
+            next_date = current_date.replace(year=current_date.year + 1, month=1)
         else:
             next_date = current_date.replace(month=current_date.month + 1)
         self.set_date(next_date.year, next_date.month)
+
     def _on_prev_year(self, month_index: int):
         """Handle previous year navigation."""
         current_date = self._get_display_date(month_index)
         prev_date = current_date.replace(year=current_date.year - 1)
         self.set_date(prev_date.year, prev_date.month)
+
     def _on_next_year(self, month_index: int):
         """Handle next year navigation."""
         current_date = self._get_display_date(month_index)
         next_date = current_date.replace(year=current_date.year + 1)
         self.set_date(next_date.year, next_date.month)
-    def _on_month_header_click(self, month_index: int):
+
+    def _on_month_header_click(self, _month_index: int):
         """Handle month header click - switch to year view."""
         if self.year_view_callback:
             self.year_view_callback()
+
     def _on_mouse_enter(self, label):
         """Handle mouse enter event."""
         # Only highlight if not already selected
@@ -702,6 +732,7 @@ class Calendar(tk.Frame):
                 bg=self.theme_colors["hover_bg"],
                 fg=self.theme_colors["hover_fg"],
             )
+
     def _on_mouse_leave(self, label):
         """Handle mouse leave event."""
         # Only restore if not selected
@@ -713,6 +744,7 @@ class Calendar(tk.Frame):
             # Restore original colors
             original = self.original_colors[label]
             label.config(bg=original["bg"], fg=original["fg"])
+
     def _on_date_click(self, month_index: int, week: int, day: int):
         """Handle date button click."""
         # Get the first day of the month using existing helper
@@ -730,7 +762,7 @@ class Calendar(tk.Frame):
             if self.selected_range is None:
                 self.selected_range = (clicked_date, clicked_date)
             else:
-                start_date, end_date = self.selected_range
+                start_date, _end_date = self.selected_range
                 if clicked_date < start_date:
                     self.selected_range = (clicked_date, start_date)
                 else:
@@ -743,6 +775,7 @@ class Calendar(tk.Frame):
                 self.selection_callback(clicked_date)
             else:
                 self.selection_callback(self.selected_range)
+
     def _update_display(self):
         if not self.winfo_exists():
             return
@@ -758,126 +791,133 @@ class Calendar(tk.Frame):
             display_month = display_date.month
             # Update year and month headers
             if self.show_month_headers:
-                if hasattr(self, "year_labels") and month_offset < len(
-                    self.year_labels
-                ):
-                    year_label = self.year_labels[month_offset]
-                    year_label.config(text=str(display_year))
-                if hasattr(self, "month_headers") and month_offset < len(
-                    self.month_headers
-                ):
-                    month_label = self.month_headers[month_offset]
-                    month_label.config(
-                        text=self._get_month_name(display_month, short=True)
-                    )
+                self._update_month_headers(month_offset, display_year, display_month)
             # Update day name headers
             children = self.month_frames[month_offset].winfo_children()
             if self.show_month_headers and len(children) > 1:
                 days_frame = children[1]
             else:
                 days_frame = children[0]
-            day_names = self._get_day_names(short=True)
-            # Find day header labels and update them
-            day_header_index = 0
-            for child in days_frame.winfo_children():
-                if isinstance(child, tk.Label) and child.cget("text") == "":
-                    # Skip empty header (week number column)
-                    continue
-                elif isinstance(child, tk.Label):
-                    # This is a day header
-                    if day_header_index < len(day_names):
-                        child.config(text=day_names[day_header_index])
-                        day_header_index += 1
+            self._update_day_name_headers(days_frame)
             # Get calendar data efficiently using monthrange
-            _, last_day = calendar.monthrange(display_year, display_month)
-            month_days = list(
-                self.cal.itermonthdays(display_year, display_month)
-            )
+            _, _last_day = calendar.monthrange(display_year, display_month)
+            month_days = list(self.cal.itermonthdays(display_year, display_month))
             # Update week numbers
             if self.show_week_numbers:
-                # Reuse existing calendar object for efficiency
-                month_calendar = self.cal.monthdatescalendar(
-                    display_year, display_month
+                week_label_index = self._update_week_numbers(
+                    display_year, display_month, week_label_index
                 )
-                for week in range(6):
-                    if week_label_index + week < len(self.week_labels):
-                        week_label = self.week_labels[week_label_index + week]
-                        if week < len(month_calendar):
-                            # Get the week dates
-                            week_dates = month_calendar[week]
-                            # Check if this week contains days from the current
-                            # month
-                            week_has_month_days = any(
-                                date.year == display_year
-                                and date.month == display_month
-                                for date in week_dates
-                            )
-                            if week_has_month_days:
-                                # For ISO week numbers, we need to use the
-                                # Monday of the week
-                                # as the reference date for week number
-                                # calculation
-                                if self.week_start == "Monday":
-                                    # Monday is already the first day of the
-                                    # week
-                                    reference_date = week_dates[0]
-                                elif self.week_start == "Saturday":
-                                    # Saturday start: Monday is the third day
-                                    # (index 2)
-                                    reference_date = week_dates[2]
-                                else:  # Sunday
-                                    # Sunday start: Monday is the second day
-                                    # (index 1)
-                                    reference_date = week_dates[1]
-                                week_num = reference_date.isocalendar()[1]
-                                week_label.config(text=str(week_num))
-                            else:
-                                week_label.config(text="")
-                        else:
-                            week_label.config(text="")
             # Update day labels
-            for week in range(6):
-                for day in range(7):
-                    day_index = week * 7 + day
-                    # Find the corresponding label
-                    for m, w, d, label in self.day_labels:
-                        if m == month_offset and w == week and d == day:
-                            if day_index < len(month_days):
-                                day_num = month_days[day_index]
-                                if day_num == 0:
-                                    # Empty day - show previous/next month
-                                    # days
-                                    self._set_adjacent_month_day(
-                                        label,
-                                        display_year,
-                                        display_month,
-                                        week,
-                                        day,
-                                    )
-                                else:
-                                    # Valid day
-                                    label.config(text=str(day_num))
-                                    # Set colors
-                                    self._set_day_colors(
-                                        label,
-                                        display_year,
-                                        display_month,
-                                        day_num,
-                                    )
-                            else:
-                                # Beyond month days
-                                self._set_adjacent_month_day(
-                                    label,
-                                    display_year,
-                                    display_month,
-                                    week,
-                                    day,
-                                )
-                            break
+            self._update_day_labels(month_offset, display_year,
+                                    display_month, month_days)
             # Update week label index for next month
             if self.show_week_numbers:
                 week_label_index += 6
-    def _set_adjacent_month_day(
+
+    def _update_month_headers(self, month_offset: int, display_year: int,
+                              display_month: int):
+        """Update year and month headers."""
+        if hasattr(self, "year_labels") and month_offset < len(self.year_labels):
+            year_label = self.year_labels[month_offset]
+            year_label.config(text=str(display_year))
+        if hasattr(self, "month_headers") and month_offset < len(self.month_headers):
+            month_label = self.month_headers[month_offset]
+            month_label.config(
+                text=self._get_month_name(display_month, short=True)
+            )
+
+    def _update_day_name_headers(self, days_frame):
+        """Update day name headers."""
+        day_names = self._get_day_names(short=True)
+        # Find day header labels and update them
+        day_header_index = 0
+        for child in days_frame.winfo_children():
+            if isinstance(child, tk.Label) and child.cget("text") == "":
+                # Skip empty header (week number column)
+                continue
+            if isinstance(child, tk.Label):
+                # This is a day header
+                if day_header_index < len(day_names):
+                    child.config(text=day_names[day_header_index])
+                    day_header_index += 1
+
+    def _update_day_labels(self, month_offset: int, display_year: int,
+                           display_month: int, month_days):
+        """Update day labels for a specific month."""
+        for week in range(6):
+            for day in range(7):
+                day_index = week * 7 + day
+                # Find the corresponding label
+                for m, w, d, label in self.day_labels:
+                    if m == month_offset and w == week and d == day:
+                        self._update_single_day_label(
+                            label, display_year, display_month, week, day,
+                            day_index, month_days
+                        )
+                        break
+
+    def _update_single_day_label(self, label, display_year: int,
+                                 display_month: int, week: int, day: int,
+                                 day_index: int, month_days):
+        """Update a single day label."""
+        if day_index < len(month_days):
+            day_num = month_days[day_index]
+            if day_num == 0:
+                # Empty day - show previous/next month days
+                self._set_adjacent_month_day(
+                    label, display_year, display_month, week, day
+                )
+            else:
+                # Valid day
+                label.config(text=str(day_num))
+                # Set colors
+                self._set_day_colors(label, display_year, display_month, day_num)
+        else:
+            # Beyond month days
+            self._set_adjacent_month_day(
+                label, display_year, display_month, week, day
+            )
+
+    def _update_week_numbers(self, display_year: int, display_month: int,
+                             week_label_index: int) -> int:
+        """Update week numbers for a specific month."""
+        # Reuse existing calendar object for efficiency
+        month_calendar = self.cal.monthdatescalendar(display_year, display_month)
+        for week in range(6):
+            if week_label_index + week < len(self.week_labels):
+                week_label = self.week_labels[week_label_index + week]
+                if week < len(month_calendar):
+                    # Get the week dates
+                    week_dates = month_calendar[week]
+                    # Check if this week contains days from the current month
+                    week_has_month_days = any(
+                        date.year == display_year and date.month == display_month
+                        for date in week_dates
+                    )
+                    if week_has_month_days:
+                        # For ISO week numbers, we need to use the Monday of the week
+                        # as the reference date for week number calculation
+                        reference_date = self._get_week_reference_date(week_dates)
+                        week_num = reference_date.isocalendar()[1]
+                        week_label.config(text=str(week_num))
+                    else:
+                        week_label.config(text="")
+                else:
+                    week_label.config(text="")
+        return week_label_index
+
+    def _get_week_reference_date(self, week_dates):
+        """Get the reference date for week number calculation."""
+        if self.week_start == "Monday":
+            # Monday is already the first day of the week
+            return week_dates[0]
+        if self.week_start == "Saturday":
+            # Saturday start: Monday is the third day (index 2)
+            return week_dates[2]
+        # Sunday start: Monday is the second day (index 1)
+        return week_dates[1]
+
+    def _set_adjacent_month_day(  # pylint: disable=R0917
         self, label, year: int, month: int, week: int, day: int
     ):
         """Set display for adjacent month days."""
@@ -893,10 +933,7 @@ class Calendar(tk.Frame):
         _, last_day = calendar.monthrange(year, month)
         current_month_start = datetime.date(year, month, 1)
         current_month_end = datetime.date(year, month, last_day)
-        if (
-            clicked_date < current_month_start
-            or clicked_date > current_month_end
-        ):
+        if clicked_date < current_month_start or clicked_date > current_month_end:
             # Adjacent month day
             label.config(
                 text=str(clicked_date.day),
@@ -910,69 +947,98 @@ class Calendar(tk.Frame):
                 bg=self.theme_colors["day_bg"],
                 fg=self.theme_colors["day_fg"],
             )
+
     def _set_day_colors(self, label, year: int, month: int, day: int):
         """Set colors for a specific day."""
-        # Default colors
-        bg_color = self.theme_colors["day_bg"]
-        fg_color = self.theme_colors["day_fg"]
-        # Create date object for comparison
-        date_obj = datetime.date(year, month, day)
-        # Check if it's selected
-        if self.selectmode == "single" and self.selected_date == date_obj:
-            bg_color = self.theme_colors["selected_bg"]
-            fg_color = self.theme_colors["selected_fg"]
-        elif self.selectmode == "range" and self.selected_range:
-            start_date, end_date = self.selected_range
-            if start_date <= date_obj <= end_date:
-                if date_obj == start_date or date_obj == end_date:
-                    bg_color = self.theme_colors["selected_bg"]
-                    fg_color = self.theme_colors["selected_fg"]
-                else:
-                    bg_color = self.theme_colors["range_bg"]
-                    fg_color = self.theme_colors["range_fg"]
-        # Check if it's today (only if not selected)
-        if bg_color == self.theme_colors["day_bg"]:
-            today = datetime.date.today()
-            if (
-                year == today.year
-                and month == today.month
-                and day == today.day
-            ):
-                if self.today_color is not None:
-                    bg_color = self.today_color
-                    fg_color = (
-                        "black"  # Default foreground for custom today color
-                    )
-                elif (
-                    self.today_color is None
-                    and hasattr(self, "today_color_set")
-                    and not self.today_color_set
-                ):
-                    # Skip today color if explicitly set to "none"
-                    pass
-                else:
-                    bg_color = self.theme_colors["today_bg"]
-                    fg_color = self.theme_colors["today_fg"]
-        # Check holiday colors (only if not selected)
-        if bg_color == self.theme_colors["day_bg"]:
-            date_str = f"{year:04d}-{month:02d}-{day:02d}"
-            if date_str in self.holidays:
-                bg_color = self.holidays[date_str]
-        # Check day of week colors (only if not selected)
-        if bg_color == self.theme_colors["day_bg"]:
-            day_name = date_obj.strftime("%A")
-            if day_name in self.day_colors:
-                bg_color = self.day_colors[day_name]
-            # Apply default weekend colors for Saturday and Sunday if no custom
-            # colors set
-            elif day_name in ["Saturday", "Sunday"]:
-                bg_color = self.theme_colors["weekend_bg"]
-                fg_color = self.theme_colors["weekend_fg"]
+        # Get colors based on various conditions
+        bg_color, fg_color = self._determine_day_colors(year, month, day)
         # Apply colors
         label.config(bg=bg_color, fg=fg_color)
         # Update original colors for hover effect restoration
         if label in self.original_colors:
             self.original_colors[label] = {"bg": bg_color, "fg": fg_color}
+
+    def _determine_day_colors(self, year: int, month: int, day: int):
+        """Determine background and foreground colors for a day."""
+        # Default colors
+        bg_color = self.theme_colors["day_bg"]
+        fg_color = self.theme_colors["day_fg"]
+
+        # Create date object for comparison
+        date_obj = datetime.date(year, month, day)
+
+        # Check selection colors first (highest priority)
+        bg_color, fg_color = self._get_selection_colors(date_obj, bg_color, fg_color)
+
+        # If not selected, check other conditions
+        if bg_color == self.theme_colors["day_bg"]:
+            # Check today colors
+            bg_color, fg_color = self._get_today_colors(
+                year, month, day, bg_color, fg_color
+            )
+
+            # Check holiday colors
+            if bg_color == self.theme_colors["day_bg"]:
+                bg_color = self._get_holiday_color(year, month, day, bg_color)
+
+            # Check day of week colors
+            if bg_color == self.theme_colors["day_bg"]:
+                bg_color, fg_color = self._get_day_of_week_colors(
+                    date_obj, bg_color, fg_color
+                )
+
+        return bg_color, fg_color
+
+    def _get_selection_colors(self, date_obj, bg_color, fg_color):
+        """Get colors for selected dates."""
+        if self.selectmode == "single" and self.selected_date == date_obj:
+            return self.theme_colors["selected_bg"], self.theme_colors["selected_fg"]
+        if self.selectmode == "range" and self.selected_range:
+            start_date, end_date = self.selected_range
+            if start_date <= date_obj <= end_date:
+                if date_obj in (start_date, end_date):
+                    return (self.theme_colors["selected_bg"],
+                            self.theme_colors["selected_fg"])
+                return (self.theme_colors["range_bg"],
+                        self.theme_colors["range_fg"])
+        return bg_color, fg_color
+
+    def _get_today_colors(self, year: int, month: int, day: int, bg_color, fg_color):
+        """Get colors for today's date."""
+        today = datetime.date.today()
+        if year == today.year and month == today.month and day == today.day:
+            if self.today_color is not None:
+                return (self.today_color,
+                        "black")  # Default foreground for custom today color
+            if (
+                self.today_color is None
+                and hasattr(self, "today_color_set")
+                and not self.today_color_set
+            ):
+                # Skip today color if explicitly set to "none"
+                return bg_color, fg_color
+            return (self.theme_colors["today_bg"],
+                    self.theme_colors["today_fg"])
+        return bg_color, fg_color
+
+    def _get_holiday_color(self, year: int, month: int, day: int, bg_color):
+        """Get holiday color for a date."""
+        date_str = f"{year:04d}-{month:02d}-{day:02d}"
+        if date_str in self.holidays:
+            return self.holidays[date_str]
+        return bg_color
+
+    def _get_day_of_week_colors(self, date_obj, bg_color, fg_color):
+        """Get colors based on day of week."""
+        day_name = date_obj.strftime("%A")
+        if day_name in self.day_colors:
+            return self.day_colors[day_name], fg_color
+        # Apply default weekend colors for Saturday and Sunday if no custom colors set
+        if day_name in ["Saturday", "Sunday"]:
+            return (self.theme_colors["weekend_bg"],
+                    self.theme_colors["weekend_fg"])
+        return bg_color, fg_color
+
     def set_date(self, year: int, month: int):
         """Set the displayed year and month."""
         self.year = year
@@ -982,24 +1048,27 @@ class Calendar(tk.Frame):
             self._update_year_view()
         else:
             self._update_display()
+
     def set_holidays(self, holidays: Dict[str, str]):
         """Set holiday colors dictionary."""
         self.holidays = holidays
         if not self.year_view_mode:
             self._update_display()
+
     def set_day_colors(self, day_colors: Dict[str, str]):
         """Set day of week colors dictionary."""
         self.day_colors = day_colors
         if not self.year_view_mode:
             self._update_display()
+
     def set_theme(self, theme: str):
         """Set the calendar theme."""
         try:
             self.theme_colors = get_calendar_theme(theme)
             self.theme = theme
-        except ValueError:
+        except ValueError as exc:
             themes = get_calendar_themes()
-            raise ValueError(f"theme must be one of {list(themes.keys())}")
+            raise ValueError(f"theme must be one of {list(themes.keys())}") from exc
         if (
             self.year_view_mode
             and hasattr(self, "year_view_window")
@@ -1016,10 +1085,9 @@ class Calendar(tk.Frame):
         # Update DPI scaling after theme change
         try:
             self.update_dpi_scaling()
-        except Exception as e:
-            self.logger.debug(
-                f"Failed to update DPI scaling during theme change: {e}"
-            )
+        except (OSError, ValueError, AttributeError) as e:
+            self.logger.debug("Failed to update DPI scaling during theme change: %s", e)
+
     def set_today_color(self, color: str):
         """Set the today color."""
         if color == "none":
@@ -1030,6 +1098,7 @@ class Calendar(tk.Frame):
             self.today_color_set = True
         if not self.year_view_mode:
             self._update_display()
+
     def _recreate_widgets(self):
         """Recreate all widgets while preserving current settings."""
         # Store current settings
@@ -1064,23 +1133,22 @@ class Calendar(tk.Frame):
         # Update DPI scaling after recreation
         try:
             self.update_dpi_scaling()
-        except Exception as e:
-            self.logger.debug(
-                f"Failed to update DPI scaling during recreation: {e}"
-            )
+        except (OSError, ValueError, AttributeError) as e:
+            self.logger.debug("Failed to update DPI scaling during recreation: %s", e)
+
     def set_week_start(self, week_start: str):
         """Set the week start day."""
         if week_start not in ["Sunday", "Monday", "Saturday"]:
-            raise ValueError(
-                "week_start must be 'Sunday', 'Monday', or 'Saturday'"
-            )
+            raise ValueError("week_start must be 'Sunday', 'Monday', or 'Saturday'")
         self.week_start = week_start
         self._update_calendar_week_start()
         self._recreate_widgets()
+
     def set_show_week_numbers(self, show: bool):
         """Set whether to show week numbers."""
         self.show_week_numbers = show
         self._recreate_widgets()
+
     def refresh_language(self):
         """Refresh the display to reflect language changes."""
         if (
@@ -1099,9 +1167,10 @@ class Calendar(tk.Frame):
         # Update DPI scaling after language change
         try:
             self.update_dpi_scaling()
-        except Exception:
+        except (OSError, ValueError, AttributeError):
             # Ignore DPI scaling errors during language change
             pass
+
     def set_months(self, months: int):
         """Set the number of months to display."""
         if months < 1:
@@ -1152,17 +1221,20 @@ class Calendar(tk.Frame):
         # Update DPI scaling after recreation
         try:
             self.update_dpi_scaling()
-        except Exception:
+        except (OSError, ValueError, AttributeError):
             # Ignore DPI scaling errors during recreation
             pass
+
     def get_selected_date(self) -> Optional[datetime.date]:
         """Get the currently selected date (if any)."""
         return self.selected_date
+
     def get_selected_range(
         self,
     ) -> Optional[Tuple[datetime.date, datetime.date]]:
         """Get the currently selected date range (if any)."""
         return self.selected_range
+
     def get_popup_geometry(self, parent_widget: tk.Widget) -> str:
         """
         Calculate the optimal geometry for popup windows (calendar and year
@@ -1196,65 +1268,57 @@ class Calendar(tk.Frame):
                 # If still off screen, adjust to fit
                 if y + height > screen_height:
                     y = max(0, screen_height - height)
-        except Exception as e:
+        except (AttributeError, TypeError, OSError) as e:
             self.logger.debug(
-                f"Failed to adjust popup position: {e}, "
-                "using original position"
+                "Failed to adjust popup position: %s, using original position", e
             )
         return f"{width}x{height}+{x}+{y}"
+
     def bind_date_selected(self, callback):
         """Bind a callback function to date selection events."""
         self.selection_callback = callback
+
     def set_selected_date(self, date: datetime.date):
         """Set the selected date."""
         self.selected_date = date
         self.selected_range = None
         if not self.year_view_mode:
             self._update_display()
-    def set_selected_range(
-        self, start_date: datetime.date, end_date: datetime.date
-    ):
+
+    def set_selected_range(self, start_date: datetime.date, end_date: datetime.date):
         """Set the selected date range."""
         self.selected_range = (start_date, end_date)
         self.selected_date = None
         if not self.year_view_mode:
             self._update_display()
+
     def _create_year_view(self):
         """Create year view - placeholder method."""
-        pass
+        # Placeholder for year view creation
+
     def _create_year_view_content(self):
         """Create year view content with 3x4 month grid."""
         # Set main frame background color
         self.configure(bg=self.theme_colors["background"])
         # Year header with navigation
         if self.show_navigation:
-            header_frame = tk.Frame(
-                self, bg=self.theme_colors["month_header_bg"]
-            )
+            header_frame = tk.Frame(self, bg=self.theme_colors["month_header_bg"])
             header_frame.pack(fill="x", pady=(5, 0))
-            nav_frame = tk.Frame(
-                header_frame, bg=self.theme_colors["month_header_bg"]
-            )
+            nav_frame = tk.Frame(header_frame, bg=self.theme_colors["month_header_bg"])
             nav_frame.pack(expand=True, fill="x")
-            center_frame = tk.Frame(
-                nav_frame, bg=self.theme_colors["month_header_bg"]
-            )
+            center_frame = tk.Frame(nav_frame, bg=self.theme_colors["month_header_bg"])
             center_frame.pack(expand=True)
             # Previous year button
             prev_btn = tk.Label(
                 center_frame,
                 text="<<",
-                font=self._get_scaled_font(
-                    self.theme_colors["navigation_font"]
-                ),
+                font=self._get_scaled_font(self.theme_colors["navigation_font"]),
                 bg=self.theme_colors["navigation_bg"],
                 fg=self.theme_colors["navigation_fg"],
                 cursor="hand2",
             )
             prev_btn.pack(side="left", padx=(5, 0))
-            prev_btn.bind(
-                "<Button-1>", lambda e: self._on_prev_year_year_view()
-            )
+            prev_btn.bind("<Button-1>", lambda e: self._on_prev_year_year_view())
             prev_btn.bind(
                 "<Enter>",
                 lambda e, btn=prev_btn: btn.config(
@@ -1284,17 +1348,13 @@ class Calendar(tk.Frame):
             next_btn = tk.Label(
                 center_frame,
                 text=">>",
-                font=self._get_scaled_font(
-                    self.theme_colors["navigation_font"]
-                ),
+                font=self._get_scaled_font(self.theme_colors["navigation_font"]),
                 bg=self.theme_colors["navigation_bg"],
                 fg=self.theme_colors["navigation_fg"],
                 cursor="hand2",
             )
             next_btn.pack(side="left", padx=(0, 10))
-            next_btn.bind(
-                "<Button-1>", lambda e: self._on_next_year_year_view()
-            )
+            next_btn.bind("<Button-1>", lambda e: self._on_next_year_year_view())
             next_btn.bind(
                 "<Enter>",
                 lambda e, btn=next_btn: btn.config(
@@ -1333,9 +1393,7 @@ class Calendar(tk.Frame):
                 fg=self.theme_colors["day_fg"],
                 cursor="hand2",
             )
-            month_label.grid(
-                row=row, column=col, padx=2, pady=2, sticky="nsew"
-            )
+            month_label.grid(row=row, column=col, padx=2, pady=2, sticky="nsew")
             # Highlight current month
             if month == self.month:
                 month_label.config(
@@ -1349,25 +1407,24 @@ class Calendar(tk.Frame):
             )
             month_label.bind(
                 "<Enter>",
-                lambda e, label=month_label: self._on_year_view_mouse_enter(
-                    label
-                ),
+                lambda e, label=month_label: self._on_year_view_mouse_enter(label),
             )
             month_label.bind(
                 "<Leave>",
-                lambda e, label=month_label: self._on_year_view_mouse_leave(
-                    label
-                ),
+                lambda e, label=month_label: self._on_year_view_mouse_leave(label),
             )
             self.year_view_labels.append((month, month_label))
+
     def _on_prev_year_year_view(self):
         """Handle previous year navigation in year view."""
         self.year -= 1
         self._update_year_view()
+
     def _on_next_year_year_view(self):
         """Handle next year navigation in year view."""
         self.year += 1
         self._update_year_view()
+
     def _on_year_view_month_click(self, month: int):
         """Handle month click in year view."""
         self.month = month
@@ -1375,6 +1432,7 @@ class Calendar(tk.Frame):
         # Call date callback if available
         if self.date_callback:
             self.date_callback(self.year, month)
+
     def _on_year_view_mouse_enter(self, label):
         """Handle mouse enter event in year view."""
         current_bg = label.cget("bg")
@@ -1383,6 +1441,7 @@ class Calendar(tk.Frame):
                 bg=self.theme_colors["hover_bg"],
                 fg=self.theme_colors["hover_fg"],
             )
+
     def _on_year_view_mouse_leave(self, label):
         """Handle mouse leave event in year view."""
         current_bg = label.cget("bg")
@@ -1401,6 +1460,7 @@ class Calendar(tk.Frame):
                             fg=self.theme_colors["day_fg"],
                         )
                     break
+
     def _update_year_view(self):
         """Update year view display."""
         if hasattr(self, "year_view_year_label"):
@@ -1418,9 +1478,8 @@ class Calendar(tk.Frame):
                     bg=self.theme_colors["selected_bg"],
                     fg=self.theme_colors["selected_fg"],
                 )
-    def set_popup_size(
-        self, width: Optional[int] = None, height: Optional[int] = None
-    ):
+
+    def set_popup_size(self, width: Optional[int] = None, height: Optional[int] = None):
         """
         Set the popup size for both calendar and year view.
         Args:
@@ -1435,6 +1494,7 @@ class Calendar(tk.Frame):
             self.popup_height = height
         else:
             self.popup_height = DEFAULT_POPUP_HEIGHT
+
     def update_dpi_scaling(self):
         """Update DPI scaling factor and refresh display."""
         try:
@@ -1446,12 +1506,15 @@ class Calendar(tk.Frame):
                     self._update_display()
                 else:
                     self._update_year_view()
-        except Exception as e:
+        except (OSError, ValueError, AttributeError) as e:
             self.logger.warning(
-                f"Failed to update DPI scaling: {e}, using 1.0 as fallback"
+                "Failed to update DPI scaling: %s, using 1.0 as fallback", e
             )
             self.dpi_scaling_factor = 1.0
+
+
 # Theme loading functions
+
 
 def _parse_font(font_str: str) -> tuple:
     """
@@ -1471,6 +1534,7 @@ def _parse_font(font_str: str) -> tuple:
         style = parts[2] if len(parts) > 2 else "normal"
         return (family, size, style)
     return ("TkDefaultFont", 9, "normal")
+
 
 def _load_theme_file(theme_name: str) -> Dict[str, Any]:
     """
@@ -1504,6 +1568,7 @@ def _load_theme_file(theme_name: str) -> Dict[str, Any]:
             theme_dict[key] = value
     return theme_dict
 
+
 def get_calendar_themes() -> Dict[str, Dict[str, Any]]:
     """
     Get all available calendar themes.
@@ -1520,9 +1585,10 @@ def get_calendar_themes() -> Dict[str, Dict[str, Any]]:
         except (FileNotFoundError, configparser.Error) as e:
             # Skip malformed theme files
             logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to load theme file {theme_file}: {e}")
+            logger.warning("Failed to load theme file %s: %s", theme_file, e)
             continue
     return themes
+
 
 def get_calendar_theme(theme_name: str) -> Dict[str, Any]:
     """
@@ -1536,11 +1602,10 @@ def get_calendar_theme(theme_name: str) -> Dict[str, Any]:
     """
     try:
         return _load_theme_file(theme_name)
-    except FileNotFoundError:
+    except FileNotFoundError as exc:
         available_themes = list(get_calendar_themes().keys())
         raise ValueError(
-            f"Theme '{theme_name}' not found. Available themes: "
-            f"{available_themes}"
-        )
+            f"Theme '{theme_name}' not found. Available themes: " f"{available_themes}"
+        ) from exc
     except configparser.Error as e:
-        raise ValueError(f"Error loading theme '{theme_name}': {e}")
+        raise ValueError(f"Error loading theme '{theme_name}': {e}") from e

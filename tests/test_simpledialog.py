@@ -1,5 +1,8 @@
-from unittest.mock import patch, MagicMock
+# pylint: disable=import-outside-toplevel,protected-access
+from unittest.mock import MagicMock, patch
+
 import pytest
+
 from tkface import simpledialog
 
 
@@ -81,7 +84,7 @@ def test_language_passed_to_show(lang):
         simpledialog.askstring(message="Test", language=lang)
         mock_show.assert_called_once()
         _, kwargs = mock_show.call_args
-        assert kwargs["language"] == lang
+        assert kwargs["config"].language == lang
 
 
 @pytest.mark.parametrize(
@@ -102,10 +105,10 @@ def test_dialog_positioning_kwargs_passed(x, y, x_offset, y_offset):
         )
         mock_show.assert_called_once()
         _, kwargs = mock_show.call_args
-        assert kwargs.get("x") == x
-        assert kwargs.get("y") == y
-        assert kwargs.get("x_offset") == x_offset
-        assert kwargs.get("y_offset") == y_offset
+        assert kwargs["position"].x == x
+        assert kwargs["position"].y == y
+        assert kwargs["position"].x_offset == x_offset
+        assert kwargs["position"].y_offset == y_offset
 
 
 @pytest.mark.parametrize("lang", ["ja", "en"])
@@ -115,14 +118,18 @@ def test_simpledialog_translation_calls(root, lang):
         mock_lang_get.side_effect = lambda key, *a, **kw: f"{key}_{lang}"
         from tkface.dialog.simpledialog import CustomSimpleDialog
 
-        with patch("tkinter.Toplevel.wait_window"), patch(
-            "tkinter.Label"
-        ), patch("tkinter.Button"), patch("tkinter.Entry"):
+        with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
+            "tkinter.Button"
+        ), patch("tkinter.Entry"):
+            from tkface.dialog.simpledialog import SimpleDialogConfig
+
             CustomSimpleDialog(
                 master=root,
-                title="Test Title",
-                message="Test Message",
-                language=lang,
+                config=SimpleDialogConfig(
+                    title="Test Title",
+                    message="Test Message",
+                    language=lang,
+                ),
             )
     calls = mock_lang_get.call_args_list
     assert any(c.args[0] == "Test Title" for c in calls)
@@ -142,7 +149,7 @@ def test_bell_parameter_not_supported_in_simpledialog(root):
         mock_show.assert_called_once()
         _, kwargs = mock_show.call_args
         # Bell parameter should not be passed
-        assert "bell" not in kwargs
+        assert not hasattr(kwargs["config"], "bell")
 
 
 def test_askfromlistbox_single_selection():
@@ -151,9 +158,7 @@ def test_askfromlistbox_single_selection():
     with patch(
         "tkface.simpledialog.CustomSimpleDialog.show", return_value="Green"
     ) as mock_show:
-        result = simpledialog.askfromlistbox(
-            message="Choose color:", choices=choices
-        )
+        result = simpledialog.askfromlistbox(message="Choose color:", choices=choices)
         assert result == "Green"
         mock_show.assert_called_once()
 
@@ -192,11 +197,15 @@ def test_custom_simpledialog_with_choices(root):
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ), patch("tkinter.Listbox"):
+        from tkface.dialog.simpledialog import SimpleDialogConfig
+
         dialog = CustomSimpleDialog(
             master=root,
-            title="Test",
-            message="Choose an option:",
-            choices=choices,
+            config=SimpleDialogConfig(
+                title="Test",
+                message="Choose an option:",
+                choices=choices,
+            ),
         )
         assert dialog.choices == choices
         assert dialog.multiple is False
@@ -210,12 +219,16 @@ def test_custom_simpledialog_with_multiple_selection(root):
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ), patch("tkinter.Listbox"):
+        from tkface.dialog.simpledialog import SimpleDialogConfig
+
         dialog = CustomSimpleDialog(
             master=root,
-            title="Test",
-            message="Choose options:",
-            choices=choices,
-            multiple=True,
+            config=SimpleDialogConfig(
+                title="Test",
+                message="Choose options:",
+                choices=choices,
+                multiple=True,
+            ),
         )
         assert dialog.choices == choices
         assert dialog.multiple is True
@@ -230,13 +243,17 @@ def test_custom_simpledialog_with_initial_selection(root):
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ), patch("tkinter.Listbox"):
+        from tkface.dialog.simpledialog import SimpleDialogConfig
+
         dialog = CustomSimpleDialog(
             master=root,
-            title="Test",
-            message="Choose options:",
-            choices=choices,
-            multiple=True,
-            initial_selection=initial_selection,
+            config=SimpleDialogConfig(
+                title="Test",
+                message="Choose options:",
+                choices=choices,
+                multiple=True,
+                initial_selection=initial_selection,
+            ),
         )
         assert dialog.initial_selection == initial_selection
 
@@ -251,32 +268,38 @@ def test_custom_simpledialog_with_validation(root):
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ), patch("tkinter.Entry"):
+        from tkface.dialog.simpledialog import SimpleDialogConfig
+
         dialog = CustomSimpleDialog(
             master=root,
-            title="Test",
-            message="Enter text:",
-            validate_func=validate_func,
+            config=SimpleDialogConfig(
+                title="Test",
+                message="Enter text:",
+                validate_func=validate_func,
+            ),
         )
-        assert dialog.validate_func == validate_func
+        assert dialog.validate_func is validate_func
 
 
 def test_custom_simpledialog_validation_failure(root):
     """Test CustomSimpleDialog validation failure."""
     from tkface.dialog.simpledialog import CustomSimpleDialog
 
-    def validate_func(value):
+    def validate_func(value):  # pylint: disable=unused-argument
         return False  # Always fail validation
 
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
-    ), patch("tkinter.Entry"), patch(
-        "tkface.messagebox.showwarning"
-    ) as mock_warning:
+    ), patch("tkinter.Entry"), patch("tkface.messagebox.showwarning") as mock_warning:
+        from tkface.dialog.simpledialog import SimpleDialogConfig
+
         dialog = CustomSimpleDialog(
             master=root,
-            title="Test",
-            message="Enter text:",
-            validate_func=validate_func,
+            config=SimpleDialogConfig(
+                title="Test",
+                message="Enter text:",
+                validate_func=validate_func,
+            ),
         )
         # Test validation failure
         dialog.entry_var = type("MockVar", (), {"get": lambda self: "test"})()
@@ -293,17 +316,19 @@ def test_custom_simpledialog_get_selection_result_single(root):
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ), patch("tkinter.Listbox"):
+        from tkface.dialog.simpledialog import SimpleDialogConfig
+
         dialog = CustomSimpleDialog(
             master=root,
-            title="Test",
-            message="Choose an option:",
-            choices=choices,
+            config=SimpleDialogConfig(
+                title="Test",
+                message="Choose an option:",
+                choices=choices,
+            ),
         )
         # Mock listbox with single selection
         mock_listbox_instance = MagicMock()
-        mock_listbox_instance.curselection.return_value = [
-            1
-        ]  # Select second item
+        mock_listbox_instance.curselection.return_value = [1]  # Select second item
         dialog.listbox = mock_listbox_instance
         result = dialog._get_selection_result()
         assert result == "Option 2"
@@ -317,12 +342,16 @@ def test_custom_simpledialog_get_selection_result_multiple(root):
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ), patch("tkinter.Listbox"):
+        from tkface.dialog.simpledialog import SimpleDialogConfig
+
         dialog = CustomSimpleDialog(
             master=root,
-            title="Test",
-            message="Choose options:",
-            choices=choices,
-            multiple=True,
+            config=SimpleDialogConfig(
+                title="Test",
+                message="Choose options:",
+                choices=choices,
+                multiple=True,
+            ),
         )
         # Mock listbox with multiple selection
         mock_listbox_instance = MagicMock()
@@ -343,11 +372,15 @@ def test_custom_simpledialog_get_selection_result_no_selection(root):
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ), patch("tkinter.Listbox"):
+        from tkface.dialog.simpledialog import SimpleDialogConfig
+
         dialog = CustomSimpleDialog(
             master=root,
-            title="Test",
-            message="Choose an option:",
-            choices=choices,
+            config=SimpleDialogConfig(
+                title="Test",
+                message="Choose an option:",
+                choices=choices,
+            ),
         )
         # Mock listbox with no selection
         mock_listbox_instance = MagicMock()
@@ -365,11 +398,15 @@ def test_custom_simpledialog_double_click(root):
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ), patch("tkinter.Listbox"):
+        from tkface.dialog.simpledialog import SimpleDialogConfig
+
         dialog = CustomSimpleDialog(
             master=root,
-            title="Test",
-            message="Choose an option:",
-            choices=choices,
+            config=SimpleDialogConfig(
+                title="Test",
+                message="Choose an option:",
+                choices=choices,
+            ),
         )
         # Mock listbox with selection
         mock_listbox_instance = MagicMock()
@@ -390,11 +427,15 @@ def test_custom_simpledialog_double_click_no_selection(root):
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
     ), patch("tkinter.Listbox"):
+        from tkface.dialog.simpledialog import SimpleDialogConfig
+
         dialog = CustomSimpleDialog(
             master=root,
-            title="Test",
-            message="Choose an option:",
-            choices=choices,
+            config=SimpleDialogConfig(
+                title="Test",
+                message="Choose an option:",
+                choices=choices,
+            ),
         )
         # Mock listbox with no selection
         mock_listbox_instance = MagicMock()
@@ -408,7 +449,8 @@ def test_custom_simpledialog_double_click_no_selection(root):
 
 
 def test_custom_simpledialog_without_master():
-    """Test CustomSimpleDialog when no master is provided and no root exists."""
+    """Test CustomSimpleDialog when no master is provided
+    and no root exists."""
     from tkface.dialog.simpledialog import CustomSimpleDialog
 
     with patch("tkinter._default_root", None):
@@ -418,26 +460,24 @@ def test_custom_simpledialog_without_master():
 
 def test_custom_simpledialog_show_class_method():
     """Test CustomSimpleDialog.show class method."""
-    from tkface.dialog.simpledialog import CustomSimpleDialog
+    from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
 
-    with patch(
-        "tkface.dialog.simpledialog.CustomSimpleDialog.show"
-    ) as mock_show:
+    with patch("tkface.dialog.simpledialog.CustomSimpleDialog.show") as mock_show:
         mock_show.return_value = "test_result"
-        result = CustomSimpleDialog.show(message="Test", title="Test Title")
+        result = CustomSimpleDialog.show(
+            config=SimpleDialogConfig(message="Test", title="Test Title")
+        )
         assert result == "test_result"
         mock_show.assert_called_once()
 
 
 def test_custom_simpledialog_show_with_created_root():
     """Test CustomSimpleDialog.show when root is created."""
-    from tkface.dialog.simpledialog import CustomSimpleDialog
+    from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
 
-    with patch(
-        "tkface.dialog.simpledialog.CustomSimpleDialog.show"
-    ) as mock_show:
+    with patch("tkface.dialog.simpledialog.CustomSimpleDialog.show") as mock_show:
         mock_show.return_value = "test_result"
-        result = CustomSimpleDialog.show(message="Test")
+        result = CustomSimpleDialog.show(config=SimpleDialogConfig(message="Test"))
         assert result == "test_result"
         mock_show.assert_called_once()
 
@@ -448,11 +488,12 @@ def test_custom_simpledialog_close(root):
 
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
-    ), patch("tkinter.Entry"), patch(
-        "tkinter.Toplevel.destroy"
-    ) as mock_destroy:
+    ), patch("tkinter.Entry"), patch("tkinter.Toplevel.destroy") as mock_destroy:
+        from tkface.dialog.simpledialog import SimpleDialogConfig
+
         dialog = CustomSimpleDialog(
-            master=root, title="Test", message="Test Message"
+            master=root,
+            config=SimpleDialogConfig(title="Test", message="Test Message"),
         )
         dialog.close()
         mock_destroy.assert_called()
@@ -464,12 +505,75 @@ def test_custom_simpledialog_on_cancel(root):
 
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
-    ), patch("tkinter.Entry"), patch(
-        "tkinter.Toplevel.destroy"
-    ) as mock_destroy:
+    ), patch("tkinter.Entry"), patch("tkinter.Toplevel.destroy") as mock_destroy:
+        from tkface.dialog.simpledialog import SimpleDialogConfig
+
         dialog = CustomSimpleDialog(
-            master=root, title="Test", message="Test Message"
+            master=root,
+            config=SimpleDialogConfig(title="Test", message="Test Message"),
         )
         dialog._on_cancel()
         assert dialog.result is None
         mock_destroy.assert_called()
+
+
+def test_simpledialog_actual_translation(root):
+    """Test that simpledialog actually translates messages correctly."""
+    from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
+
+    with patch("tkinter.Toplevel.wait_window"), patch(
+        "tkinter.Label"
+    ) as mock_label, patch("tkinter.Entry"), patch("tkinter.Button"):
+        CustomSimpleDialog(
+            master=root,
+            config=SimpleDialogConfig(
+                title="Input",
+                message="Please enter a value.",
+                language="ja",
+            ),
+        )
+
+    # Check that the translated message was used
+    label_calls = mock_label.call_args_list
+    message_call = None
+    for call in label_calls:
+        if call.kwargs.get("text") == "値を入力してください。":
+            message_call = call
+            break
+
+    assert message_call is not None, "Translated message was not found in simpledialog"
+
+
+def test_simpledialog_error_message_translation(root):
+    """Test that simpledialog error messages are translated correctly."""
+    from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
+
+    def validate_false(val):  # pylint: disable=unused-argument
+        return False
+
+    with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
+        "tkinter.Entry"
+    ), patch("tkinter.Button"), patch(
+        "tkface.dialog.messagebox.showwarning"
+    ) as mock_warning:
+        dialog = CustomSimpleDialog(
+            master=root,
+            config=SimpleDialogConfig(
+                title="Input",
+                message="Test message",
+                validate_func=validate_false,
+                language="ja",
+            ),
+        )
+        # Trigger validation by calling _on_ok
+        dialog._on_ok()
+
+    # Check that the error message was translated
+    warning_calls = mock_warning.call_args_list
+    assert len(warning_calls) > 0, "Error message should be shown"
+
+    # Check that the error message contains translated text
+    call_args = warning_calls[0]
+    message = call_args.kwargs.get("message", "")
+    assert "入力が無効です。" in message, "Translated error message not found"
+    assert "もう一度お試しください。" in message, "Translated retry message not found"

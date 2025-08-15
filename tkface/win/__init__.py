@@ -9,7 +9,7 @@ Available features:
 - Windows system sounds
 - Windows 11 corner rounding control
 """
-import sys
+
 from .bell import bell
 from .button import (
     FlatButton,
@@ -45,15 +45,7 @@ from .unround import (
     unround,
 )
 
-def is_windows():
-    """
-    Check if running on Windows platform.
-    Returns:
-        bool: True if running on Windows, False otherwise
-    """
-    return sys.platform == "win32"
 __all__ = [
-    "is_windows",
     "dpi",
     "get_scaling_factor",
     "enable_dpi_geometry",

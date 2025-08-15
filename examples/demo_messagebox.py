@@ -1,10 +1,13 @@
 import tkinter as tk
 from tkinter import messagebox as tk_messagebox
+
 import tkface
 from tkface import messagebox as tkface_messagebox
+
 # Note: tkface.Button provides Windows-specific flat styling
 # On Windows: flat appearance (no shadow)
 # On non-Windows: standard button styling
+
 
 def main():
     root = tk.Tk()
@@ -30,6 +33,7 @@ def main():
         text="tkinter.messagebox\n(System Default)",
         font=("Arial", 12, "bold"),
     ).pack(pady=(0, 10))
+
     # Functions for pure tkinter
     def tk_showerror():
         print("=== tkinter.messagebox.showerror ===")
@@ -37,48 +41,56 @@ def main():
             "Error", "An error has occurred.", parent=root
         )
         print(f"Result: {result}")
+
     def tk_showinfo():
         print("=== tkinter.messagebox.showinfo ===")
         result = tk_messagebox.showinfo(
             "Info", "Operation completed successfully.", parent=root
         )
         print(f"Result: {result}")
+
     def tk_showwarning():
         print("=== tkinter.messagebox.showwarning ===")
         result = tk_messagebox.showwarning(
             "Warning", "This is a warning message.", parent=root
         )
         print(f"Result: {result}")
+
     def tk_askquestion():
         print("=== tkinter.messagebox.askquestion ===")
         result = tk_messagebox.askquestion(
             "Question", "Do you want to proceed?", parent=root
         )
         print(f"Result: {result}")
+
     def tk_askyesno():
         print("=== tkinter.messagebox.askyesno ===")
         result = tk_messagebox.askyesno(
             "Question", "Do you want to proceed?", parent=root
         )
         print(f"Result: {result}")
+
     def tk_askokcancel():
         print("=== tkinter.messagebox.askokcancel ===")
         result = tk_messagebox.askokcancel(
             "Confirm", "Do you want to save?", parent=root
         )
         print(f"Result: {result}")
+
     def tk_askyesnocancel():
         print("=== tkinter.messagebox.askyesnocancel ===")
         result = tk_messagebox.askyesnocancel(
             "Question", "Do you want to save before closing?", parent=root
         )
         print(f"Result: {result}")
+
     def tk_askretrycancel():
         print("=== tkinter.messagebox.askretrycancel ===")
         result = tk_messagebox.askretrycancel(
             "Retry", "Failed to save. Retry?", parent=root
         )
         print(f"Result: {result}")
+
     tkface.Button(left_frame, text="showerror", command=tk_showerror).pack(
         pady=3, fill=tk.X
     )
@@ -111,6 +123,7 @@ def main():
         text="tkface.messagebox\n(English)",
         font=("Arial", 12, "bold"),
     ).pack(pady=(0, 10))
+
     # Functions for tkface English
     def tkface_showerror_en():
         print("=== tkface.messagebox.showerror (English) ===")
@@ -118,6 +131,7 @@ def main():
             message="An error has occurred.", language="en", bell=True
         )
         print(f"Result: {result}")
+
     def tkface_showinfo_en():
         print("=== tkface.messagebox.showinfo (English) ===")
         result = tkface_messagebox.showinfo(
@@ -126,42 +140,49 @@ def main():
             bell=True,
         )
         print(f"Result: {result}")
+
     def tkface_showwarning_en():
         print("=== tkface.messagebox.showwarning (English) ===")
         result = tkface_messagebox.showwarning(
             message="This is a warning message.", language="en", bell=True
         )
         print(f"Result: {result}")
+
     def tkface_askquestion_en():
         print("=== tkface.messagebox.askquestion (English) ===")
         result = tkface_messagebox.askquestion(
             message="Do you want to proceed?", language="en", bell=True
         )
         print(f"Result: {result}")
+
     def tkface_askyesno_en():
         print("=== tkface.messagebox.askyesno (English) ===")
         result = tkface_messagebox.askyesno(
             message="Do you want to proceed?", language="en"
         )
         print(f"Result: {result}")
+
     def tkface_askokcancel_en():
         print("=== tkface.messagebox.askokcancel (English) ===")
         result = tkface_messagebox.askokcancel(
             message="Do you want to save?", language="en"
         )
         print(f"Result: {result}")
+
     def tkface_askyesnocancel_en():
         print("=== tkface.messagebox.askyesnocancel (English) ===")
         result = tkface_messagebox.askyesnocancel(
             message="Do you want to save before closing?", language="en"
         )
         print(f"Result: {result}")
+
     def tkface_askretrycancel_en():
         print("=== tkface.messagebox.askretrycancel (English) ===")
         result = tkface_messagebox.askretrycancel(
             message="Failed to save. Retry?", language="en"
         )
         print(f"Result: {result}")
+
     def tkface_custom_position_en():
         print("=== tkface.messagebox.showinfo (custom position) ===")
         x = int(100 * scaling)
@@ -173,6 +194,7 @@ def main():
             language="en",
         )
         print(f"Result: {result}")
+
     def tkface_custom_offset_en():
         print("=== tkface.messagebox.showinfo (custom offset) ===")
         x_offset = int(500 * scaling)
@@ -184,6 +206,7 @@ def main():
             language="en",
         )
         print(f"Result: {result}")
+
     tkface.Button(
         center_frame, text="showerror (EN)", command=tkface_showerror_en
     ).pack(pady=3, fill=tk.X)
@@ -230,6 +253,7 @@ def main():
         text="tkface.messagebox\n(Japanese)",
         font=("Arial", 12, "bold"),
     ).pack(pady=(0, 10))
+
     # Functions for tkface Japanese
     def tkface_showerror_ja():
         print("=== tkface.messagebox.showerror (Japanese) ===")
@@ -237,6 +261,7 @@ def main():
             message="An error has occurred.", language="ja", bell=True
         )
         print(f"Result: {result}")
+
     def tkface_showinfo_ja():
         print("=== tkface.messagebox.showinfo (Japanese) ===")
         result = tkface_messagebox.showinfo(
@@ -245,64 +270,73 @@ def main():
             bell=True,
         )
         print(f"Result: {result}")
+
     def tkface_showwarning_ja():
         print("=== tkface.messagebox.showwarning (Japanese) ===")
         result = tkface_messagebox.showwarning(
             message="This is a warning message.", language="ja", bell=True
         )
         print(f"Result: {result}")
+
     def tkface_askquestion_ja():
         print("=== tkface.messagebox.askquestion (Japanese) ===")
         result = tkface_messagebox.askquestion(
             message="Do you want to proceed?", language="ja", bell=True
         )
         print(f"Result: {result}")
+
     def tkface_askyesno_ja():
         print("=== tkface.messagebox.askyesno (Japanese) ===")
         result = tkface_messagebox.askyesno(
             message="Do you want to proceed?", language="ja"
         )
         print(f"Result: {result}")
+
     def tkface_askokcancel_ja():
         print("=== tkface.messagebox.askokcancel (Japanese) ===")
         result = tkface_messagebox.askokcancel(
             message="Do you want to save?", language="ja"
         )
         print(f"Result: {result}")
+
     def tkface_askyesnocancel_ja():
         print("=== tkface.messagebox.askyesnocancel (Japanese) ===")
         result = tkface_messagebox.askyesnocancel(
             message="Do you want to save before closing?", language="ja"
         )
         print(f"Result: {result}")
+
     def tkface_askretrycancel_ja():
         print("=== tkface.messagebox.askretrycancel (Japanese) ===")
         result = tkface_messagebox.askretrycancel(
             message="Failed to save. Retry?", language="ja"
         )
         print(f"Result: {result}")
+
     def tkface_custom_position_ja():
         print("=== tkface.messagebox.showinfo (custom position) ===")
         x = int(100 * scaling)
         y = int(100 * scaling)
         result = tkface_messagebox.showinfo(
-            message="This box appears at a custom position.",
+            message="このボックスはカスタム位置に表示されます。",
             x=x,
             y=y,
             language="ja",
         )
         print(f"Result: {result}")
+
     def tkface_custom_offset_ja():
         print("=== tkface.messagebox.showinfo (custom offset) ===")
         x_offset = int(500 * scaling)
         y_offset = int(-300 * scaling)
         result = tkface_messagebox.showinfo(
-            message="This box appears with an offset from the parent window.",
+            message="このボックスは親ウィンドウからのオフセットで表示されます。",
             x_offset=x_offset,
             y_offset=y_offset,
             language="ja",
         )
         print(f"Result: {result}")
+
     tkface.Button(
         right_frame, text="showerror (JA)", command=tkface_showerror_ja
     ).pack(pady=3, fill=tk.X)
@@ -351,5 +385,7 @@ def main():
         footer_frame, text=footer_text, font=("Arial", 9), fg="#666666"
     ).pack()
     root.mainloop()
+
+
 if __name__ == "__main__":
     main()

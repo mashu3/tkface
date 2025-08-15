@@ -5,7 +5,9 @@ DPI scaling, window unrounding, and system bell sounds.
 
 import sys
 from unittest.mock import patch
+
 import pytest
+
 from tkface import win
 
 

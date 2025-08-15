@@ -1,4 +1,5 @@
 import pytest
+
 import tkface
 
 # Try to import toml at module level

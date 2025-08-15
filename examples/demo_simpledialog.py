@@ -1,11 +1,13 @@
 import tkinter as tk
 from tkinter import simpledialog as tk_simpledialog
+
 import tkface
 from tkface import simpledialog as tkface_simpledialog
 
 # Note: tkface.Button provides Windows-specific flat styling
 # On Windows: flat appearance (no shadow)
 # On non-Windows: standard button styling
+
 
 def main():
     root = tk.Tk()
@@ -28,7 +30,7 @@ def main():
     # Button frame (3-column layout)
     button_frame = tk.Frame(main_frame)
     button_frame.pack(fill=tk.BOTH, expand=True)
-    
+
     # Left column: pure tkinter
     left_frame = tk.Frame(button_frame)
     left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
@@ -37,6 +39,7 @@ def main():
         text="tkinter.simpledialog\n(System Default)",
         font=("Arial", 12, "bold"),
     ).pack(pady=(0, 10))
+
     # Functions for pure tkinter
     def tk_askstring():
         print("=== tkinter.simpledialog.askstring ===")
@@ -44,6 +47,7 @@ def main():
             "Input", "Enter your name:", parent=root
         )
         print(f"Result: {result}")
+
     def tk_askinteger():
         print("=== tkinter.simpledialog.askinteger ===")
         result = tk_simpledialog.askinteger(
@@ -65,6 +69,7 @@ def main():
             maxvalue=3.0,
         )
         print(f"Result: {result}")
+
     tkface.Button(left_frame, text="askstring", command=tk_askstring).pack(
         pady=3, fill=tk.X
     )
@@ -90,6 +95,7 @@ def main():
         text="tkface.simpledialog\n(Japanese)",
         font=("Arial", 12, "bold"),
     ).pack(pady=(0, 10))
+
     # Functions for tkface English
     def tkface_askstring_en():
         print("=== tkface.simpledialog.askstring (English) ===")
@@ -176,7 +182,9 @@ def main():
         x_offset = int(500 * scaling)
         y_offset = int(-300 * scaling)
         result = tkface_simpledialog.askstring(
-            message="This dialog appears with an offset from the parent window.",
+            message=(
+                "This dialog appears with an offset from the parent window."
+            ),
             title="Custom Offset",
             x_offset=x_offset,
             y_offset=y_offset,
@@ -256,7 +264,9 @@ def main():
         x_offset = int(500 * scaling)
         y_offset = int(-300 * scaling)
         result = tkface_simpledialog.askstring(
-            message="このダイアログは親ウィンドウからのオフセットで表示されます",
+            message=(
+                "このダイアログは親ウィンドウからのオフセットで表示されます"
+            ),
             title="カスタムオフセット",
             x_offset=x_offset,
             y_offset=y_offset,
@@ -353,6 +363,7 @@ def main():
         footer_frame, text=footer_text, font=("Arial", 9), fg="#666666"
     ).pack()
     root.mainloop()
+
 
 if __name__ == "__main__":
     main()

@@ -1,12 +1,11 @@
 import sys
 import tkinter as tk
-# Import the common Windows check function
-try:
-    from . import is_windows
-except ImportError:
-    # Fallback for when called directly
-    def is_windows():
-        return sys.platform == "win32"
+
+
+def is_windows():
+    """Check if running on Windows platform."""
+    return sys.platform == "win32"
+
 
 def configure_button_for_windows(button):
     """
@@ -16,6 +15,7 @@ def configure_button_for_windows(button):
     """
     if is_windows() and button is not None:
         button.configure(relief="solid", bd=1)
+
 
 def get_button_label_with_shortcut(button_value, translated_text):
     """
@@ -46,6 +46,7 @@ def get_button_label_with_shortcut(button_value, translated_text):
         return f"{translated_text}({shortcut})"
     return translated_text
 
+
 class FlatButton(tk.Button):
     """
     A Button widget with Windows-specific flat styling.
@@ -53,9 +54,11 @@ class FlatButton(tk.Button):
     Windows,
     while maintaining normal appearance on other platforms.
     """
+
     def __init__(self, master=None, **kwargs):
         super().__init__(master, **kwargs)
         configure_button_for_windows(self)
+
 
 def create_flat_button(master, text, command=None, **kwargs):
     """
