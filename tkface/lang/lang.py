@@ -23,9 +23,7 @@ class LanguageManager:
         """Determine the actual language code, handling 'auto' case."""
         if lang_code == "auto":
             try:
-                lang_code_full = root.tk.call("msgcat::mclocale").replace(
-                    "-", "_"
-                )
+                lang_code_full = root.tk.call("msgcat::mclocale").replace("-", "_")
                 lang_code = lang_code_full
             except TclError as e:
                 self.logger.warning(
@@ -39,9 +37,7 @@ class LanguageManager:
         """Load tk standard msgcat file if available."""
         try:
             tk_library = str(root.tk.globalgetvar("tk_library"))
-            msg_path_full = os.path.join(
-                tk_library, "msgs", f"{lang_code}.msg"
-            )
+            msg_path_full = os.path.join(tk_library, "msgs", f"{lang_code}.msg")
             msg_path_short = os.path.join(
                 tk_library, "msgs", f'{lang_code.split("_")[0]}.msg'
             )
@@ -56,9 +52,7 @@ class LanguageManager:
                 root.tk.call("msgcat::mclocale", lang_code)
                 self.msgcat_loaded.add(lang_code)
         except TclError as e:
-            self.logger.debug(
-                "Failed to load tk msgcat file for %s: %s", lang_code, e
-            )
+            self.logger.debug("Failed to load tk msgcat file for %s: %s", lang_code, e)
 
     def _parse_msg_file(self, file_path, lang_code, root):
         """Parse a .msg file and load translations."""
@@ -160,9 +154,7 @@ class LanguageManager:
             if translated != key:
                 return translated
         except TclError as e:
-            self.logger.debug(
-                "Failed to get English translation for '%s': %s", key, e
-            )
+            self.logger.debug("Failed to get English translation for '%s': %s", key, e)
             # Return key as final fallback
         return key
 

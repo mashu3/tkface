@@ -765,7 +765,7 @@ class DateEntry(ttk.Entry, _DatePickerBase):
         """
         Create DateEntry widget with individual parameters
         (for backward compatibility).
-         """
+        """
         config = DatePickerConfig(
             date_format=date_format,
             year=year,

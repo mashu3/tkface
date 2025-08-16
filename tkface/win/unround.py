@@ -25,11 +25,7 @@ def disable_window_corner_round(hwnd):
     Disable window corner rounding for a specific window handle.
     Returns True if successful, False otherwise.
     """
-    if (
-        not sys.platform.startswith("win")
-        or ctypes is None
-        or wintypes is None
-    ):
+    if not sys.platform.startswith("win") or ctypes is None or wintypes is None:
         return False
     try:
         # Load dwmapi.dll
@@ -78,8 +74,7 @@ def unround(root, auto_toplevel=True):
                     disable_window_corner_round(child_hwnd)
                 except (OSError, AttributeError) as e:
                     logger.debug(
-                        "Failed to disable corner rounding for child "
-                        "window: %s",
+                        "Failed to disable corner rounding for child window: %s",
                         e,
                     )
         return success
@@ -99,13 +94,9 @@ def _patched_toplevel_init(self, master=None, **kw):
         self.after_idle(_apply_unround_to_toplevel, self)
         self.after(100, _apply_unround_to_toplevel, self)  # Retry after 100ms
         self.after(500, _apply_unround_to_toplevel, self)  # Retry after 500ms
-        logger.debug(
-            "Scheduled multiple unround application attempts for Toplevel"
-        )
+        logger.debug("Scheduled multiple unround application attempts for Toplevel")
     except (OSError, AttributeError) as e:
-        logger.warning(
-            "Failed to schedule unround, applying immediately: %s", e
-        )
+        logger.warning("Failed to schedule unround, applying immediately: %s", e)
         # If scheduling fails, try to apply immediately
         _apply_unround_to_toplevel(self)
 
@@ -156,9 +147,7 @@ def _apply_unround_to_toplevel(toplevel):
                 else:
                     hwnd = None
             except (OSError, AttributeError) as e:
-                logger.debug(
-                    "Failed to get Toplevel hwnd via GetParent: %s", e
-                )
+                logger.debug("Failed to get Toplevel hwnd via GetParent: %s", e)
                 hwnd = None
         # Method 3: FindWindow by title (last resort)
         if hwnd is None or hwnd == 0:
@@ -167,21 +156,15 @@ def _apply_unround_to_toplevel(toplevel):
                 if title:
                     hwnd = ctypes.windll.user32.FindWindowW(None, title)
                     if hwnd and hwnd != 0:
-                        logger.debug(
-                            "Got Toplevel hwnd via FindWindow: %s", hwnd
-                        )
+                        logger.debug("Got Toplevel hwnd via FindWindow: %s", hwnd)
                     else:
                         hwnd = None
             except (OSError, AttributeError) as e:
-                logger.debug(
-                    "Failed to get Toplevel hwnd via FindWindow: %s", e
-                )
+                logger.debug("Failed to get Toplevel hwnd via FindWindow: %s", e)
                 hwnd = None
         if hwnd and hwnd != 0:
             result = disable_window_corner_round(hwnd)
-            logger.debug(
-                "Applied unround to Toplevel (hwnd: %s): %s", hwnd, result
-            )
+            logger.debug("Applied unround to Toplevel (hwnd: %s): %s", hwnd, result)
             if result:
                 # Mark as successfully applied to avoid duplicate attempts
                 _mark_unround_applied(toplevel)
@@ -211,10 +194,7 @@ def enable_auto_unround():
         # Replace with patched version
         tk.Toplevel.__init__ = _patched_toplevel_init
         _AUTO_UNROUND_ENABLED = True
-        logger.info(
-            "Auto-unround: Successfully enabled, "
-            "Toplevel.__init__ patched"
-        )
+        logger.info("Auto-unround: Successfully enabled, Toplevel.__init__ patched")
         return True
     except (OSError, AttributeError) as e:
         logger.warning("Auto-unround: Failed to enable: %s", e)
@@ -238,9 +218,7 @@ def disable_auto_unround():
         _ORIGINAL_TOPLEVEL_INIT = None
         return True
     except (OSError, AttributeError) as e:
-        logger.warning(
-            "Auto-unround: Failed to disable: %s", e
-        )
+        logger.warning("Auto-unround: Failed to disable: %s", e)
         return False
 
 

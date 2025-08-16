@@ -10,6 +10,7 @@ from tkface.dialog import _position_window, _setup_dialog_base, messagebox
 @dataclass
 class SimpleDialogConfig:
     """Configuration for simple dialog dialogs."""
+
     title: Optional[str] = "Input"
     message: str = ""
     initialvalue: Optional[str] = None
@@ -27,6 +28,7 @@ class SimpleDialogConfig:
 @dataclass
 class WindowPosition:
     """Window positioning configuration."""
+
     x: Optional[int] = None
     y: Optional[int] = None
     x_offset: int = 0
@@ -203,9 +205,7 @@ class CustomSimpleDialog:
         """
         button_frame = tk.Frame(self.window)
         button_frame.pack()
-        ok_text = ok_label or lang.get(
-            "ok", self.window, language=self.language
-        )
+        ok_text = ok_label or lang.get("ok", self.window, language=self.language)
         cancel_text = cancel_label or lang.get(
             "cancel", self.window, language=self.language
         )
@@ -258,9 +258,7 @@ class CustomSimpleDialog:
             result = self.entry_var.get()
             if not self.validate_func(result):
                 # Show error message
-                err_msg = lang.get(
-                    "Invalid input.", None, language=self.language
-                )
+                err_msg = lang.get("Invalid input.", None, language=self.language)
                 try_again_msg = lang.get(
                     "Please try again.", None, language=self.language
                 )

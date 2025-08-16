@@ -279,16 +279,20 @@ class DPIManager:
             scaled_kwargs = kwargs.copy()
             if "padx" in scaled_kwargs:
                 scaled_kwargs["padx"] = int(scaled_kwargs["padx"] * scaling_factor)
-                if (isinstance(scaled_kwargs["padx"], (list, tuple)) and
-                    len(scaled_kwargs["padx"]) == 2):
+                if (
+                    isinstance(scaled_kwargs["padx"], (list, tuple))
+                    and len(scaled_kwargs["padx"]) == 2
+                ):
                     scaled_kwargs["padx"] = (
                         int(scaled_kwargs["padx"][0] * scaling_factor),
                         int(scaled_kwargs["padx"][1] * scaling_factor),
                     )
             if "pady" in scaled_kwargs:
                 scaled_kwargs["pady"] = int(scaled_kwargs["pady"] * scaling_factor)
-                if (isinstance(scaled_kwargs["pady"], (list, tuple)) and
-                    len(scaled_kwargs["pady"]) == 2):
+                if (
+                    isinstance(scaled_kwargs["pady"], (list, tuple))
+                    and len(scaled_kwargs["pady"]) == 2
+                ):
                     scaled_kwargs["pady"] = (
                         int(scaled_kwargs["pady"][0] * scaling_factor),
                         int(scaled_kwargs["pady"][1] * scaling_factor),
@@ -305,16 +309,20 @@ class DPIManager:
             scaled_kwargs = kwargs.copy()
             if "padx" in scaled_kwargs:
                 scaled_kwargs["padx"] = int(scaled_kwargs["padx"] * scaling_factor)
-                if (isinstance(scaled_kwargs["padx"], (list, tuple)) and
-                    len(scaled_kwargs["padx"]) == 2):
+                if (
+                    isinstance(scaled_kwargs["padx"], (list, tuple))
+                    and len(scaled_kwargs["padx"]) == 2
+                ):
                     scaled_kwargs["padx"] = (
                         int(scaled_kwargs["padx"][0] * scaling_factor),
                         int(scaled_kwargs["padx"][1] * scaling_factor),
                     )
             if "pady" in scaled_kwargs:
                 scaled_kwargs["pady"] = int(scaled_kwargs["pady"] * scaling_factor)
-                if (isinstance(scaled_kwargs["pady"], (list, tuple)) and
-                    len(scaled_kwargs["pady"]) == 2):
+                if (
+                    isinstance(scaled_kwargs["pady"], (list, tuple))
+                    and len(scaled_kwargs["pady"]) == 2
+                ):
                     scaled_kwargs["pady"] = (
                         int(scaled_kwargs["pady"][0] * scaling_factor),
                         int(scaled_kwargs["pady"][1] * scaling_factor),
@@ -543,7 +551,9 @@ class DPIManager:
         # Get DPI information
         self._set_dpi_information(root)
 
-    def _adjust_tk_scaling(self, root, initial_tk_scaling):  # pylint: disable=unused-argument
+    def _adjust_tk_scaling(
+        self, root, initial_tk_scaling
+    ):  # pylint: disable=unused-argument
         """Adjust Tk scaling based on Windows scale factor."""
         try:
             windows_scale_factor = ctypes.windll.shcore.GetScaleFactorForDevice(0)

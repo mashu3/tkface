@@ -52,18 +52,18 @@ pip install git+https://github.com/mashu3/tkface.git
 import tkface
 
 # Simple information dialog
-tkface.messagebox.showinfo("Success", "Operation completed successfully!")
+tkface.messagebox.showinfo("Operation completed successfully!")
 
 # Multilingual support
-tkface.messagebox.showerror("Error", "An error has occurred!", language="ja")
+tkface.messagebox.showerror("An error has occurred!", language="ja")
 
 # With system sound (Windows only)
-tkface.messagebox.showerror("Error", "An error has occurred!", bell=True)
+tkface.messagebox.showerror("An error has occurred!", bell=True)
 
 # Confirmation dialog
-if tkface.messagebox.askyesno("Confirm", "Do you want to save?"):
+if tkface.messagebox.askyesno("Do you want to save?"):
     # Handle save operation
-    tkface.messagebox.showinfo("Success", "File saved successfully!")
+    tkface.messagebox.showinfo("File saved successfully!")
 ```
 
 ### Screenshots
@@ -81,10 +81,10 @@ if tkface.messagebox.askyesno("Confirm", "Do you want to save?"):
 import tkface
 
 # String input
-name = tkface.simpledialog.askstring("Name", "Enter your name:")
+name = tkface.simpledialog.askstring("Enter your name:")
 
 # Integer input with validation
-age = tkface.simpledialog.askinteger("Age", "Enter your age:", minvalue=0, maxvalue=120)
+age = tkface.simpledialog.askinteger("Enter your age:", minvalue=0, maxvalue=120)
 
 # List selection dialog
 color = tkface.simpledialog.askfromlistbox("Choose a color:", choices=["Red", "Green", "Blue"])
@@ -144,7 +144,7 @@ date_entry_with_date = tkface.DateEntry(
     month=8,                     # Set initial month
     date_format="%Y年%m月%d日"    # Japanese date format
 )
-date_entry.pack(padx=10, pady=10)
+date_entry_with_date.pack(padx=10, pady=10)
 
 # Get selected date
 selected_date = date_entry.get_date()
@@ -152,6 +152,9 @@ selected_date = date_entry.get_date()
 if selected_date:
     # Handle the selected date
     pass
+
+# Get selected date from specific date entry
+selected_date_with_date = date_entry_with_date.get_date()
 
 root.mainloop()
 ```

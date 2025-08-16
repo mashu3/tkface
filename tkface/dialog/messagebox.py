@@ -10,6 +10,7 @@ from tkface.dialog import _get_or_create_root, _position_window, _setup_dialog_b
 @dataclass
 class MessageBoxConfig:
     """Configuration for message box dialogs."""
+
     title: Optional[str] = "Message"
     message: str = ""
     icon: Optional[str] = None
@@ -25,6 +26,7 @@ class MessageBoxConfig:
 @dataclass
 class WindowPosition:
     """Window positioning configuration."""
+
     x: Optional[int] = None
     y: Optional[int] = None
     x_offset: int = 0
@@ -53,9 +55,7 @@ def get_icon_title(icon_type: str) -> str:
 
 def get_tk_icon(icon_type: str) -> str:
     """Get the Tkinter icon name for an icon type."""
-    return ICON_CONFIG.get(icon_type, {}).get(
-        "tk_icon", f"::tk::icons::{icon_type}"
-    )
+    return ICON_CONFIG.get(icon_type, {}).get("tk_icon", f"::tk::icons::{icon_type}")
 
 
 def _get_button_labels(button_set="ok", root=None, language=None):
@@ -430,9 +430,7 @@ class CustomMessageBox:
             The value corresponding to the button that was clicked, or
             selected choice(s)
         """
-        root, created = (
-            _get_or_create_root() if master is None else (master, False)
-        )
+        root, created = _get_or_create_root() if master is None else (master, False)
         if config is None:
             config = MessageBoxConfig()
         if position is None:
