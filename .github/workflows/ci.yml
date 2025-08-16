@@ -33,11 +33,15 @@ jobs:
           pip install .[dev] || true
           pip install flake8 pylint pytest
 
-      - name: Convert CRLF to LF
+      - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y dos2unix
+          sudo apt-get install -y dos2unix xvfb x11-utils
+
+      - name: Convert CRLF to LF
+        if: runner.os == 'Linux'
+        run: |
           find . -type f -name "*.py" -exec dos2unix {} \;
 
       - name: Run flake8
@@ -46,5 +50,18 @@ jobs:
       - name: Run pylint
         run: pylint tkface tests || true
 
-      - name: Run pytest
+      - name: Run pytest with virtual display (Linux)
+        if: runner.os == 'Linux'
+        env:
+          DISPLAY: :99
+          TK_SILENCE_DEPRECATION: 1
+          PYTHONUNBUFFERED: 1
+        run: |
+          xvfb-run -a -s "-screen 0 1024x768x24" pytest -q --maxfail=1 --disable-warnings -v
+
+      - name: Run pytest (Windows/macOS)
+        if: runner.os != 'Linux'
+        env:
+          TK_SILENCE_DEPRECATION: 1
+          PYTHONUNBUFFERED: 1
         run: pytest -q --maxfail=1 --disable-warnings -v

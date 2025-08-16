@@ -75,10 +75,13 @@ def root():
                     "fonts.tcl",
                     "icons.tcl",
                     "tk.tcl",
+                    "no display name and no $DISPLAY environment variable",
+                    "no display name",
+                    "$DISPLAY environment variable",
                 ]
             ):
                 pytest.skip(
-                    f"Tkinter not properly installed or Tcl/Tk files missing: "
+                    f"Tkinter not properly installed or display not available: "
                     f"{error_str}"
                 )
             else:
@@ -127,10 +130,13 @@ def root_function():
                 "fonts.tcl",
                 "icons.tcl",
                 "tk.tcl",
+                "no display name and no $DISPLAY environment variable",
+                "no display name",
+                "$DISPLAY environment variable",
             ]
         ):
             pytest.skip(
-                f"Tkinter not properly installed or Tcl/Tk files missing: "
+                f"Tkinter not properly installed or display not available: "
                 f"{error_str}"
             )
         else:
