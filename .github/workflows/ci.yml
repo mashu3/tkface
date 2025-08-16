@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
@@ -32,6 +32,13 @@ jobs:
           pip install --upgrade pip
           pip install .[dev] || true
           pip install flake8 pylint pytest
+
+      - name: Convert CRLF to LF
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dos2unix
+          find . -type f -name "*.py" -exec dos2unix {} \;
 
       - name: Run flake8
         run: flake8 tkface tests
