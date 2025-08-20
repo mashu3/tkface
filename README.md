@@ -105,6 +105,12 @@ colors = tkface.simpledialog.askfromlistbox("Choose colors:", choices=["Red", "G
 
 **Initial Date Behavior**: When no `year` and `month` parameters are specified, both `DateEntry` and `DateFrame` automatically use the current date as the initial value. You can also explicitly set the initial date using the `year` and `month` parameters.
 
+**Navigation Features**: The calendar widgets include intuitive navigation features:
+- Click on the year/month header to switch to year selection mode (3x4 month grid)
+- Click on a month in year selection mode to switch to that month
+- Use arrow buttons to navigate between months/years
+- All navigation maintains the selected date and theme settings
+
 ```python
 import tkinter as tk
 import tkface
@@ -287,6 +293,7 @@ See the `examples/` directory for complete working examples:
 - `demo_messagebox.py` - Message box demonstrations
 - `demo_simpledialog.py` - Input dialog demonstrations
 - `demo_calendar.py` - Calendar widget demonstrations
+- `demo_windows_features.py` - Windows-specific features demonstrations
 
 > **Note**: Test files are not included in the public release. For testing, see the development repository.
 

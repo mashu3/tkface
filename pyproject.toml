@@ -1,6 +1,6 @@
 [project]
 name = "tkface"
-version = "0.0.9"
+version = "0.0.10"
 description = "A comprehensive multilingual GUI extension library for Tkinter with enhanced message boxes, calendar widgets, theme system, and Windows-specific features"
 authors = [
     { name = "mashu3" }
