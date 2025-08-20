@@ -8,9 +8,12 @@ customization for the Calendar widget.
 import configparser
 import datetime
 import logging
+import tkinter as tk
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+from ... import lang
 
 
 @dataclass
@@ -317,3 +320,284 @@ def _get_day_of_week_colors(  # pylint: disable=R0917
     if day_name in ["Saturday", "Sunday"]:
         return ColorPair(bg=theme_colors["weekend_bg"], fg=theme_colors["weekend_fg"])
     return ColorPair(bg=bg_color, fg=fg_color)
+
+
+def get_day_names(calendar_instance, short: bool = False) -> List[str]:
+    """Get localized day names."""
+    # Define base day names
+    full_days = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    ]
+    short_days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    # Choose day list based on short parameter
+    days = short_days if short else full_days
+    # Shift days based on week_start
+    if calendar_instance.week_start == "Sunday":
+        # Move Sunday to the beginning
+        days = days[-1:] + days[:-1]
+    elif calendar_instance.week_start == "Saturday":
+        # Move Saturday to the beginning
+        days = days[-2:] + days[:-2]
+    # Get translations and handle short names
+    day_names = []
+    for day in days:
+        if short:
+            # For short names, get full name translation first, then truncate
+            full_name = full_days[short_days.index(day)]
+            full_translated = lang.get(full_name, calendar_instance.winfo_toplevel())
+            translated = (
+                full_translated[:3] if len(full_translated) >= 3 else full_translated
+            )
+        else:
+            translated = lang.get(day, calendar_instance.winfo_toplevel())
+        day_names.append(translated)
+    return day_names
+
+
+def get_month_name(calendar_instance, month: int, short: bool = False) -> str:
+    """Get localized month name."""
+    # Define base month names
+    full_months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ]
+    # Get the month name based on short parameter
+    if short:
+        # For short names, get full name translation first, then truncate
+        full_name = full_months[month - 1]
+        full_translated = lang.get(full_name, calendar_instance.winfo_toplevel())
+        return full_translated[:3] if len(full_translated) >= 3 else full_translated
+    month_name = full_months[month - 1]
+    return lang.get(month_name, calendar_instance.winfo_toplevel())
+
+
+def handle_mouse_enter(calendar_instance, label):
+    """Handle mouse enter event."""
+    # Only highlight if not already selected
+    current_bg = label.cget("bg")
+    if current_bg not in [
+        calendar_instance.theme_colors["selected_bg"],
+        calendar_instance.theme_colors["range_bg"],
+    ]:
+        # Store current colors before changing to hover
+        if label not in calendar_instance.original_colors:
+            calendar_instance.original_colors[label] = {
+                "bg": current_bg,
+                "fg": label.cget("fg"),
+            }
+        label.config(
+            bg=calendar_instance.theme_colors["hover_bg"],
+            fg=calendar_instance.theme_colors["hover_fg"],
+        )
+
+
+def handle_mouse_leave(calendar_instance, label):
+    """Handle mouse leave event."""
+    # Only restore if not selected
+    current_bg = label.cget("bg")
+    if current_bg == calendar_instance.theme_colors["hover_bg"]:
+        # Restore original colors
+        if label in calendar_instance.original_colors:
+            original = calendar_instance.original_colors[label]
+            label.config(bg=original["bg"], fg=original["fg"])
+        else:
+            # Fallback to default colors
+            label.config(
+                bg=calendar_instance.theme_colors["day_bg"],
+                fg=calendar_instance.theme_colors["day_fg"],
+            )
+
+
+def handle_year_view_mouse_enter(calendar_instance, label):
+    """Handle mouse enter event in month selection."""
+    current_bg = label.cget("bg")
+    if current_bg != calendar_instance.theme_colors["selected_bg"]:
+        label.config(
+            bg=calendar_instance.theme_colors["hover_bg"],
+            fg=calendar_instance.theme_colors["hover_fg"],
+        )
+
+
+def handle_year_view_mouse_leave(calendar_instance, label):
+    """Handle mouse leave event in month selection."""
+    current_bg = label.cget("bg")
+    if current_bg == calendar_instance.theme_colors["hover_bg"]:
+        # Check if this is the current month
+        for month, month_label in calendar_instance.year_view_labels:
+            if month_label == label:
+                if month == calendar_instance.month:
+                    label.config(
+                        bg=calendar_instance.theme_colors["selected_bg"],
+                        fg=calendar_instance.theme_colors["selected_fg"],
+                    )
+                else:
+                    label.config(
+                        bg=calendar_instance.theme_colors["day_bg"],
+                        fg=calendar_instance.theme_colors["day_fg"],
+                    )
+                break
+
+
+def handle_year_selection_mouse_enter(calendar_instance, label):
+    """Handle mouse enter event in year selection."""
+    current_bg = label.cget("bg")
+    if current_bg != calendar_instance.theme_colors["selected_bg"]:
+        label.config(
+            bg=calendar_instance.theme_colors["hover_bg"],
+            fg=calendar_instance.theme_colors["hover_fg"],
+        )
+
+
+def handle_year_selection_mouse_leave(calendar_instance, label):
+    """Handle mouse leave event in year selection."""
+    current_bg = label.cget("bg")
+    if current_bg == calendar_instance.theme_colors["hover_bg"]:
+        # Check if this is the current year
+        for year, year_label in calendar_instance.year_selection_labels:
+            if year_label == label:
+                if year == calendar_instance.year:
+                    label.config(
+                        bg=calendar_instance.theme_colors["selected_bg"],
+                        fg=calendar_instance.theme_colors["selected_fg"],
+                    )
+                else:
+                    label.config(
+                        bg=calendar_instance.theme_colors["day_bg"],
+                        fg=calendar_instance.theme_colors["day_fg"],
+                    )
+                break
+
+
+def create_navigation_button(calendar_instance, parent, text, command, padx=(0, 0)):
+    """Create a navigation button with consistent styling and events."""
+    btn = tk.Label(
+        parent,
+        text=text,
+        font=calendar_instance._get_scaled_font(  # pylint: disable=W0212
+            calendar_instance.theme_colors["navigation_font"]
+        ),
+        bg=calendar_instance.theme_colors["navigation_bg"],
+        fg=calendar_instance.theme_colors["navigation_fg"],
+        cursor="hand2",
+    )
+    btn.pack(side="left", padx=padx)
+    btn.bind("<Button-1>", lambda e, cmd=command: cmd())
+    btn.bind(
+        "<Enter>",
+        lambda e, button=btn: button.config(
+            bg=calendar_instance.theme_colors["navigation_hover_bg"],
+            fg=calendar_instance.theme_colors["navigation_hover_fg"],
+        ),
+    )
+    btn.bind(
+        "<Leave>",
+        lambda e, button=btn: button.config(
+            bg=calendar_instance.theme_colors["navigation_bg"],
+            fg=calendar_instance.theme_colors["navigation_fg"],
+        ),
+    )
+    return btn
+
+# UI helper functions for calendar widgets.
+# Note: create_clickable_label was removed as it is not used anywhere.
+
+
+def create_grid_label(  # pylint: disable=too-many-positional-arguments
+    calendar_instance,
+    parent,
+    text,
+    command=None,
+    is_selected=False,
+    row=0,
+    col=0,
+    sticky="nsew",
+    padx=1,
+    pady=1,
+):
+    """Create a grid label with consistent styling and events."""
+    label = tk.Label(
+        parent,
+        text=text,
+        font=calendar_instance._get_scaled_font(  # pylint: disable=W0212
+            ("TkDefaultFont", 10, "bold")
+        ),
+        relief="flat",
+        bd=0,
+        anchor="center",
+        bg=calendar_instance.theme_colors["day_bg"],
+        fg=calendar_instance.theme_colors["day_fg"],
+        cursor="hand2",
+    )
+    label.grid(row=row, column=col, sticky=sticky, padx=padx, pady=pady)
+
+    if is_selected:
+        label.config(
+            bg=calendar_instance.theme_colors["selected_bg"],
+            fg=calendar_instance.theme_colors["selected_fg"],
+        )
+
+    if command:
+        # Pass through Tkinter event to callback if it expects it
+        label.bind("<Button-1>", lambda event, cmd=command: cmd(event))
+
+    return label
+
+
+def bind_hover_events(
+    calendar_instance, label, hover_enter_func=None, hover_leave_func=None
+):
+    """Bind hover events to a label with optional custom handlers."""
+    if hover_enter_func:
+        label.bind(
+            "<Enter>", lambda e, lbl=label: hover_enter_func(calendar_instance, lbl)
+        )
+    if hover_leave_func:
+        label.bind(
+            "<Leave>", lambda e, lbl=label: hover_leave_func(calendar_instance, lbl)
+        )
+
+
+def set_day_colors(
+    calendar_instance, label, year: int, month: int, day: int
+):  # pylint: disable=W0212
+    """Set colors for a specific day."""
+    # Create context for color determination
+    context = DayColorContext(
+        theme_colors=calendar_instance.theme_colors,
+        selected_date=calendar_instance.selected_date,
+        selected_range=calendar_instance.selected_range,
+        today=datetime.date.today(),
+        today_color=calendar_instance.today_color,
+        today_color_set=calendar_instance.today_color_set,
+        day_colors=calendar_instance.day_colors,
+        holidays=calendar_instance.holidays,
+        date_obj=datetime.date(year, month, day),
+        year=year,
+        month=month,
+        day=day,
+    )
+
+    # Get colors based on various conditions
+    colors = _determine_day_colors(context)
+
+    # Apply colors
+    label.config(bg=colors.bg, fg=colors.fg)
+    # Update original colors for hover effect restoration
+    if label in calendar_instance.original_colors:
+        calendar_instance.original_colors[label] = {"bg": colors.bg, "fg": colors.fg}

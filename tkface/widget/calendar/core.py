@@ -13,7 +13,12 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
 from . import view
-from .style import get_calendar_theme, get_calendar_themes
+from .style import (
+    get_calendar_theme,
+    get_calendar_themes,
+    get_day_names,
+    get_month_name,
+)
 
 # Default popup dimensions
 DEFAULT_POPUP_WIDTH = 235
@@ -42,7 +47,10 @@ class CalendarConfig:  # pylint: disable=R0902
     popup_width: Optional[int] = None
     popup_height: Optional[int] = None
     date_format: str = "%Y-%m-%d"
-    year_view_mode: bool = False
+    month_selection_mode: bool = False
+    year_selection_mode: bool = False
+    year_range_start: Optional[int] = None
+    year_range_end: Optional[int] = None
 
 
 # Import DPI functions for scaling support
@@ -67,7 +75,7 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
     - Holiday highlighting
     - Language support via tkface.lang
     - Configurable week start (Sunday/Monday)
-    - Year view mode (3x4 month grid)
+    - Month selection mode (3x4 month grid)
     """
 
     def __init__(  # pylint: disable=R0917,R0915,R0902
@@ -120,14 +128,18 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
                 popup_width=popup_width,
                 popup_height=popup_height,
                 date_format=kwargs.pop("date_format", "%Y-%m-%d"),
-                year_view_mode=kwargs.pop("year_view_mode", False),
+                month_selection_mode=kwargs.pop("month_selection_mode", False),
+                year_selection_mode=kwargs.pop("year_selection_mode", False),
             )
 
         # pylint: disable=R0902
         self.date_callback = config.date_callback
         self.year_view_callback = config.year_view_callback
         self.date_format = config.date_format
-        self.year_view_mode = config.year_view_mode
+        self.month_selection_mode = config.month_selection_mode
+        self.year_selection_mode = config.year_selection_mode
+        self.year_range_start = config.year_range_start
+        self.year_range_end = config.year_range_end
         super().__init__(parent, **kwargs)
         self.logger = logging.getLogger(__name__)
 
@@ -201,12 +213,18 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         self.month_frames = []
         self.day_labels = []
         self.week_labels = []
-        self.year_view_labels = []  # For year view mode
-        # Year view attributes
+        self.year_view_labels = []  # For month selection mode
+        self.year_selection_labels = []  # For year selection mode
+        # Month selection mode attributes
         self.year_view_window = None
         self.year_view_year_label = None
+        # Year selection mode attributes
+        self.year_selection_header_label = None
         # Create widgets
-        if self.year_view_mode:
+        if self.year_selection_mode:
+            # Create year selection content
+            view._create_year_selection_content(self)  # pylint: disable=W0212
+        elif self.month_selection_mode:
             # Create year view content
             view._create_year_view_content(self)  # pylint: disable=W0212
         else:
@@ -298,6 +316,115 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         target_month = ((target_month - 1) % 12) + 1
         return datetime.date(target_year, target_month, 1)
 
+    def _get_month_days_list(self, display_year: int, display_month: int):
+        """Return a list of month day numbers using calendar iterator."""
+        return list(self.cal.itermonthdays(display_year, display_month))
+
+    def _get_month_header_texts(
+        self, display_year: int, display_month: int
+    ) -> tuple[str, str]:
+        """Return (year_text, month_text) for headers."""
+        year_text = str(display_year)
+        month_text = get_month_name(self, display_month, short=True)
+        return year_text, month_text
+
+    def _get_year_range_text(self) -> str:
+        """Return the current year range header text."""
+        return f"{self.year_range_start} - {self.year_range_end}"
+
+    def _get_day_names_for_headers(self) -> list[str]:
+        """Return day names for header labels."""
+        return get_day_names(self, short=True)
+
+    def _compute_week_numbers(self, display_year: int, display_month: int) -> list[str]:
+        """
+        Compute week numbers for up to 6 weeks of a given month.
+
+        Returns a list of length 6 containing the ISO week number as string
+        or an empty string when the row should be blank.
+        """
+        month_calendar = self.cal.monthdatescalendar(display_year, display_month)
+        week_numbers: list[str] = []
+        for week in range(6):
+            if week < len(month_calendar):
+                week_dates = month_calendar[week]
+                week_has_month_days = any(
+                    date.year == display_year and date.month == display_month
+                    for date in week_dates
+                )
+                if week_has_month_days:
+                    reference_date = self._get_week_ref_date(week_dates)
+                    week_numbers.append(str(reference_date.isocalendar()[1]))
+                else:
+                    week_numbers.append("")
+            else:
+                week_numbers.append("")
+        return week_numbers
+
+    def _get_day_cell_value(
+        self,
+        _display_year: int,  # pylint: disable=unused-argument
+        _display_month: int,  # pylint: disable=unused-argument
+        day_index: int,
+        month_days,
+    ) -> tuple[bool, Optional[int]]:
+        """
+        Determine whether the cell should show an adjacent-month day or a
+        normal day number.
+
+        Returns (use_adjacent, day_number). When use_adjacent is True, the
+        caller should render using _set_adjacent_month_day. When False, the
+        day_number is guaranteed to be an integer for the current month.
+        """
+        if day_index < len(month_days):
+            day_num = month_days[day_index]
+            if day_num == 0:
+                return True, None
+            return False, int(day_num)
+        return True, None
+
+    def _set_adjacent_month_day(  # pylint: disable=too-many-positional-arguments
+        self, label, year: int, month: int, week: int, day: int
+    ):
+        """Set display for adjacent month days."""
+        # Calculate the date for this position using datetime arithmetic
+        first_day = datetime.date(year, month, 1)
+        # Get the first day of the week for this month efficiently
+        first_weekday = self._get_week_start_offset(first_day)
+        # Calculate the date for this position
+        days_from_start = week * 7 + day - first_weekday
+        clicked_date = first_day + datetime.timedelta(days=days_from_start)
+        # Check if the date is valid (not in current month) using calendar module
+        _, last_day = calendar.monthrange(year, month)
+        current_month_start = datetime.date(year, month, 1)
+        current_month_end = datetime.date(year, month, last_day)
+        if clicked_date < current_month_start or clicked_date > current_month_end:
+            # Adjacent month day
+            label.config(
+                text=str(clicked_date.day),
+                bg=self.theme_colors["adjacent_day_bg"],
+                fg=self.theme_colors["adjacent_day_fg"],
+            )
+        else:
+            # Empty day
+            label.config(
+                text="",
+                bg=self.theme_colors["day_bg"],
+                fg=self.theme_colors["day_fg"],
+            )
+
+    def _calculate_year_range(self, center_year: int) -> tuple[int, int]:
+        """Calculate 12-year range centered on the given year."""
+        start_year = center_year - 5
+        end_year = center_year + 6
+        return start_year, end_year
+
+    def _initialize_year_range(self, center_year: int):
+        """Initialize year range for year selection mode."""
+        self.year_range_start, self.year_range_end = self._calculate_year_range(
+            center_year
+        )
+
     def _on_prev_month(self, month_index: int):
         """Handle previous month navigation."""
         current_date = self._get_display_date(month_index)
@@ -331,9 +458,28 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         self.set_date(next_date.year, next_date.month)
 
     def _on_month_header_click(self, _month_index: int):
-        """Handle month header click - switch to year view."""
+        """Handle month header click - switch to month selection."""
         if self.year_view_callback:
             self.year_view_callback()
+
+    def _on_year_header_click(self):
+        """Handle year header click - switch to year selection."""
+        self.year_selection_mode = True
+        self.month_selection_mode = False
+        self._initialize_year_range(self.year)
+        view._create_year_selection_content(self)  # pylint: disable=W0212
+        # Force UI refresh
+        try:
+            self.update_idletasks()
+            self.update()
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+    def _on_year_selection_header_click(self):
+        """Handle year selection header click - switch back to year view."""
+        self.year_selection_mode = False
+        self.month_selection_mode = True
+        view._create_year_view_content(self)  # pylint: disable=W0212
 
     def _on_date_click(self, month_index: int, week: int, day: int):
         """Handle date button click."""
@@ -367,29 +513,61 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
                 self.selection_callback(self.selected_range)
 
     def _on_prev_year_view(self):
-        """Handle previous year navigation in year view."""
+        """Handle previous year navigation in month selection."""
         self.year -= 1
         view._update_year_view(self)  # pylint: disable=W0212
 
     def _on_next_year_view(self):
-        """Handle next year navigation in year view."""
+        """Handle next year navigation in month selection."""
         self.year += 1
         view._update_year_view(self)  # pylint: disable=W0212
 
+    def _on_prev_year_range(self):
+        """Handle previous year range navigation in year selection."""
+        self.year_range_start -= 10
+        self.year_range_end -= 10
+        view._update_year_selection_display(self)  # pylint: disable=W0212
+
+    def _on_next_year_range(self):
+        """Handle next year range navigation in year selection."""
+        self.year_range_start += 10
+        self.year_range_end += 10
+        view._update_year_selection_display(self)  # pylint: disable=W0212
+
     def _on_year_view_month_click(self, month: int):
-        """Handle month click in year view."""
+        """Handle month click in month selection."""
         self.month = month
-        self.year_view_mode = False
+        self.month_selection_mode = False
+        self.year_selection_mode = False
+        # Return to normal month view
+        view._destroy_year_container(self)  # pylint: disable=W0212
+        view._create_widgets(self)  # pylint: disable=W0212
+        view._update_display(self)  # pylint: disable=W0212
         # Call date callback if available
         if self.date_callback:
             self.date_callback(self.year, month)
+
+    def _on_year_selection_year_click(self, selected_year: int):
+        """Handle year click in year selection."""
+        self.year = selected_year
+        self.year_selection_mode = False
+        self.month_selection_mode = True
+        # Switch to month selection view
+        view._create_year_view_content(self)  # pylint: disable=W0212
+        view._update_year_view(self)  # pylint: disable=W0212
+        # Force UI refresh to ensure new content is rendered
+        try:
+            self.update_idletasks()
+            self.update()
+        except Exception:  # pylint: disable=broad-except
+            pass
 
     def set_date(self, year: int, month: int):
         """Set the displayed year and month."""
         self.year = year
         self.month = month
-        # If in year view mode, update year view
-        if self.year_view_mode:
+        # If in month selection mode, update year view
+        if self.month_selection_mode:
             view._update_year_view(self)  # pylint: disable=W0212
         else:
             view._update_display(self)  # pylint: disable=W0212
@@ -397,13 +575,13 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
     def set_holidays(self, holidays: Dict[str, str]):
         """Set holiday colors dictionary."""
         self.holidays = holidays
-        if not self.year_view_mode:
+        if not self.month_selection_mode and not self.year_selection_mode:
             view._update_display(self)  # pylint: disable=W0212
 
     def set_day_colors(self, day_colors: Dict[str, str]):
         """Set day of week colors dictionary."""
         self.day_colors = day_colors
-        if not self.year_view_mode:
+        if not self.month_selection_mode and not self.year_selection_mode:
             view._update_display(self)  # pylint: disable=W0212
 
     def set_theme(self, theme: str):
@@ -415,7 +593,7 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
             themes = get_calendar_themes()
             raise ValueError(f"theme must be one of {list(themes.keys())}") from exc
         if (
-            self.year_view_mode
+            self.month_selection_mode
             and hasattr(self, "year_view_window")
             and self.year_view_window
         ):
@@ -441,7 +619,7 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         else:
             self.today_color = color
             self.today_color_set = True
-        if not self.year_view_mode:
+        if not self.month_selection_mode and not self.year_selection_mode:
             view._update_display(self)  # pylint: disable=W0212
 
     def set_week_start(self, week_start: str):
@@ -460,7 +638,7 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
     def refresh_language(self):
         """Refresh the display to reflect language changes."""
         if (
-            self.year_view_mode
+            self.month_selection_mode
             and hasattr(self, "year_view_window")
             and self.year_view_window
         ):
@@ -496,7 +674,7 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         # Store current settings
         current_day_colors = self.day_colors.copy()
         current_holidays = self.holidays.copy()
-        current_year_view_mode = self.year_view_mode
+        current_month_selection_mode = self.month_selection_mode
         # Destroy all existing widgets completely
         if hasattr(self, "canvas"):
             self.canvas.destroy()
@@ -519,9 +697,9 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         # Restore settings
         self.day_colors = current_day_colors
         self.holidays = current_holidays
-        self.year_view_mode = current_year_view_mode
+        self.month_selection_mode = current_month_selection_mode
         # Recreate everything
-        if self.year_view_mode:
+        if self.month_selection_mode:
             view._create_year_view_content(self)  # pylint: disable=W0212
         else:
             view._create_widgets(self)  # pylint: disable=W0212
@@ -592,19 +770,19 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         """Set the selected date."""
         self.selected_date = date
         self.selected_range = None
-        if not self.year_view_mode:
+        if not self.month_selection_mode and not self.year_selection_mode:
             view._update_display(self)  # pylint: disable=W0212
 
     def set_selected_range(self, start_date: datetime.date, end_date: datetime.date):
         """Set the selected date range."""
         self.selected_range = (start_date, end_date)
         self.selected_date = None
-        if not self.year_view_mode:
+        if not self.month_selection_mode and not self.year_selection_mode:
             view._update_display(self)  # pylint: disable=W0212
 
     def set_popup_size(self, width: Optional[int] = None, height: Optional[int] = None):
         """
-        Set the popup size for both calendar and year view.
+        Set the popup size for both calendar and month selection.
 
         Args:
             width: Width in pixels (None to use default)
@@ -626,7 +804,10 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
             self.dpi_scaling_factor = get_scaling_factor(self)
             # Only update if scaling factor has changed
             if abs(old_scaling - self.dpi_scaling_factor) > 0.01:
-                if not self.year_view_mode:
+                if self.year_selection_mode:
+                    # Don't update display in year selection mode
+                    pass
+                elif not self.month_selection_mode:
                     view._update_display(self)  # pylint: disable=W0212
                 else:
                     view._update_year_view(self)  # pylint: disable=W0212
@@ -639,12 +820,15 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
     # Public methods for backward compatibility
     def _get_day_names(self, short: bool = False):
         """Get localized day names."""
-        return view._get_day_names(self, short)  # pylint: disable=W0212
+        return get_day_names(self, short)
 
     def _get_month_name(self, month: int, short: bool = False):
         """Get localized month name."""
-        return view._get_month_name(self, month, short)  # pylint: disable=W0212
+        return get_month_name(self, month, short)
 
     def _update_display(self):
         """Update the calendar display."""
+        # Check if in year selection mode
+        if self.year_selection_mode:
+            return
         view._update_display(self)  # pylint: disable=W0212

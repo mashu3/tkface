@@ -15,7 +15,7 @@ from tkinter import ttk
 from typing import Dict, Optional
 
 from . import get_scaling_factor
-from .calendar import Calendar, get_calendar_theme
+from .calendar import Calendar, get_calendar_theme, view
 
 
 @dataclass
@@ -140,14 +140,48 @@ class _DatePickerBase:
         Handle click events in the popup to detect clicks outside the
         calendar.
         """
-        if isinstance(event.widget, str):
-            hide_callback()
+        try:
+            # If calendar is in selection overlay modes and click is inside the
+            # calendar, do nothing
+            if (
+                hasattr(self, "calendar")
+                and self.calendar
+                and (
+                    getattr(self.calendar, "year_selection_mode", False)
+                    or getattr(self.calendar, "month_selection_mode", False)
+                )
+            ):
+                if not isinstance(event.widget, str) and self._is_child_of_calendar(
+                    event.widget, calendar_widget
+                ):
+                    calendar_widget.focus_set()
+                    return "break"
+
+            # Some platforms may deliver a string widget; fall back to pointer check
+            if isinstance(event.widget, str):
+                x, y = popup_window.winfo_pointerxy()
+                xc = popup_window.winfo_rootx()
+                yc = popup_window.winfo_rooty()
+                w = popup_window.winfo_width()
+                h = popup_window.winfo_height()
+                if xc <= x <= xc + w and yc <= y <= yc + h:
+                    calendar_widget.focus_set()
+                    return "break"
+                hide_callback()
+                return "break"
+
+            if not self._is_child_of_calendar(event.widget, calendar_widget):
+                hide_callback()
+            else:
+                calendar_widget.focus_set()
             return "break"
-        if not self._is_child_of_calendar(event.widget, calendar_widget):
-            hide_callback()
-        else:
-            calendar_widget.focus_set()
-        return "break"
+        except Exception:  # pylint: disable=broad-except
+            # On any unexpected error, prefer keeping the popup open
+            try:
+                calendar_widget.focus_set()
+            except Exception:  # pylint: disable=broad-except
+                pass
+            return "break"
 
     def _bind_calendar_events(self, widget):
         """Bind events to all child widgets of the calendar."""
@@ -203,6 +237,35 @@ class _DatePickerBase:
     def _on_focus_out(self, event):  # pylint: disable=unused-argument
         """Handle focus out events."""
         focus_widget = self.focus_get()  # pylint: disable=no-member
+        # If we have a calendar, and focus is within the calendar (including
+        # year/month views), do not hide
+        try:
+            if hasattr(self, "calendar") and self.calendar:
+                if focus_widget is not None:
+                    if focus_widget == self or self._is_child_of_calendar(
+                        focus_widget, self.calendar
+                    ):
+                        return "break"
+                # If calendar is in selection overlay modes, be conservative and
+                # keep it open
+                if getattr(self.calendar, "year_selection_mode", False) or getattr(
+                    self.calendar, "month_selection_mode", False
+                ):
+                    # If pointer is inside popup, keep focus on calendar
+                    try:
+                        x, y = self.popup.winfo_pointerxy()
+                        xc = self.popup.winfo_rootx()
+                        yc = self.popup.winfo_rooty()
+                        w = self.popup.winfo_width()
+                        h = self.popup.winfo_height()
+                        if xc <= x <= xc + w and yc <= y <= yc + h:
+                            self.calendar.focus_force()
+                            return "break"
+                    except Exception:  # pylint: disable=broad-except
+                        return "break"
+        except Exception:  # pylint: disable=broad-except
+            pass
+
         if focus_widget is not None:
             if focus_widget == self:
                 # Don't hide calendar when focus is on the DateEntry itself
@@ -261,7 +324,7 @@ class _DatePickerBase:
         return "break"
 
     def _setup_year_view_click_outside_handling(self):
-        """Setup click outside handling for year view."""
+        """Setup click outside handling for month selection."""
         self.year_view_window.bind(
             "<Button-1>",
             lambda e: self._on_popup_click(
@@ -300,11 +363,21 @@ class _DatePickerBase:
         self.show_calendar()
 
     def _on_calendar_year_view_request(self):
-        """Handle year view request from calendar."""
-        self.show_year_view()
+        """Handle month selection request from calendar."""
+        # Instead of creating a new window, switch the current calendar to year
+        # view mode
+        if self.calendar:
+            self.calendar.month_selection_mode = True
+            self.calendar.year_selection_mode = False
+            # Recreate the calendar content in year view mode
+            view._create_year_view_content(self.calendar)  # pylint: disable=W0212
+            view._update_year_view(self.calendar)  # pylint: disable=W0212
+        else:
+            # Fallback to old method
+            self.show_year_view()
 
     def show_year_view(self):
-        """Show year view calendar."""
+        """Show month selection calendar."""
         if hasattr(self, "year_view_window") and self.year_view_window:
             return
         if self.popup:
@@ -327,7 +400,7 @@ class _DatePickerBase:
         if toplevel:
             self.year_view_window.transient(toplevel)
         year_view_config = self.calendar_config.copy()
-        year_view_config["year_view_mode"] = True
+        year_view_config["month_selection_mode"] = True
         self.year_view_calendar = Calendar(
             self.year_view_window,
             **year_view_config,
@@ -336,19 +409,16 @@ class _DatePickerBase:
         # Position the year view using geometry from Calendar
         self.year_view_window.update_idletasks()
         year_view_geometry = self.year_view_calendar.get_popup_geometry(self)
-        # Scale year view geometry based on DPI (only scale size, not
-        # position)
+        # Scale year view geometry based on DPI (only scale size, not position)
         try:
             if self.dpi_scaling_factor > 1.0:
-                # Parse geometry string and scale only dimensions, not
-                # position
+                # Parse geometry string and scale only dimensions, not position
                 match = re.match(r"(\d+)x(\d+)\+(\d+)\+(\d+)", year_view_geometry)
                 if match:
                     width, height, x, y = map(int, match.groups())
                     scaled_width = int(width * self.dpi_scaling_factor)
                     scaled_height = int(height * self.dpi_scaling_factor)
-                    # Don't scale position coordinates (x, y) - keep them as
-                    # is
+                    # Don't scale position coordinates (x, y) - keep them as is
                     year_view_geometry = f"{scaled_width}x{scaled_height}+{x}+{y}"
         except (ValueError, AttributeError) as e:
             self.logger.debug(
@@ -365,9 +435,12 @@ class _DatePickerBase:
         self.year_view_window.focus_force()
         self.year_view_window.update()
         self.year_view_window.lift()
+        # Ensure year view window is on top
+        self.year_view_window.attributes("-topmost", True)
+        self.year_view_window.attributes("-topmost", False)
 
     def hide_year_view(self):
-        """Hide year view calendar."""
+        """Hide month selection calendar."""
         if hasattr(self, "year_view_window") and self.year_view_window:
             # Unbind events to prevent memory leaks
             try:
@@ -449,11 +522,18 @@ class _DatePickerBase:
             delattr(self, "_parent_configure_binding")
 
     def _on_year_view_month_selected(self, year, month):
-        """Handle month selection in year view."""
-        self.hide_year_view()
+        """Handle month selection in month selection."""
+        # Update calendar config
         self.calendar_config["year"] = year
         self.calendar_config["month"] = month
-        self.show_calendar()
+        # Switch back to normal calendar view
+        if self.calendar:
+            self.calendar.month_selection_mode = False
+            self.calendar.year_selection_mode = False
+            # Recreate normal calendar view
+            view._destroy_year_container(self.calendar)  # pylint: disable=W0212
+            view._create_widgets(self.calendar)  # pylint: disable=W0212
+            view._update_display(self.calendar)  # pylint: disable=W0212
 
     def show_calendar(self):
         """Show the popup calendar."""
@@ -585,7 +665,7 @@ class _DatePickerBase:
         )
 
     def set_popup_size(self, width: Optional[int] = None, height: Optional[int] = None):
-        """Set the popup size for both calendar and year view."""
+        """Set the popup size for both calendar and month selection."""
         self._delegate_to_calendar("set_popup_size", width, height)
 
     def update_dpi_scaling(self):

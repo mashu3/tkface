@@ -8,7 +8,7 @@ This module provides a customizable calendar widget with support for:
 - Holiday highlighting
 - Language support
 - Configurable week start
-- Year view mode
+- Month selection mode
 """
 
 from .core import Calendar, CalendarConfig

@@ -6,12 +6,54 @@ handling for the Calendar widget.
 """
 
 import calendar
-import datetime
 import tkinter as tk
-from typing import List
 
-from ... import lang
-from .style import DayColorContext, _determine_day_colors
+from .style import (
+    bind_hover_events,
+    create_grid_label,
+    create_navigation_button,
+    get_month_name,
+    handle_mouse_enter,
+    handle_mouse_leave,
+    handle_year_selection_mouse_enter,
+    handle_year_selection_mouse_leave,
+    handle_year_view_mouse_enter,
+    handle_year_view_mouse_leave,
+    set_day_colors,
+)
+
+
+def _create_header_frame(calendar_instance, parent):
+    """Create a consistent header frame structure."""
+    header_frame = tk.Frame(
+        parent, bg=calendar_instance.theme_colors["month_header_bg"]
+    )
+    header_frame.pack(fill="x", pady=(5, 0))
+
+    nav_frame = tk.Frame(
+        header_frame, bg=calendar_instance.theme_colors["month_header_bg"]
+    )
+    nav_frame.pack(expand=True, fill="x")
+
+    center_frame = tk.Frame(
+        nav_frame, bg=calendar_instance.theme_colors["month_header_bg"]
+    )
+    center_frame.pack(expand=True)
+
+    return center_frame
+
+
+def _create_grid_container(calendar_instance, parent, rows, cols):
+    """Create a grid container with consistent configuration."""
+    grid_frame = tk.Frame(parent, bg=calendar_instance.theme_colors["background"])
+    grid_frame.pack(fill="both", expand=True, padx=2, pady=2)
+
+    for i in range(cols):
+        grid_frame.columnconfigure(i, weight=1)
+    for i in range(rows):
+        grid_frame.rowconfigure(i, weight=1)
+
+    return grid_frame
 
 
 def _create_container(calendar_instance):
@@ -61,6 +103,101 @@ def _create_container(calendar_instance):
         for i in range(calendar_instance.grid_rows):
             calendar_instance.scrollable_frame.rowconfigure(i, weight=1)
     return is_single_month
+
+
+def _hide_normal_calendar_views(calendar_instance):
+    """Hide normal month views (single or scrollable) when showing overlays."""
+    # Hide single-month container
+    if (
+        hasattr(calendar_instance, "months_container")
+        and calendar_instance.months_container
+    ):
+        try:
+            calendar_instance.months_container.pack_forget()
+        except Exception:  # pylint: disable=broad-except
+            pass
+    # Hide scrollable views if present
+    if hasattr(calendar_instance, "canvas") and calendar_instance.canvas:
+        try:
+            calendar_instance.canvas.pack_forget()
+        except Exception:  # pylint: disable=broad-except
+            pass
+    if hasattr(calendar_instance, "scrollbar") and calendar_instance.scrollbar:
+        try:
+            calendar_instance.scrollbar.pack_forget()
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+
+def _ensure_year_container(calendar_instance):
+    """Ensure overlay container exists and is packed to fill the calendar area."""
+    _hide_normal_calendar_views(calendar_instance)
+    if (
+        not hasattr(calendar_instance, "year_container")
+        or calendar_instance.year_container is None
+    ):
+        calendar_instance.year_container = tk.Frame(
+            calendar_instance,
+            relief="flat",
+            bd=1,
+            bg=calendar_instance.theme_colors["background"],
+        )
+        calendar_instance.year_container.pack(fill="both", expand=True, padx=2, pady=2)
+    else:
+        # If exists but not visible, ensure it's packed
+        try:
+            calendar_instance.year_container.pack(
+                fill="both", expand=True, padx=2, pady=2
+            )
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+
+def _clear_year_container_children(calendar_instance):
+    """Remove all widgets inside the overlay container."""
+    if (
+        hasattr(calendar_instance, "year_container")
+        and calendar_instance.year_container
+    ):
+        for child in list(calendar_instance.year_container.winfo_children()):
+            try:
+                child.destroy()
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+
+def _destroy_year_container(calendar_instance):  # pylint: disable=W0212
+    """Destroy overlay container and restore normal month views."""
+    if (
+        hasattr(calendar_instance, "year_container")
+        and calendar_instance.year_container
+    ):
+        try:
+            calendar_instance.year_container.destroy()
+        except Exception:  # pylint: disable=broad-except
+            pass
+        calendar_instance.year_container = None
+    # Restore normal views
+    if (
+        hasattr(calendar_instance, "months_container")
+        and calendar_instance.months_container
+    ):
+        try:
+            calendar_instance.months_container.pack(
+                fill="both", expand=True, padx=2, pady=2
+            )
+        except Exception:  # pylint: disable=broad-except
+            pass
+    if hasattr(calendar_instance, "canvas") and calendar_instance.canvas:
+        try:
+            calendar_instance.canvas.pack(side="top", fill="both", expand=True)
+        except Exception:  # pylint: disable=broad-except
+            pass
+    if hasattr(calendar_instance, "scrollbar") and calendar_instance.scrollbar:
+        try:
+            calendar_instance.scrollbar.pack(side="bottom", fill="x")
+        except Exception:  # pylint: disable=broad-except
+            pass
 
 
 def _create_navigation_buttons(calendar_instance, center_frame, month_index):
@@ -123,7 +260,7 @@ def _create_navigation_buttons(calendar_instance, center_frame, month_index):
         )
 
 
-def _create_navigation_item(  # pylint: disable=R0917
+def _create_navigation_item(  # pylint: disable=R0917,W0212
     calendar_instance,
     center_frame,
     month_index,
@@ -136,31 +273,12 @@ def _create_navigation_item(  # pylint: disable=R0917
 ):
     """Create a single navigation item (prev button, label, next button)."""
     # Previous button
-    prev_btn = tk.Label(
+    create_navigation_button(
+        calendar_instance,
         center_frame,
-        text=prev_text,
-        font=calendar_instance._get_scaled_font(  # pylint: disable=W0212
-            calendar_instance.theme_colors["navigation_font"]
-        ),
-        bg=calendar_instance.theme_colors["navigation_bg"],
-        fg=calendar_instance.theme_colors["navigation_fg"],
-        cursor="hand2",
-    )
-    prev_btn.pack(side="left", padx=(5, 0))
-    prev_btn.bind("<Button-1>", lambda e, m=month_index, cmd=prev_cmd: cmd(m))
-    prev_btn.bind(
-        "<Enter>",
-        lambda e, btn=prev_btn: btn.config(
-            bg=calendar_instance.theme_colors["navigation_hover_bg"],
-            fg=calendar_instance.theme_colors["navigation_hover_fg"],
-        ),
-    )
-    prev_btn.bind(
-        "<Leave>",
-        lambda e, btn=prev_btn: btn.config(
-            bg=calendar_instance.theme_colors["navigation_bg"],
-            fg=calendar_instance.theme_colors["navigation_fg"],
-        ),
+        prev_text,
+        lambda m=month_index, cmd=prev_cmd: cmd(m),
+        padx=(5, 0),
     )
 
     # Label
@@ -201,41 +319,26 @@ def _create_navigation_item(  # pylint: disable=R0917
         )
         calendar_instance.month_headers.append(label)
     else:
+        # Bind click event for year selection
+        label.bind(
+            "<Button-1>",
+            lambda e: calendar_instance._on_year_header_click(),  # noqa: E501
+        )
+        label.config(cursor="hand2")
         calendar_instance.year_labels.append(label)
     label.pack(side="left", padx=2)
 
     # Next button
-    next_btn = tk.Label(
+    if item_type == ("year" if year_first else "month"):
+        next_padx = (0, 10)
+    else:
+        next_padx = (0, 5)
+    create_navigation_button(
+        calendar_instance,
         center_frame,
-        text=next_text,
-        font=calendar_instance._get_scaled_font(  # pylint: disable=W0212
-            calendar_instance.theme_colors["navigation_font"]
-        ),
-        bg=calendar_instance.theme_colors["navigation_bg"],
-        fg=calendar_instance.theme_colors["navigation_fg"],
-        cursor="hand2",
-    )
-    next_btn.pack(
-        side="left",
-        padx=(
-            0,
-            (10 if item_type == ("year" if year_first else "month") else 5),
-        ),
-    )
-    next_btn.bind("<Button-1>", lambda e, m=month_index, cmd=next_cmd: cmd(m))
-    next_btn.bind(
-        "<Enter>",
-        lambda e, btn=next_btn: btn.config(
-            bg=calendar_instance.theme_colors["navigation_hover_bg"],
-            fg=calendar_instance.theme_colors["navigation_hover_fg"],
-        ),
-    )
-    next_btn.bind(
-        "<Leave>",
-        lambda e, btn=next_btn: btn.config(
-            bg=calendar_instance.theme_colors["navigation_bg"],
-            fg=calendar_instance.theme_colors["navigation_fg"],
-        ),
+        next_text,
+        lambda m=month_index, cmd=next_cmd: cmd(m),
+        padx=next_padx,
     )
 
 
@@ -244,21 +347,7 @@ def _create_month_header(calendar_instance, month_frame, month_index):
     if not calendar_instance.show_month_headers:
         return
 
-    header_frame = tk.Frame(
-        month_frame, bg=calendar_instance.theme_colors["month_header_bg"]
-    )
-    header_frame.pack(fill="x", pady=(2, 0))
-
-    nav_frame = tk.Frame(
-        header_frame, bg=calendar_instance.theme_colors["month_header_bg"]
-    )
-    nav_frame.pack(expand=True, fill="x")
-
-    center_frame = tk.Frame(
-        nav_frame, bg=calendar_instance.theme_colors["month_header_bg"]
-    )
-    center_frame.pack(expand=True)
-
+    center_frame = _create_header_frame(calendar_instance, month_frame)
     _create_navigation_buttons(calendar_instance, center_frame, month_index)
 
 
@@ -322,7 +411,7 @@ def _create_calendar_grid(calendar_instance, month_frame, month_index):
     for week in range(6):  # Maximum 6 weeks
         grid_frame.rowconfigure(week + 1, weight=1)
     # Create day name headers (row 0)
-    day_names = _get_day_names(calendar_instance, short=True)
+    day_names = calendar_instance._get_day_names_for_headers()  # pylint: disable=W0212
     if calendar_instance.show_week_numbers:
         # Empty header for week number column
         empty_header = tk.Label(
@@ -397,124 +486,25 @@ def _create_calendar_grid(calendar_instance, month_frame, month_index):
             )
             day_label.bind(
                 "<Enter>",
-                lambda e, label=day_label: _on_mouse_enter(calendar_instance, label),
+                lambda e, label=day_label: handle_mouse_enter(calendar_instance, label),
             )
             day_label.bind(
                 "<Leave>",
-                lambda e, label=day_label: _on_mouse_leave(calendar_instance, label),
+                lambda e, label=day_label: handle_mouse_leave(calendar_instance, label),
             )
             calendar_instance.day_labels.append((month_index, week, day, day_label))
-
-
-def _get_day_names(
-    calendar_instance, short: bool = False
-) -> List[str]:  # pylint: disable=W0212
-    """Get localized day names."""
-    # Define base day names
-    full_days = [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-    ]
-    short_days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    # Choose day list based on short parameter
-    days = short_days if short else full_days
-    # Shift days based on week_start
-    if calendar_instance.week_start == "Sunday":
-        # Move Sunday to the beginning
-        days = days[-1:] + days[:-1]
-    elif calendar_instance.week_start == "Saturday":
-        # Move Saturday to the beginning
-        days = days[-2:] + days[:-2]
-    # Get translations and handle short names
-    day_names = []
-    for day in days:
-        if short:
-            # For short names, get full name translation first, then truncate
-            full_name = full_days[short_days.index(day)]
-            full_translated = lang.get(full_name, calendar_instance.winfo_toplevel())
-            translated = (
-                full_translated[:3] if len(full_translated) >= 3 else full_translated
-            )
-        else:
-            translated = lang.get(day, calendar_instance.winfo_toplevel())
-        day_names.append(translated)
-    return day_names
-
-
-def _get_month_name(
-    calendar_instance, month: int, short: bool = False
-) -> str:  # pylint: disable=W0212
-    """Get localized month name."""
-    # Define base month names
-    full_months = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-    ]
-    # Get the month name based on short parameter
-    if short:
-        # For short names, get full name translation first, then truncate
-        full_name = full_months[month - 1]
-        full_translated = lang.get(full_name, calendar_instance.winfo_toplevel())
-        return full_translated[:3] if len(full_translated) >= 3 else full_translated
-    month_name = full_months[month - 1]
-    return lang.get(month_name, calendar_instance.winfo_toplevel())
-
-
-def _on_mouse_enter(calendar_instance, label):  # pylint: disable=W0212
-    """Handle mouse enter event."""
-    # Only highlight if not already selected
-    current_bg = label.cget("bg")
-    if current_bg not in [
-        calendar_instance.theme_colors["selected_bg"],
-        calendar_instance.theme_colors["range_bg"],
-    ]:
-        # Store current colors before changing to hover
-        if label not in calendar_instance.original_colors:
-            calendar_instance.original_colors[label] = {
-                "bg": current_bg,
-                "fg": label.cget("fg"),
-            }
-        label.config(
-            bg=calendar_instance.theme_colors["hover_bg"],
-            fg=calendar_instance.theme_colors["hover_fg"],
-        )
-
-
-def _on_mouse_leave(calendar_instance, label):  # pylint: disable=W0212
-    """Handle mouse leave event."""
-    # Only restore if not selected
-    current_bg = label.cget("bg")
-    if (
-        current_bg == calendar_instance.theme_colors["hover_bg"]
-        and label in calendar_instance.original_colors
-    ):
-        # Restore original colors
-        original = calendar_instance.original_colors[label]
-        label.config(bg=original["bg"], fg=original["fg"])
 
 
 def _update_display(calendar_instance):  # pylint: disable=W0212
     """Update the calendar display."""
     if not calendar_instance.winfo_exists():
         return
-    # Check if in year view mode
-    if calendar_instance.year_view_mode:
+    # Check if in month selection mode
+    if calendar_instance.month_selection_mode:
         _update_year_view(calendar_instance)
+        return
+    # Check if in year selection mode
+    if calendar_instance.year_selection_mode:
         return
     week_label_index = 0
     for month_offset in range(calendar_instance.months):
@@ -536,10 +526,10 @@ def _update_display(calendar_instance):  # pylint: disable=W0212
         else:
             days_frame = children[0]
         _update_day_name_headers(calendar_instance, days_frame)
-        # Get calendar data efficiently using monthrange
+        # Get calendar data from core helper
         _, _last_day = calendar.monthrange(display_year, display_month)
-        month_days = list(
-            calendar_instance.cal.itermonthdays(display_year, display_month)
+        month_days = calendar_instance._get_month_days_list(  # pylint: disable=W0212
+            display_year, display_month
         )
         # Update week numbers
         if calendar_instance.show_week_numbers:
@@ -559,23 +549,26 @@ def _update_month_headers(
     calendar_instance, month_offset: int, display_year: int, display_month: int
 ):
     """Update year and month headers."""
+    year_text, month_text = (
+        calendar_instance._get_month_header_texts(  # pylint: disable=W0212
+            display_year, display_month
+        )
+    )
     if hasattr(calendar_instance, "year_labels") and month_offset < len(
         calendar_instance.year_labels
     ):
         year_label = calendar_instance.year_labels[month_offset]
-        year_label.config(text=str(display_year))
+        year_label.config(text=year_text)
     if hasattr(calendar_instance, "month_headers") and month_offset < len(
         calendar_instance.month_headers
     ):
         month_label = calendar_instance.month_headers[month_offset]
-        month_label.config(
-            text=_get_month_name(calendar_instance, display_month, short=True)
-        )
+        month_label.config(text=month_text)
 
 
 def _update_day_name_headers(calendar_instance, days_frame):
     """Update day name headers."""
-    day_names = _get_day_names(calendar_instance, short=True)
+    day_names = calendar_instance._get_day_names_for_headers()  # pylint: disable=W0212
     # Find day header labels and update them
     day_header_index = 0
     for child in days_frame.winfo_children():
@@ -616,7 +609,7 @@ def _update_day_labels(
                     break
 
 
-def _update_single_day_label(  # pylint: disable=R0917
+def _update_single_day_label(  # pylint: disable=R0917,W0212
     calendar_instance,
     label,
     display_year: int,
@@ -627,24 +620,20 @@ def _update_single_day_label(  # pylint: disable=R0917
     month_days,
 ):
     """Update a single day label."""
-    if day_index < len(month_days):
-        day_num = month_days[day_index]
-        if day_num == 0:
-            # Empty day - show previous/next month days
-            _set_adjacent_month_day(
-                calendar_instance, label, display_year, display_month, week, day
-            )
-        else:
-            # Valid day
-            label.config(text=str(day_num))
-            # Set colors
-            _set_day_colors(
-                calendar_instance, label, display_year, display_month, day_num
-            )
+    use_adjacent, day_num = calendar_instance._get_day_cell_value(
+        display_year,
+        display_month,
+        day_index,
+        month_days,
+    )
+    if use_adjacent:
+        calendar_instance._set_adjacent_month_day(
+            label, display_year, display_month, week, day
+        )
     else:
-        # Beyond month days
-        _set_adjacent_month_day(
-            calendar_instance, label, display_year, display_month, week, day
+        label.config(text=str(day_num))
+        set_day_colors(
+            calendar_instance, label, display_year, display_month, int(day_num)
         )
 
 
@@ -652,300 +641,195 @@ def _update_week_numbers(
     calendar_instance, display_year: int, display_month: int, week_label_index: int
 ) -> int:
     """Update week numbers for a specific month."""
-    # Reuse existing calendar object for efficiency
-    month_calendar = calendar_instance.cal.monthdatescalendar(
+    week_numbers = calendar_instance._compute_week_numbers(  # pylint: disable=W0212
         display_year, display_month
     )
     for week in range(6):
         if week_label_index + week < len(calendar_instance.week_labels):
             week_label = calendar_instance.week_labels[week_label_index + week]
-            if week < len(month_calendar):
-                # Get the week dates
-                week_dates = month_calendar[week]
-                # Check if this week contains days from the current month
-                week_has_month_days = any(
-                    date.year == display_year and date.month == display_month
-                    for date in week_dates
-                )
-                if week_has_month_days:
-                    # For ISO week numbers, we need to use the Monday of the week
-                    # as the reference date for week number calculation
-                    reference_date = (
-                        calendar_instance._get_week_ref_date(  # pylint: disable=W0212
-                            week_dates
-                        )
-                    )
-                    week_num = reference_date.isocalendar()[1]
-                    week_label.config(text=str(week_num))
-                else:
-                    week_label.config(text="")
-            else:
-                week_label.config(text="")
+            week_label.config(text=week_numbers[week])
     return week_label_index
 
 
-def _set_adjacent_month_day(  # pylint: disable=R0917
-    calendar_instance, label, year: int, month: int, week: int, day: int
-):
-    """Set display for adjacent month days."""
-    # Calculate the date for this position using datetime arithmetic
-    first_day = datetime.date(year, month, 1)
-    # Get the first day of the week for this month efficiently
-    first_weekday = calendar_instance._get_week_start_offset(  # pylint: disable=W0212
-        first_day
-    )
-    # Calculate the date for this position
-    days_from_start = week * 7 + day - first_weekday
-    clicked_date = first_day + datetime.timedelta(days=days_from_start)
-    # Check if the date is valid (not in current month) using calendar module
-    _, last_day = calendar.monthrange(year, month)
-    current_month_start = datetime.date(year, month, 1)
-    current_month_end = datetime.date(year, month, last_day)
-    if clicked_date < current_month_start or clicked_date > current_month_end:
-        # Adjacent month day
-        label.config(
-            text=str(clicked_date.day),
-            bg=calendar_instance.theme_colors["adjacent_day_bg"],
-            fg=calendar_instance.theme_colors["adjacent_day_fg"],
-        )
-    else:
-        # Empty day
-        label.config(
-            text="",
-            bg=calendar_instance.theme_colors["day_bg"],
-            fg=calendar_instance.theme_colors["day_fg"],
-        )
-
-
-def _set_day_colors(
-    calendar_instance, label, year: int, month: int, day: int
-):  # pylint: disable=W0212
-    """Set colors for a specific day."""
-    # Create context for color determination
-    context = DayColorContext(
-        theme_colors=calendar_instance.theme_colors,
-        selected_date=calendar_instance.selected_date,
-        selected_range=calendar_instance.selected_range,
-        today=datetime.date.today(),
-        today_color=calendar_instance.today_color,
-        today_color_set=calendar_instance.today_color_set,
-        day_colors=calendar_instance.day_colors,
-        holidays=calendar_instance.holidays,
-        date_obj=datetime.date(year, month, day),
-        year=year,
-        month=month,
-        day=day,
-    )
-
-    # Get colors based on various conditions
-    colors = _determine_day_colors(context)
-
-    # Apply colors
-    label.config(bg=colors.bg, fg=colors.fg)
-    # Update original colors for hover effect restoration
-    if label in calendar_instance.original_colors:
-        calendar_instance.original_colors[label] = {"bg": colors.bg, "fg": colors.fg}
-
-
 def _create_year_view_content(calendar_instance):  # pylint: disable=W0212
-    """Create year view content with 3x4 month grid."""
-    # Set main frame background color
-    calendar_instance.configure(bg=calendar_instance.theme_colors["background"])
-    # Year header with navigation
+    """Create month selection content with 3x4 month grid as overlay."""
+    # Ensure overlay container
+    _ensure_year_container(calendar_instance)
+    _clear_year_container_children(calendar_instance)
+
+    # Header
     if calendar_instance.show_navigation:
-        header_frame = tk.Frame(
-            calendar_instance, bg=calendar_instance.theme_colors["month_header_bg"]
+        center_frame = _create_header_frame(
+            calendar_instance, calendar_instance.year_container
         )
-        header_frame.pack(fill="x", pady=(5, 0))
-        nav_frame = tk.Frame(
-            header_frame, bg=calendar_instance.theme_colors["month_header_bg"]
-        )
-        nav_frame.pack(expand=True, fill="x")
-        center_frame = tk.Frame(
-            nav_frame, bg=calendar_instance.theme_colors["month_header_bg"]
-        )
-        center_frame.pack(expand=True)
-        # Previous year button
-        prev_btn = tk.Label(
-            center_frame,
-            text="<<",
-            font=calendar_instance._get_scaled_font(  # pylint: disable=W0212
-                calendar_instance.theme_colors["navigation_font"]
-            ),
-            bg=calendar_instance.theme_colors["navigation_bg"],
-            fg=calendar_instance.theme_colors["navigation_fg"],
-            cursor="hand2",
-        )
-        prev_btn.pack(side="left", padx=(5, 0))
-        prev_btn.bind(
-            "<Button-1>",
-            lambda e: calendar_instance._on_prev_year_view(),  # pylint: disable=W0212
-        )
-        prev_btn.bind(
-            "<Enter>",
-            lambda e, btn=prev_btn: btn.config(
-                bg=calendar_instance.theme_colors["navigation_hover_bg"],
-                fg=calendar_instance.theme_colors["navigation_hover_fg"],
-            ),
-        )
-        prev_btn.bind(
-            "<Leave>",
-            lambda e, btn=prev_btn: btn.config(
-                bg=calendar_instance.theme_colors["navigation_bg"],
-                fg=calendar_instance.theme_colors["navigation_fg"],
-            ),
-        )
-        # Year label
-        calendar_instance.year_view_year_label = tk.Label(
-            center_frame,
-            text=str(calendar_instance.year),
-            font=(
-                calendar_instance._get_scaled_font(  # pylint: disable=W0212
-                    ("TkDefaultFont", 12, "bold")
-                )
-            ),
-            relief="flat",
-            bd=0,
-            bg=calendar_instance.theme_colors["month_header_bg"],
-            fg=calendar_instance.theme_colors["month_header_fg"],
-        )
-        calendar_instance.year_view_year_label.pack(side="left", padx=10)
-        # Next year button
-        next_btn = tk.Label(
-            center_frame,
-            text=">>",
-            font=calendar_instance._get_scaled_font(  # pylint: disable=W0212
-                calendar_instance.theme_colors["navigation_font"]
-            ),
-            bg=calendar_instance.theme_colors["navigation_bg"],
-            fg=calendar_instance.theme_colors["navigation_fg"],
-            cursor="hand2",
-        )
-        next_btn.pack(side="left", padx=(0, 10))
-        next_btn.bind(
-            "<Button-1>",
-            lambda e: calendar_instance._on_next_year_view(),  # pylint: disable=W0212
-        )
-        next_btn.bind(
-            "<Enter>",
-            lambda e, btn=next_btn: btn.config(
-                bg=calendar_instance.theme_colors["navigation_hover_bg"],
-                fg=calendar_instance.theme_colors["navigation_hover_fg"],
-            ),
-        )
-        next_btn.bind(
-            "<Leave>",
-            lambda e, btn=next_btn: btn.config(
-                bg=calendar_instance.theme_colors["navigation_bg"],
-                fg=calendar_instance.theme_colors["navigation_fg"],
-            ),
-        )
-    # Create month grid (3x4) in the year view window
-    month_grid_frame = tk.Frame(
-        calendar_instance, bg=calendar_instance.theme_colors["background"]
+        _create_year_view_navigation(calendar_instance, center_frame)
+
+    # Grid frame
+    month_grid_frame = _create_grid_container(
+        calendar_instance, calendar_instance.year_container, 3, 4
     )
-    month_grid_frame.pack(fill="both", expand=True, padx=2, pady=2)
-    # Configure grid weights
-    for i in range(4):
-        month_grid_frame.columnconfigure(i, weight=1)
-    for i in range(3):
-        month_grid_frame.rowconfigure(i, weight=1)
-    # Create month buttons
+
+    # Month labels
     calendar_instance.year_view_labels = []
     for month in range(1, 13):
         row = (month - 1) // 4
         col = (month - 1) % 4
-        month_name = _get_month_name(calendar_instance, month, short=True)
-        month_label = tk.Label(
+        month_name = get_month_name(calendar_instance, month, short=True)
+
+        def _on_month_label_click(_event, m=month):  # noqa: ANN001
+            calendar_instance._on_year_view_month_click(m)  # pylint: disable=W0212
+            return "break"
+
+        month_label = create_grid_label(
+            calendar_instance,
             month_grid_frame,
-            text=month_name,
-            font=(
-                calendar_instance._get_scaled_font(  # pylint: disable=W0212
-                    ("TkDefaultFont", 10, "bold")
-                )
-            ),
-            relief="flat",
-            bd=1,
-            bg=calendar_instance.theme_colors["day_bg"],
-            fg=calendar_instance.theme_colors["day_fg"],
-            cursor="hand2",
+            month_name,
+            command=_on_month_label_click,
+            is_selected=(month == calendar_instance.month),
+            row=row,
+            col=col,
         )
-        month_label.grid(row=row, column=col, padx=2, pady=2, sticky="nsew")
-        # Highlight current month
-        if month == calendar_instance.month:
-            month_label.config(
-                bg=calendar_instance.theme_colors["selected_bg"],
-                fg=calendar_instance.theme_colors["selected_fg"],
-            )
-        # Bind click events
-        month_label.bind(
-            "<Button-1>",
-            lambda e, m=month: (
-                calendar_instance._on_year_view_month_click(m)  # pylint: disable=W0212
-            ),
+
+        bind_hover_events(
+            calendar_instance,
+            month_label,
+            handle_year_view_mouse_enter,
+            handle_year_view_mouse_leave,
         )
-        month_label.bind(
-            "<Enter>",
-            lambda e, label=month_label: _on_year_view_mouse_enter(
-                calendar_instance, label
-            ),
-        )
-        month_label.bind(
-            "<Leave>",
-            lambda e, label=month_label: _on_year_view_mouse_leave(
-                calendar_instance, label
-            ),
-        )
+
         calendar_instance.year_view_labels.append((month, month_label))
 
+    # Bring overlay to front and force redraw
+    try:
+        if (
+            hasattr(calendar_instance, "year_container")
+            and calendar_instance.year_container
+        ):
+            calendar_instance.year_container.lift()
+        calendar_instance.update_idletasks()
+    except Exception:  # pylint: disable=broad-except
+        pass
 
-def _on_year_view_mouse_enter(calendar_instance, label):
-    """Handle mouse enter event in year view."""
-    current_bg = label.cget("bg")
-    if current_bg != calendar_instance.theme_colors["selected_bg"]:
-        label.config(
-            bg=calendar_instance.theme_colors["hover_bg"],
-            fg=calendar_instance.theme_colors["hover_fg"],
+
+def _create_year_selection_content(calendar_instance):  # pylint: disable=W0212
+    """Create year selection content with 3x4 year grid as overlay."""
+    _ensure_year_container(calendar_instance)
+    _clear_year_container_children(calendar_instance)
+
+    center_frame = _create_header_frame(
+        calendar_instance, calendar_instance.year_container
+    )
+    _create_year_selection_navigation(calendar_instance, center_frame)
+
+    year_grid_frame = _create_grid_container(
+        calendar_instance, calendar_instance.year_container, 3, 4
+    )
+
+    calendar_instance.year_selection_labels = []
+    for year in range(
+        calendar_instance.year_range_start, calendar_instance.year_range_end + 1
+    ):
+        row = (year - calendar_instance.year_range_start) // 4
+        col = (year - calendar_instance.year_range_start) % 4
+
+        def _on_year_label_click(_event, y=year):  # noqa: ANN001
+            calendar_instance._on_year_selection_year_click(y)  # pylint: disable=W0212
+            return "break"
+
+        year_label = create_grid_label(
+            calendar_instance,
+            year_grid_frame,
+            str(year),
+            command=_on_year_label_click,
+            is_selected=(year == calendar_instance.year),
+            row=row,
+            col=col,
         )
 
+        bind_hover_events(
+            calendar_instance,
+            year_label,
+            handle_year_selection_mouse_enter,
+            handle_year_selection_mouse_leave,
+        )
 
-def _on_year_view_mouse_leave(calendar_instance, label):
-    """Handle mouse leave event in year view."""
-    current_bg = label.cget("bg")
-    if current_bg == calendar_instance.theme_colors["hover_bg"]:
-        # Check if this is the current month
-        for month, month_label in calendar_instance.year_view_labels:
-            if month_label == label:
-                if month == calendar_instance.month:
-                    label.config(
-                        bg=calendar_instance.theme_colors["selected_bg"],
-                        fg=calendar_instance.theme_colors["selected_fg"],
-                    )
-                else:
-                    label.config(
-                        bg=calendar_instance.theme_colors["day_bg"],
-                        fg=calendar_instance.theme_colors["day_fg"],
-                    )
-                break
+        calendar_instance.year_selection_labels.append((year, year_label))
+
+    # Bring overlay to front and force redraw
+    try:
+        if (
+            hasattr(calendar_instance, "year_container")
+            and calendar_instance.year_container
+        ):
+            calendar_instance.year_container.lift()
+        calendar_instance.update_idletasks()
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+
+# pylint: disable=W0212
+def _update_year_selection_display(calendar_instance):
+    """Update year selection display."""
+    # Update year range label
+    if hasattr(calendar_instance, "year_selection_header_label"):
+        calendar_instance.year_selection_header_label.config(
+            text=calendar_instance._get_year_range_text()
+        )
+
+    # Update year labels (texts, bindings, and highlight) to reflect new range
+    if (
+        hasattr(calendar_instance, "year_selection_labels")
+        and calendar_instance.year_selection_labels
+    ):
+        updated_labels = []
+        for idx, (_old_year, label) in enumerate(
+            calendar_instance.year_selection_labels
+        ):
+            new_year = calendar_instance.year_range_start + idx
+            # Update text
+            label.config(
+                text=str(new_year),
+                bg=calendar_instance.theme_colors["day_bg"],
+                fg=calendar_instance.theme_colors["day_fg"],
+            )
+            # Rebind click with the new year value
+            label.bind(
+                "<Button-1>",
+                lambda e, y=new_year: (
+                    calendar_instance._on_year_selection_year_click(y)
+                ),
+            )
+            # Apply highlight for the currently selected year
+            if new_year == calendar_instance.year:
+                label.config(
+                    bg=calendar_instance.theme_colors["selected_bg"],
+                    fg=calendar_instance.theme_colors["selected_fg"],
+                )
+            updated_labels.append((new_year, label))
+        # Replace with updated (year, label) pairs
+        calendar_instance.year_selection_labels = updated_labels
 
 
 def _update_year_view(calendar_instance):  # pylint: disable=W0212
-    """Update year view display."""
+    """Update month selection display."""
+    # Update year label
     if hasattr(calendar_instance, "year_view_year_label"):
         calendar_instance.year_view_year_label.config(text=str(calendar_instance.year))
+
     # Update month labels
-    for month, label in calendar_instance.year_view_labels:
-        # Reset to default colors
-        label.config(
-            bg=calendar_instance.theme_colors["day_bg"],
-            fg=calendar_instance.theme_colors["day_fg"],
-        )
-        # Highlight current month
-        if month == calendar_instance.month:
+    if hasattr(calendar_instance, "year_view_labels"):
+        for month, label in calendar_instance.year_view_labels:
+            # Reset to default colors
             label.config(
-                bg=calendar_instance.theme_colors["selected_bg"],
-                fg=calendar_instance.theme_colors["selected_fg"],
+                bg=calendar_instance.theme_colors["day_bg"],
+                fg=calendar_instance.theme_colors["day_fg"],
             )
+            # Highlight current month
+            if month == calendar_instance.month:
+                label.config(
+                    bg=calendar_instance.theme_colors["selected_bg"],
+                    fg=calendar_instance.theme_colors["selected_fg"],
+                )
 
 
 def _recreate_widgets(calendar_instance):  # pylint: disable=W0212
@@ -954,7 +838,8 @@ def _recreate_widgets(calendar_instance):  # pylint: disable=W0212
     current_day_colors = calendar_instance.day_colors.copy()
     current_holidays = calendar_instance.holidays.copy()
     current_show_week_numbers = calendar_instance.show_week_numbers
-    current_year_view_mode = calendar_instance.year_view_mode
+    current_month_selection_mode = calendar_instance.month_selection_mode
+    current_year_selection_mode = calendar_instance.year_selection_mode
     # Destroy all existing widgets completely
     if hasattr(calendar_instance, "canvas"):
         calendar_instance.canvas.destroy()
@@ -968,13 +853,17 @@ def _recreate_widgets(calendar_instance):  # pylint: disable=W0212
     calendar_instance.week_labels.clear()
     calendar_instance.original_colors.clear()
     calendar_instance.year_view_labels.clear()
+    calendar_instance.year_selection_labels.clear()
     # Restore settings
     calendar_instance.day_colors = current_day_colors
     calendar_instance.holidays = current_holidays
     calendar_instance.show_week_numbers = current_show_week_numbers
-    calendar_instance.year_view_mode = current_year_view_mode
+    calendar_instance.month_selection_mode = current_month_selection_mode
+    calendar_instance.year_selection_mode = current_year_selection_mode
     # Recreate everything
-    if calendar_instance.year_view_mode:
+    if calendar_instance.year_selection_mode:
+        _create_year_selection_content(calendar_instance)
+    elif calendar_instance.month_selection_mode:
         _create_year_view_content(calendar_instance)
     else:
         _create_widgets(calendar_instance)
@@ -986,3 +875,99 @@ def _recreate_widgets(calendar_instance):  # pylint: disable=W0212
         calendar_instance.logger.debug(
             "Failed to update DPI scaling during recreation: %s", e
         )
+
+
+# pylint: disable=W0108
+def _create_year_view_navigation(calendar_instance, center_frame):
+    """Create navigation buttons for year view."""
+    # Previous year button
+    create_navigation_button(
+        calendar_instance,
+        center_frame,
+        "<<",
+        lambda: calendar_instance._on_prev_year_view(),  # pylint: disable=W0212
+        padx=(5, 0),
+    )
+
+    # Year label
+    calendar_instance.year_view_year_label = tk.Label(
+        center_frame,
+        text=str(calendar_instance.year),
+        font=calendar_instance._get_scaled_font(  # pylint: disable=W0212
+            ("TkDefaultFont", 12, "bold")
+        ),
+        relief="flat",
+        bd=0,
+        bg=calendar_instance.theme_colors["month_header_bg"],
+        fg=calendar_instance.theme_colors["month_header_fg"],
+    )
+    calendar_instance.year_view_year_label.pack(side="left", padx=10)
+    calendar_instance.year_view_year_label.config(cursor="hand2")
+    # Bind click event for year selection
+    calendar_instance.year_view_year_label.bind(
+        "<Button-1>",
+        lambda _e: calendar_instance._on_year_header_click(),  # pylint: disable=W0212
+    )
+    # Add hover effects for year label
+    calendar_instance.year_view_year_label.bind(
+        "<Enter>",
+        lambda e, lbl=calendar_instance.year_view_year_label: lbl.config(
+            bg=calendar_instance.theme_colors["navigation_hover_bg"],
+            fg=calendar_instance.theme_colors["navigation_hover_fg"],
+        ),
+    )
+    calendar_instance.year_view_year_label.bind(
+        "<Leave>",
+        lambda e, lbl=calendar_instance.year_view_year_label: lbl.config(
+            bg=calendar_instance.theme_colors["month_header_bg"],
+            fg=calendar_instance.theme_colors["month_header_fg"],
+        ),
+    )
+
+    # Next year button
+    create_navigation_button(
+        calendar_instance,
+        center_frame,
+        ">>",
+        lambda: calendar_instance._on_next_year_view(),  # pylint: disable=W0212
+        padx=(0, 10),
+    )
+
+
+# pylint: disable=W0108
+def _create_year_selection_navigation(calendar_instance, center_frame):
+    """Create navigation buttons for year selection."""
+    # Previous year range button
+    create_navigation_button(
+        calendar_instance,
+        center_frame,
+        "<<",
+        lambda: calendar_instance._on_prev_year_range(),  # pylint: disable=W0212
+        padx=(5, 0),
+    )
+
+    # Year range label
+    calendar_instance.year_selection_header_label = tk.Label(
+        center_frame,
+        text=(
+            f"{calendar_instance.year_range_start} - "
+            f"{calendar_instance.year_range_end}"
+        ),
+        font=calendar_instance._get_scaled_font(  # pylint: disable=W0212
+            ("TkDefaultFont", 12, "bold")
+        ),
+        relief="flat",
+        bd=0,
+        bg=calendar_instance.theme_colors["month_header_bg"],
+        fg=calendar_instance.theme_colors["month_header_fg"],
+    )
+    calendar_instance.year_selection_header_label.pack(side="left", padx=10)
+
+    # Next year range button
+    create_navigation_button(
+        calendar_instance,
+        center_frame,
+        ">>",
+        lambda: calendar_instance._on_next_year_range(),  # pylint: disable=W0212
+        padx=(0, 10),
+    )
