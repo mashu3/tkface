@@ -167,16 +167,16 @@ class TestPathBrowser:
 
         # Test that multiple extensions are handled correctly
         # pylint: disable=import-outside-toplevel
-        from tkface.widget.pathbrowser.view import matches_filter
-        assert matches_filter(browser, "test.png")
-        assert matches_filter(browser, "test.jpg")
-        assert matches_filter(browser, "test.jpeg")
-        assert matches_filter(browser, "test.gif")
-        assert matches_filter(browser, "test.bmp")
-        assert matches_filter(browser, "test.tiff")
+        from tkface.widget.pathbrowser.utils import matches_filter
+        assert matches_filter("test.png", browser.config.filetypes, browser.filter_var.get(), browser.config.select, "All files")
+        assert matches_filter("test.jpg", browser.config.filetypes, browser.filter_var.get(), browser.config.select, "All files")
+        assert matches_filter("test.jpeg", browser.config.filetypes, browser.filter_var.get(), browser.config.select, "All files")
+        assert matches_filter("test.gif", browser.config.filetypes, browser.filter_var.get(), browser.config.select, "All files")
+        assert matches_filter("test.bmp", browser.config.filetypes, browser.filter_var.get(), browser.config.select, "All files")
+        assert matches_filter("test.tiff", browser.config.filetypes, browser.filter_var.get(), browser.config.select, "All files")
 
-        assert not matches_filter(browser, "test.txt")
-        assert not matches_filter(browser, "test.doc")
+        assert not matches_filter("test.txt", browser.config.filetypes, browser.filter_var.get(), browser.config.select, "All files")
+        assert not matches_filter("test.doc", browser.config.filetypes, browser.filter_var.get(), browser.config.select, "All files")
 
     def test_pathbrowser_multiple_files_display(self, root):
         """Test PathBrowser multiple files display in textbox."""
