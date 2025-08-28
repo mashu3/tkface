@@ -59,3 +59,37 @@ October {10月}
 November {11月}
 December {12月}
 Week {週}
+# PathBrowser translations
+Directory selected. {ディレクトリが選択されました。}
+Please select a file. {ファイルを選択してください。}
+Please select files. {ファイルを選択してください。}
+File name: {ファイル名:}
+Files of type: {ファイルの種類:}
+All files {すべてのファイル}
+Name {名前}
+Size {サイズ}
+Modified {更新日時}
+Type {種類}
+Folder {フォルダ}
+File {ファイル}
+Unknown {不明}
+Loading... {読み込み中...}
+Go {移動}
+Selected: {選択:}
+folders {フォルダ}
+folder {フォルダ}
+files {ファイル}
+file {ファイル}
+Empty folder {空のフォルダ}
+No forward history available {前進履歴がありません}
+Error loading directory: {ディレクトリの読み込みエラー:}
+Open {開く}
+Expand {展開}
+Collapse {折りたたみ}
+Expand All {すべて展開}
+Copy Path {パスをコピー}
+Save as: {名前を付けて保存:}
+Please enter a filename. {ファイル名を入力してください。}
+File already exists. Do you want to overwrite it? {ファイルが既に存在します。上書きしますか？}
+Confirm Overwrite {上書き確認}
+Save {保存}

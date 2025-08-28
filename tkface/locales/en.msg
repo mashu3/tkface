@@ -51,3 +51,37 @@ October {Oct}
 November {Nov}
 December {Dec}
 Week {Week}
+# PathBrowser translations
+Directory selected. {Directory selected.}
+Please select a file. {Please select a file.}
+Please select files. {Please select files.}
+File name: {File name:}
+Files of type: {Files of type:}
+All files {All files}
+Name {Name}
+Size {Size}
+Modified {Modified}
+Type {Type}
+Folder {Folder}
+File {File}
+Unknown {Unknown}
+Loading... {Loading...}
+Go {Go}
+Selected: {Selected:}
+folders {folders}
+folder {folder}
+files {files}
+file {file}
+Empty folder {Empty folder}
+No forward history available {No forward history available}
+Error loading directory: {Error loading directory:}
+Open {Open}
+Expand {Expand}
+Collapse {Collapse}
+Expand All {Expand All}
+Copy Path {Copy Path}
+Save as: {Save as:}
+Please enter a filename. {Please enter a filename.}
+File already exists. Do you want to overwrite it? {File already exists. Do you want to overwrite it?}
+Confirm Overwrite {Confirm Overwrite}
+Save {Save}

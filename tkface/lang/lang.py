@@ -151,6 +151,8 @@ class LanguageManager:
         try:
             root.tk.call("msgcat::mclocale", "en")
             translated = root.tk.call("::msgcat::mc", key)
+            # Restore original locale
+            root.tk.call("msgcat::mclocale", self.current_lang)
             if translated != key:
                 return translated
         except TclError as e:
