@@ -5,7 +5,7 @@ from .dialog import messagebox, simpledialog, pathchooser
 
 # Export Calendar and DateEntry for backward compatibility
 from .widget.calendar import Calendar
-from .widget.datepicker import DateEntry, DateFrame
+from .dialog.datepicker import DateEntry, DateFrame
 
 # Export Windows-specific flat button as Button
 from .win.button import FlatButton as Button

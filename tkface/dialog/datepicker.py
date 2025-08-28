@@ -14,8 +14,8 @@ from dataclasses import dataclass
 from tkinter import ttk
 from typing import Dict, Optional
 
-from . import get_scaling_factor
-from .calendar import Calendar, get_calendar_theme, view
+from ..widget import get_scaling_factor
+from ..widget.calendar import Calendar, get_calendar_theme, view
 
 
 @dataclass
