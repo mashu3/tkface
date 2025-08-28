@@ -93,6 +93,49 @@ color = tkface.simpledialog.askfromlistbox("Choose a color:", choices=["Red", "G
 colors = tkface.simpledialog.askfromlistbox("Choose colors:", choices=["Red", "Green", "Blue"], multiple=True)
 ```
 
+### File and Directory Selection Dialogs
+
+```python
+import tkface
+
+# Select a single file
+file_path = tkface.pathchooser.askopenfile(
+    title="Select a File",
+    filetypes=[("Text files", "*.txt"), ("Python files", "*.py")]
+)
+
+# Select multiple files
+file_paths = tkface.pathchooser.askopenfiles(
+    title="Select Multiple Files",
+    filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+)
+
+# Select a directory
+directory = tkface.pathchooser.askdirectory(
+    title="Select a Directory"
+)
+
+# Advanced file/directory selection
+paths = tkface.pathchooser.askpath(
+    select="both",           # "file", "dir", or "both"
+    multiple=True,           # Allow multiple selection
+    initialdir="/path/to/start",
+    filetypes=[("Text files", "*.txt"), ("Log files", "*.log")]
+)
+```
+
+**Features**:
+- **Directory Tree**: Hierarchical folder navigation with icons
+- **File List**: Details view with size, modification date, and file type
+- **View Modes**: Switch between list and details view
+- **File Filtering**: Filter by file type with dropdown
+- **Path Navigation**: Direct path entry with Go button
+- **Refresh**: Refresh current directory (F5 or Ctrl+R)
+- **Multiple Selection**: Select multiple files/directories
+- **Keyboard Shortcuts**: Enter (OK), Escape (Cancel), F5 (Refresh)
+
+**Note**: All file dialog functions return a list of selected paths. If cancelled, an empty list is returned.
+
 ### DatePicker Widgets
 
 #### Screenshots
@@ -276,6 +319,7 @@ tkface.simpledialog.askfromlistbox(
 - **Multilingual Support**: Automatic language detection, English/Japanese built-in, custom dictionaries
 - **Enhanced Message Boxes**: All standard and advanced dialogs, custom positioning, keyboard shortcuts, tab navigation
 - **Enhanced Input Dialogs**: String/integer/float input, validation, password input, list selection, custom positioning
+- **File and Directory Selection**: Advanced file browser with directory tree, file filtering, multiple selection support
 - **Calendar Widget**: Multi-month display, week numbers, holiday highlighting, customizable colors, language support
 - **Windows Features**: 
   - **DPI Awareness**: Automatic scaling for high-resolution displays
@@ -292,6 +336,7 @@ See the `examples/` directory for complete working examples:
 
 - `demo_messagebox.py` - Message box demonstrations
 - `demo_simpledialog.py` - Input dialog demonstrations
+- `demo_pathchooser.py` - File and directory selection demonstrations
 - `demo_calendar.py` - Calendar widget demonstrations
 - `demo_windows_features.py` - Windows-specific features demonstrations
 
