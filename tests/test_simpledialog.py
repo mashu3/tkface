@@ -491,11 +491,10 @@ def test_custom_simpledialog_close(root):
     ), patch("tkinter.Entry"), patch("tkinter.Toplevel.destroy") as mock_destroy:
         from tkface.dialog.simpledialog import SimpleDialogConfig
 
-        dialog = CustomSimpleDialog(
+        CustomSimpleDialog(
             master=root,
             config=SimpleDialogConfig(title="Test", message="Test Message"),
-        )
-        dialog.close()
+        ).close()
         mock_destroy.assert_called()
 
 
@@ -556,7 +555,7 @@ def test_simpledialog_error_message_translation(root):
     ), patch("tkinter.Button"), patch(
         "tkface.dialog.messagebox.showwarning"
     ) as mock_warning:
-        dialog = CustomSimpleDialog(
+        CustomSimpleDialog(
             master=root,
             config=SimpleDialogConfig(
                 title="Input",
@@ -564,9 +563,7 @@ def test_simpledialog_error_message_translation(root):
                 validate_func=validate_false,
                 language="ja",
             ),
-        )
-        # Trigger validation by calling _on_ok
-        dialog._on_ok()
+        )._on_ok()
 
     # Check that the error message was translated
     warning_calls = mock_warning.call_args_list

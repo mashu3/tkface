@@ -1,9 +1,11 @@
+# pylint: disable=too-many-lines
 import ctypes
 import logging
 import re
 import sys
 import tkinter as tk
 import tkinter.font as tkfont
+from tkinter import ttk
 from ctypes import pointer, wintypes
 
 
@@ -118,13 +120,25 @@ class DPIManager:
         # Patch widget constructors
         self._patch_widget_constructors(scaling_factor)
 
+        # Patch TreeView methods
+        self._patch_treeview_methods(scaling_factor)
+
     def _get_scaling_factor_for_patching(self, root):
         """Get scaling factor for patching widget methods."""
         try:
-            return float(root.tk.call("tk", "scaling"))
+            tk_scaling = float(root.tk.call("tk", "scaling"))
+            dpi_scaling = getattr(root, 'DPI_scaling', 1.0)
+
+            # If Tkinter already handles DPI scaling well (tk_scaling > 1.5),
+            # use minimal additional scaling to avoid over-scaling
+            if tk_scaling > 1.5:
+                # Use a reduced scaling factor to prevent over-scaling
+                return min(tk_scaling * 0.5, dpi_scaling * 0.8)
+            # Use DPI scaling when Tkinter doesn't scale enough
+            return dpi_scaling
         except Exception as e:  # pylint: disable=W0718
             self.logger.debug("Failed to get tk scaling: %s", e)
-            return root.DPI_scaling
+            return getattr(root, 'DPI_scaling', 1.0)
 
     def _patch_layout_methods(self, scaling_factor):
         """Patch layout methods (pack, grid, place)."""
@@ -270,6 +284,7 @@ class DPIManager:
         self._patch_canvas_constructor(scaling_factor)
         self._patch_menu_constructor(scaling_factor)
         self._patch_menubutton_constructor(scaling_factor)
+        self._patch_treeview_constructor(scaling_factor)
 
     def _patch_label_frame_constructor(self, scaling_factor):
         """Patch the LabelFrame constructor with scaling."""
@@ -494,6 +509,51 @@ class DPIManager:
             return original_menubutton(self, parent, **scaled_kwargs)
 
         tk.Menubutton.__init__ = scaled_menubutton_init
+
+    def _patch_treeview_constructor(self, scaling_factor):
+        """Patch the Treeview constructor with scaling."""
+        original_treeview = ttk.Treeview.__init__
+
+        def scaled_treeview_init(self, parent=None, **kwargs):
+            scaled_kwargs = kwargs.copy()
+            if "height" in scaled_kwargs:
+                scaled_kwargs["height"] = int(scaled_kwargs["height"] * scaling_factor)
+            return original_treeview(self, parent, **scaled_kwargs)
+
+        ttk.Treeview.__init__ = scaled_treeview_init
+
+    def _patch_treeview_methods(self, scaling_factor):
+        """Patch TreeView methods with scaling."""
+        self._patch_treeview_column_method(scaling_factor)
+        self._patch_treeview_style_method(scaling_factor)
+
+    def _patch_treeview_column_method(self, scaling_factor):
+        """Patch the TreeView column method with scaling."""
+        original_column = ttk.Treeview.column
+
+        def scaled_column(self, column, option=None, **kw):
+            # Scale width and minwidth parameters in kw
+            if "width" in kw:
+                kw["width"] = int(kw["width"] * scaling_factor)
+            if "minwidth" in kw:
+                kw["minwidth"] = int(kw["minwidth"] * scaling_factor)
+
+            return original_column(self, column, option, **kw)
+
+        ttk.Treeview.column = scaled_column
+
+    def _patch_treeview_style_method(self, scaling_factor):
+        """Patch the TreeView style configuration with scaling."""
+        original_configure = ttk.Style.configure
+
+        def scaled_configure(self, style, option=None, **kw):
+            # Scale rowheight parameter in kw
+            if "rowheight" in kw:
+                kw["rowheight"] = int(kw["rowheight"] * scaling_factor)
+
+            return original_configure(self, style, option, **kw)
+
+        ttk.Style.configure = scaled_configure
 
     def fix_dpi(self, root):
         """Adjust scaling for high DPI displays on Windows."""

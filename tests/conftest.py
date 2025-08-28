@@ -191,6 +191,306 @@ def calendar_mock_patches():
         p.stop()
 
 
+@pytest.fixture
+def pathbrowser_mock_patches():
+    """Provide comprehensive mock patches for PathBrowser class tests."""
+    patches = [
+        patch("tkinter.Frame.__init__", return_value=None),
+        patch("tkinter.Frame.configure"),
+        patch("tkinter.Frame.pack"),
+        patch("tkinter.Frame.grid"),
+        patch("tkinter.Frame.place"),
+        patch("tkinter.Frame.columnconfigure"),
+        patch("tkinter.Frame.rowconfigure"),
+        patch("tkinter.Frame.grid_columnconfigure"),
+        patch("tkinter.Frame.grid_rowconfigure"),
+        patch("tkinter.Label"),
+        patch("tkinter.Button"),
+        patch("tkinter.Entry"),
+        patch("tkinter.Text"),
+        patch("tkinter.Scrollbar"),
+        patch("tkinter.Treeview"),
+        patch("tkinter.ttk.Frame"),
+        patch("tkinter.ttk.Label"),
+        patch("tkinter.ttk.Button"),
+        patch("tkinter.ttk.Entry"),
+        patch("tkinter.ttk.Combobox"),
+        patch("tkinter.ttk.Scrollbar"),
+        patch("tkinter.ttk.Treeview"),
+        patch("tkinter.ttk.LabelFrame"),
+        patch("tkinter.StringVar"),
+        patch("tkinter.BooleanVar"),
+        patch("tkinter.IntVar"),
+        patch("tkinter.DoubleVar"),
+        patch("tkinter.Label.configure"),
+        patch("tkinter.Button.configure"),
+        patch("tkinter.Entry.configure"),
+        patch("tkinter.Text.configure"),
+        patch("tkinter.Scrollbar.configure"),
+        patch("tkinter.Treeview.configure"),
+        patch("tkinter.ttk.Frame.configure"),
+        patch("tkinter.ttk.Label.configure"),
+        patch("tkinter.ttk.Button.configure"),
+        patch("tkinter.ttk.Entry.configure"),
+        patch("tkinter.ttk.Combobox.configure"),
+        patch("tkinter.ttk.Scrollbar.configure"),
+        patch("tkinter.ttk.Treeview.configure"),
+        patch("tkinter.ttk.LabelFrame.configure"),
+        patch("tkinter.Label.pack"),
+        patch("tkinter.Button.pack"),
+        patch("tkinter.Entry.pack"),
+        patch("tkinter.Text.pack"),
+        patch("tkinter.Scrollbar.pack"),
+        patch("tkinter.Treeview.pack"),
+        patch("tkinter.ttk.Frame.pack"),
+        patch("tkinter.ttk.Label.pack"),
+        patch("tkinter.ttk.Button.pack"),
+        patch("tkinter.ttk.Entry.pack"),
+        patch("tkinter.ttk.Combobox.pack"),
+        patch("tkinter.ttk.Scrollbar.pack"),
+        patch("tkinter.ttk.Treeview.pack"),
+        patch("tkinter.ttk.LabelFrame.pack"),
+        patch("tkinter.Label.grid"),
+        patch("tkinter.Button.grid"),
+        patch("tkinter.Entry.grid"),
+        patch("tkinter.Text.grid"),
+        patch("tkinter.Scrollbar.grid"),
+        patch("tkinter.Treeview.grid"),
+        patch("tkinter.ttk.Frame.grid"),
+        patch("tkinter.ttk.Label.grid"),
+        patch("tkinter.ttk.Button.grid"),
+        patch("tkinter.ttk.Entry.grid"),
+        patch("tkinter.ttk.Combobox.grid"),
+        patch("tkinter.ttk.Scrollbar.grid"),
+        patch("tkinter.ttk.Treeview.grid"),
+        patch("tkinter.ttk.LabelFrame.grid"),
+        patch("tkinter.Label.place"),
+        patch("tkinter.Button.place"),
+        patch("tkinter.Entry.place"),
+        patch("tkinter.Text.place"),
+        patch("tkinter.Scrollbar.place"),
+        patch("tkinter.Treeview.place"),
+        patch("tkinter.ttk.Frame.place"),
+        patch("tkinter.ttk.Label.place"),
+        patch("tkinter.ttk.Button.place"),
+        patch("tkinter.ttk.Entry.place"),
+        patch("tkinter.ttk.Combobox.place"),
+        patch("tkinter.ttk.Scrollbar.place"),
+        patch("tkinter.ttk.Treeview.place"),
+        patch("tkinter.ttk.LabelFrame.place"),
+        patch("tkinter.Label.cget"),
+        patch("tkinter.Button.cget"),
+        patch("tkinter.Entry.cget"),
+        patch("tkinter.Text.cget"),
+        patch("tkinter.Scrollbar.cget"),
+        patch("tkinter.Treeview.cget"),
+        patch("tkinter.ttk.Frame.cget"),
+        patch("tkinter.ttk.Label.cget"),
+        patch("tkinter.ttk.Button.cget"),
+        patch("tkinter.ttk.Entry.cget"),
+        patch("tkinter.ttk.Combobox.cget"),
+        patch("tkinter.ttk.Scrollbar.cget"),
+        patch("tkinter.ttk.Treeview.cget"),
+        patch("tkinter.ttk.LabelFrame.cget"),
+        patch("tkinter.Label.winfo_width"),
+        patch("tkinter.Button.winfo_width"),
+        patch("tkinter.Entry.winfo_width"),
+        patch("tkinter.Text.winfo_width"),
+        patch("tkinter.Scrollbar.winfo_width"),
+        patch("tkinter.Treeview.winfo_width"),
+        patch("tkinter.ttk.Frame.winfo_width"),
+        patch("tkinter.ttk.Label.winfo_width"),
+        patch("tkinter.ttk.Button.winfo_width"),
+        patch("tkinter.ttk.Entry.winfo_width"),
+        patch("tkinter.ttk.Combobox.winfo_width"),
+        patch("tkinter.ttk.Scrollbar.winfo_width"),
+        patch("tkinter.ttk.Treeview.winfo_width"),
+        patch("tkinter.ttk.LabelFrame.winfo_width"),
+        patch("tkinter.Label.winfo_height"),
+        patch("tkinter.Button.winfo_height"),
+        patch("tkinter.Entry.winfo_height"),
+        patch("tkinter.Text.winfo_height"),
+        patch("tkinter.Scrollbar.winfo_height"),
+        patch("tkinter.Treeview.winfo_height"),
+        patch("tkinter.ttk.Frame.winfo_height"),
+        patch("tkinter.ttk.Label.winfo_height"),
+        patch("tkinter.ttk.Button.winfo_height"),
+        patch("tkinter.ttk.Entry.winfo_height"),
+        patch("tkinter.ttk.Combobox.winfo_height"),
+        patch("tkinter.ttk.Scrollbar.winfo_height"),
+        patch("tkinter.ttk.Treeview.winfo_height"),
+        patch("tkinter.ttk.LabelFrame.winfo_height"),
+        patch("tkinter.Label.winfo_children"),
+        patch("tkinter.Button.winfo_children"),
+        patch("tkinter.Entry.winfo_children"),
+        patch("tkinter.Text.winfo_children"),
+        patch("tkinter.Scrollbar.winfo_children"),
+        patch("tkinter.Treeview.winfo_children"),
+        patch("tkinter.ttk.Frame.winfo_children"),
+        patch("tkinter.ttk.Label.winfo_children"),
+        patch("tkinter.ttk.Button.winfo_children"),
+        patch("tkinter.ttk.Entry.winfo_children"),
+        patch("tkinter.ttk.Combobox.winfo_children"),
+        patch("tkinter.ttk.Scrollbar.winfo_children"),
+        patch("tkinter.ttk.Treeview.winfo_children"),
+        patch("tkinter.ttk.LabelFrame.winfo_children"),
+        patch("tkinter.Frame.winfo_children"),
+        patch("tkinter.Frame.winfo_width"),
+        patch("tkinter.Frame.winfo_height"),
+        patch("tkinter.Frame.cget"),
+        patch("tkinter.Frame.bind"),
+        patch("tkinter.Label.bind"),
+        patch("tkinter.Button.bind"),
+        patch("tkinter.Entry.bind"),
+        patch("tkinter.Text.bind"),
+        patch("tkinter.Scrollbar.bind"),
+        patch("tkinter.Treeview.bind"),
+        patch("tkinter.ttk.Frame.bind"),
+        patch("tkinter.ttk.Label.bind"),
+        patch("tkinter.ttk.Button.bind"),
+        patch("tkinter.ttk.Entry.bind"),
+        patch("tkinter.ttk.Combobox.bind"),
+        patch("tkinter.ttk.Scrollbar.bind"),
+        patch("tkinter.ttk.Treeview.bind"),
+        patch("tkinter.ttk.LabelFrame.bind"),
+        patch("tkinter.Treeview.selection"),
+        patch("tkinter.Treeview.selection_set"),
+        patch("tkinter.Treeview.selection_remove"),
+        patch("tkinter.Treeview.selection_toggle"),
+        patch("tkinter.Treeview.get_children"),
+        patch("tkinter.Treeview.insert"),
+        patch("tkinter.Treeview.delete"),
+        patch("tkinter.Treeview.item"),
+        patch("tkinter.Treeview.see"),
+        patch("tkinter.Treeview.exists"),
+        patch("tkinter.Treeview.identify_row"),
+        patch("tkinter.Treeview.identify_column"),
+        patch("tkinter.Treeview.identify_region"),
+        patch("tkinter.Treeview.identify_element"),
+        patch("tkinter.ttk.Treeview.selection"),
+        patch("tkinter.ttk.Treeview.selection_set"),
+        patch("tkinter.ttk.Treeview.selection_remove"),
+        patch("tkinter.ttk.Treeview.selection_toggle"),
+        patch("tkinter.ttk.Treeview.get_children"),
+        patch("tkinter.ttk.Treeview.insert"),
+        patch("tkinter.ttk.Treeview.delete"),
+        patch("tkinter.ttk.Treeview.item"),
+        patch("tkinter.ttk.Treeview.see"),
+        patch("tkinter.ttk.Treeview.exists"),
+        patch("tkinter.ttk.Treeview.identify_row"),
+        patch("tkinter.ttk.Treeview.identify_column"),
+        patch("tkinter.ttk.Treeview.identify_region"),
+        patch("tkinter.ttk.Treeview.identify_element"),
+        patch("tkinter.ttk.Combobox.set"),
+        patch("tkinter.ttk.Combobox.get"),
+        patch("tkinter.ttk.Combobox.configure"),
+        patch("tkinter.StringVar.set"),
+        patch("tkinter.StringVar.get"),
+        patch("tkinter.BooleanVar.set"),
+        patch("tkinter.BooleanVar.get"),
+        patch("tkinter.IntVar.set"),
+        patch("tkinter.IntVar.get"),
+        patch("tkinter.DoubleVar.set"),
+        patch("tkinter.DoubleVar.get"),
+        patch("tkinter.Text.insert"),
+        patch("tkinter.Text.delete"),
+        patch("tkinter.Text.get"),
+        patch("tkinter.Text.see"),
+        patch("tkinter.Text.configure"),
+        patch("tkinter.Entry.insert"),
+        patch("tkinter.Entry.delete"),
+        patch("tkinter.Entry.get"),
+        patch("tkinter.Entry.configure"),
+        patch("tkinter.ttk.Entry.insert"),
+        patch("tkinter.ttk.Entry.delete"),
+        patch("tkinter.ttk.Entry.get"),
+        patch("tkinter.ttk.Entry.configure"),
+        patch("tkinter.Toplevel"),
+        patch("tkinter.Toplevel.__init__", return_value=None),
+        patch("tkinter.Toplevel.configure"),
+        patch("tkinter.Toplevel.geometry"),
+        patch("tkinter.Toplevel.title"),
+        patch("tkinter.Toplevel.transient"),
+        patch("tkinter.Toplevel.grab_set"),
+        patch("tkinter.Toplevel.deiconify"),
+        patch("tkinter.Toplevel.lift"),
+        patch("tkinter.Toplevel.focus_set"),
+        patch("tkinter.Toplevel.wait_window"),
+        patch("tkinter.Toplevel.destroy"),
+        patch("tkinter.Toplevel.winfo_toplevel"),
+        patch("tkinter.Toplevel.winfo_rootx"),
+        patch("tkinter.Toplevel.winfo_rooty"),
+        patch("tkinter.Toplevel.winfo_width"),
+        patch("tkinter.Toplevel.winfo_height"),
+        patch("tkinter.Toplevel.update_idletasks"),
+        patch("tkinter.Toplevel.update"),
+        patch("tkinter.Toplevel.after"),
+        patch("tkinter.Toplevel.bind"),
+        patch("tkinter.Toplevel.event_generate"),
+        patch("tkinter.Toplevel.focus_set"),
+        patch("tkinter.Toplevel.clipboard_clear"),
+        patch("tkinter.Toplevel.clipboard_append"),
+    ]
+    # Start all patches
+    for p in patches:
+        p.start()
+    yield patches
+    # Stop all patches
+    for p in patches:
+        p.stop()
+
+
+@pytest.fixture
+def temp_dir():
+    """Create a temporary directory for testing."""
+    import tempfile  # pylint: disable=import-outside-toplevel
+    import shutil  # pylint: disable=import-outside-toplevel
+
+    temp_dir_path = tempfile.mkdtemp()  # pylint: disable=redefined-outer-name
+    yield temp_dir_path
+    # Cleanup
+    try:
+        shutil.rmtree(temp_dir_path, ignore_errors=True)
+    except Exception:  # pylint: disable=W0718
+        pass
+
+
+@pytest.fixture
+def sample_files(temp_dir):  # pylint: disable=redefined-outer-name
+    """Create sample files in temporary directory for testing."""
+
+    # Create sample files
+    files = {
+        "test1.txt": "test content 1",
+        "test2.py": "test content 2",
+        "test3.log": "test content 3",
+        "image1.png": "fake image data",
+        "image2.jpg": "fake image data",
+        "document.pdf": "fake pdf data",
+    }
+
+    created_files = []
+    for filename, content in files.items():
+        file_path = os.path.join(temp_dir, filename)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        created_files.append(file_path)
+
+    # Create subdirectories
+    subdirs = ["subdir1", "subdir2", "docs", "images"]
+    for subdir in subdirs:
+        subdir_path = os.path.join(temp_dir, subdir)
+        os.makedirs(subdir_path, exist_ok=True)
+        # Add some files to subdirectories
+        for i in range(3):
+            file_path = os.path.join(subdir_path, f"file{i}.txt")
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(f"content in {subdir} file {i}")
+            created_files.append(file_path)
+
+    yield temp_dir, created_files
+
+
 # Configuration for parallel testing
 
 
@@ -211,7 +511,12 @@ def pytest_configure(config):  # pylint: disable=unused-argument
 
 def pytest_collection_modifyitems(config, items):  # pylint: disable=unused-argument
     """Modify test collection for better parallel execution."""
-    for item in items:
+    for item in items:  # pylint: disable=redefined-outer-name
         # Add gui marker to GUI tests
-        if "messagebox" in item.nodeid or "calendar" in item.nodeid:
+        if any(
+            pattern in item.nodeid for pattern in [
+                "messagebox",
+                "calendar",
+                "pathbrowser",
+                "pathchooser"]):
             item.add_marker(pytest.mark.gui)

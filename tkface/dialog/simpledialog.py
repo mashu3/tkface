@@ -74,7 +74,13 @@ class CustomSimpleDialog:
         # Initialize attributes that will be set in _create_content
         self.listbox = None
         self.window = tk.Toplevel(master)
-        self.window.title(lang.get(config.title, self.window, language=config.language))
+
+        # Initialize language system
+        if self.language:
+            lang.set(self.language, self.window)
+
+        title_text = lang.get(config.title, self.window, language=config.language)
+        self.window.title(title_text)
         self.window.transient(master)
         self.window.grab_set()
         if config.custom_translations:
@@ -258,12 +264,14 @@ class CustomSimpleDialog:
             result = self.entry_var.get()
             if not self.validate_func(result):
                 # Show error message
-                err_msg = lang.get("Invalid input.", None, language=self.language)
+                err_msg = lang.get(
+                    "Invalid input.", self.window, language=self.language
+                )
                 try_again_msg = lang.get(
-                    "Please try again.", None, language=self.language
+                    "Please try again.", self.window, language=self.language
                 )
                 illegal_value_msg = lang.get(
-                    "Illegal value", None, language=self.language
+                    "Illegal value", self.window, language=self.language
                 )
                 messagebox.showwarning(
                     master=self.window,

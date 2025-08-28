@@ -147,12 +147,9 @@ class CustomMessageBox:
         # Hide window initially to prevent flickering
         self.window.withdraw()
         # Cache DPI scaling calculations for performance
-        # Use different padding based on DPI scaling: 10 when DPI is effective,
-        # 20 otherwise
-        base_padding = 10 if win.get_scaling_factor(self.window) > 1.0 else 20
         self._scaled_sizes = win.calculate_dpi_sizes(
             {
-                "padding": base_padding,
+                "padding": 20,
                 "wraplength": 300,
                 "button_width": 10,
                 "button_padding": 5,

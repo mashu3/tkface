@@ -1,7 +1,7 @@
 from . import dialog, lang, widget, win
 
 # Export messagebox and simpledialog for backward compatibility
-from .dialog import messagebox, simpledialog
+from .dialog import messagebox, simpledialog, pathchooser
 
 # Export Calendar and DateEntry for backward compatibility
 from .widget.calendar import Calendar
@@ -26,4 +26,5 @@ __all__ = [
     "DateEntry",
     "messagebox",
     "simpledialog",
+    "pathchooser",
 ]

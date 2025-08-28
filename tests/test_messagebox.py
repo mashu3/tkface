@@ -604,8 +604,12 @@ def test_messagebox_button_translation(root):
     button_texts = [call.kwargs.get("text", "") for call in button_calls]
 
     # Check for Japanese button text (with keyboard shortcuts)
-    assert any("はい" in text for text in button_texts), "Japanese 'yes' button not found"
-    assert any("いいえ" in text for text in button_texts), "Japanese 'no' button not found"
+    assert any(
+        "はい" in text for text in button_texts
+    ), "Japanese 'yes' button not found"
+    assert any(
+        "いいえ" in text for text in button_texts
+    ), "Japanese 'no' button not found"
 
 
 def test_messagebox_title_translation(root):
