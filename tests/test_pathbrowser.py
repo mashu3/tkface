@@ -758,8 +758,10 @@ class TestPathBrowserIntegration:
             browser.state.forward_history = ["/test/dir/subdir"]
             
             # Test _go_up method
-            with patch('pathlib.Path') as mock_path:
-                mock_path.return_value.parent = "/test"
+            with patch('tkface.widget.pathbrowser.core.Path') as mock_path:
+                mock_path_obj = Mock()
+                mock_path_obj.parent = "/test"
+                mock_path.return_value = mock_path_obj
                 browser._go_up()
                 mock_load.assert_called_with("/test")
                 assert browser.state.forward_history == ["/test/dir/subdir", "/test/dir"]
@@ -1301,8 +1303,10 @@ class TestView:
             
             with patch('tkface.widget.pathbrowser.view.populate_tree_node') as mock_populate:
                 with patch('tkface.widget.pathbrowser.view.expand_path') as mock_expand:
-                    with patch('pathlib.Path') as mock_path:
-                        mock_path.return_value.exists.return_value = True
+                    with patch('tkface.widget.pathbrowser.view.Path') as mock_path:
+                        mock_path_obj = Mock()
+                        mock_path_obj.exists.return_value = True
+                        mock_path.return_value = mock_path_obj
                         view.load_directory_tree(browser)
                         
                         browser.tree.delete.assert_called()
@@ -1740,13 +1744,13 @@ class TestStyleAdvanced:
     def test_load_theme_file_error_handling(self, root):
         """Test theme file loading with error handling."""
         # Test with nonexistent theme file
-        with patch('pathlib.Path.exists', return_value=False):
+        with patch('tkface.widget.pathbrowser.style.Path.exists', return_value=False):
             with pytest.raises(FileNotFoundError):
                 style._load_theme_file("nonexistent")
         
         # Test with malformed config file
         import configparser
-        with patch('pathlib.Path.exists', return_value=True), \
+        with patch('tkface.widget.pathbrowser.style.Path.exists', return_value=True), \
              patch('configparser.ConfigParser.read') as mock_read, \
              patch('configparser.ConfigParser.__getitem__', side_effect=KeyError):
             mock_read.return_value = []
@@ -1792,14 +1796,14 @@ class TestStyleAdvanced:
 
     def test_get_pathbrowser_themes_with_missing_dir(self, root):
         """Test getting themes when themes directory is missing."""
-        with patch('pathlib.Path.exists', return_value=False):
+        with patch('tkface.widget.pathbrowser.style.Path.exists', return_value=False):
             themes = style.get_pathbrowser_themes()
             assert themes == ["light"]
 
     def test_get_pathbrowser_themes_with_filtering(self, root):
         """Test getting themes with filtering."""
-        with patch('pathlib.Path.exists', return_value=True), \
-             patch('pathlib.Path.glob') as mock_glob:
+        with patch('tkface.widget.pathbrowser.style.Path.exists', return_value=True), \
+             patch('tkface.widget.pathbrowser.style.Path.glob') as mock_glob:
             
             # Mock theme files
             mock_theme1 = Mock()
