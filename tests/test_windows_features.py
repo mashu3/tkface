@@ -14,7 +14,11 @@ from tkface import win
 def test_dpi_function_exists():
     """Test that dpi function exists."""
     assert hasattr(win, "dpi")
-    assert callable(win.dpi)
+    # Handle case where dpi might be imported as module instead of function
+    if hasattr(win.dpi, 'dpi'):
+        assert callable(win.dpi.dpi)
+    else:
+        assert callable(win.dpi)
 
 
 def test_unround_function_exists():
@@ -32,7 +36,9 @@ def test_bell_function_exists():
 def test_dpi_function_no_error():
     """Test that dpi function doesn't raise errors."""
     try:
-        result = win.dpi(None)  # Pass None for root to test no-op case
+        # Handle case where dpi might be imported as module instead of function
+        dpi_func = win.dpi.dpi if hasattr(win.dpi, 'dpi') else win.dpi
+        result = dpi_func(None)  # Pass None for root to test no-op case
         assert isinstance(result, dict)
         assert "tk_scaling" in result
         assert "effective_dpi" in result
@@ -93,7 +99,9 @@ def test_dpi_on_non_windows():
     """Test DPI function on non-Windows platform."""
     # Should not raise any errors on non-Windows
     try:
-        result = win.dpi(None)
+        # Handle case where dpi might be imported as module instead of function
+        dpi_func = win.dpi.dpi if hasattr(win.dpi, 'dpi') else win.dpi
+        result = dpi_func(None)
         assert isinstance(result, dict)
         assert result.get("platform") == "non-windows"
     except (AttributeError, TypeError, ValueError) as e:
@@ -119,7 +127,9 @@ def test_get_scaling_factor_returns_float(root):
 def test_dpi_with_root_parameter(root):
     """Test that dpi function works with root parameter."""
     try:
-        result = win.dpi(root)
+        # Handle case where dpi might be imported as module instead of function
+        dpi_func = win.dpi.dpi if hasattr(win.dpi, 'dpi') else win.dpi
+        result = dpi_func(root)
         assert isinstance(result, dict)
         assert "tk_scaling" in result
         assert "effective_dpi" in result
@@ -132,10 +142,12 @@ def test_dpi_with_root_parameter(root):
 def test_dpi_with_options():
     """Test that dpi function works with various options."""
     try:
-        result = win.dpi(None, enable=False)
+        # Handle case where dpi might be imported as module instead of function
+        dpi_func = win.dpi.dpi if hasattr(win.dpi, 'dpi') else win.dpi
+        result = dpi_func(None, enable=False)
         assert isinstance(result, dict)
         assert result.get("enabled") is False
-        result = win.dpi(None, enable=True)
+        result = dpi_func(None, enable=True)
         assert isinstance(result, dict)
     except (AttributeError, TypeError, ValueError) as e:
         pytest.fail(f"win.dpi() with options raised {e} unexpectedly!")

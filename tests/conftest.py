@@ -61,6 +61,8 @@ def root():
             _TK_ROOT.update_idletasks()
             _TK_INITIALIZED = True
             yield _TK_ROOT
+            # Clean up after session
+            _cleanup_tkinter()
         except tk.TclError as e:
             error_str = str(e)
             if any(
@@ -108,7 +110,7 @@ def root_function():
         os.environ["TK_SILENCE_DEPRECATION"] = "1"
         # Create new root window
         temp_root = tk.Tk()
-        temp_root.withdraw()
+        temp_root.withdraw()  # Hide the main window
         temp_root.update()
         yield temp_root
         # Cleanup
@@ -181,6 +183,11 @@ def calendar_mock_patches():
         patch("tkinter.Frame.bind"),
         patch("tkinter.Label.bind"),
         patch("tkinter.Button.bind"),
+        # Additional patches to prevent window creation
+        patch("tkinter.Tk"),
+        patch("tkinter.Toplevel"),
+        patch("tkinter.Tk.__init__", return_value=None),
+        patch("tkinter.Toplevel.__init__", return_value=None),
     ]
     # Start all patches
     for p in patches:
@@ -189,6 +196,109 @@ def calendar_mock_patches():
     # Stop all patches
     for p in patches:
         p.stop()
+
+
+@pytest.fixture
+def calendar_theme_colors():
+    """Provide complete theme_colors for Calendar tests."""
+    return {
+        "background": "white",
+        "month_header_bg": "white",
+        "month_header_fg": "black",
+        "navigation_bg": "white",
+        "navigation_fg": "black",
+        "navigation_font": ("Arial", 10),
+        "navigation_hover_bg": "lightgray",
+        "navigation_hover_fg": "black",
+        "day_header_bg": "white",
+        "day_header_fg": "black",
+        "day_header_font": ("Arial", 10),
+        "week_number_bg": "white",
+        "week_number_fg": "black",
+        "week_number_font": ("Arial", 8),
+        "day_bg": "white",
+        "day_fg": "black",
+        "day_font": ("Arial", 10),
+        "selected_bg": "blue",
+        "selected_fg": "white",
+        "hover_bg": "lightgray",
+        "hover_fg": "black",
+        "adjacent_day_bg": "lightgray",
+        "adjacent_day_fg": "gray",
+        "weekend_bg": "lightgray",
+        "weekend_fg": "black"
+    }
+
+
+@pytest.fixture
+def calendar_mock_widgets():
+    """Provide mock widgets for Calendar tests."""
+    from unittest.mock import Mock
+    
+    # Create mock widgets
+    mock_label = Mock()
+    mock_label.config = Mock()
+    mock_label.cget = Mock(return_value="white")
+    mock_label.winfo_children = Mock(return_value=[])
+    
+    mock_frame = Mock()
+    mock_frame.winfo_children = Mock(return_value=[])
+    mock_frame.config = Mock()
+    mock_frame._last_child_ids = {}
+    mock_frame.tk = Mock()
+    mock_frame._w = "."
+    mock_frame.children = {}
+    
+    return {
+        "label": mock_label,
+        "frame": mock_frame
+    }
+
+
+@pytest.fixture
+def pathbrowser_mock_widgets():
+    """Provide mock widgets for PathBrowser tests."""
+    from unittest.mock import Mock
+    
+    # Create mock widgets
+    mock_frame = Mock()
+    mock_frame.config = Mock()
+    mock_frame.cget = Mock(return_value="white")
+    mock_frame.winfo_children = Mock(return_value=[])
+    mock_frame._last_child_ids = {}
+    mock_frame.tk = Mock()
+    mock_frame._w = "."
+    mock_frame.children = {}
+    
+    mock_label = Mock()
+    mock_label.config = Mock()
+    mock_label.cget = Mock(return_value="white")
+    mock_label.winfo_children = Mock(return_value=[])
+    
+    mock_button = Mock()
+    mock_button.config = Mock()
+    mock_button.cget = Mock(return_value="white")
+    mock_button.winfo_children = Mock(return_value=[])
+    
+    mock_entry = Mock()
+    mock_entry.config = Mock()
+    mock_entry.cget = Mock(return_value="white")
+    mock_entry.winfo_children = Mock(return_value=[])
+    
+    mock_treeview = Mock()
+    mock_treeview.config = Mock()
+    mock_treeview.cget = Mock(return_value="white")
+    mock_treeview.winfo_children = Mock(return_value=[])
+    mock_treeview.selection = Mock(return_value=[])
+    mock_treeview.get_children = Mock(return_value=[])
+    
+    return {
+        "frame": mock_frame,
+        "label": mock_label,
+        "button": mock_button,
+        "entry": mock_entry,
+        "treeview": mock_treeview
+    }
 
 
 @pytest.fixture
@@ -209,7 +319,6 @@ def pathbrowser_mock_patches():
         patch("tkinter.Entry"),
         patch("tkinter.Text"),
         patch("tkinter.Scrollbar"),
-        patch("tkinter.Treeview"),
         patch("tkinter.ttk.Frame"),
         patch("tkinter.ttk.Label"),
         patch("tkinter.ttk.Button"),
@@ -227,7 +336,6 @@ def pathbrowser_mock_patches():
         patch("tkinter.Entry.configure"),
         patch("tkinter.Text.configure"),
         patch("tkinter.Scrollbar.configure"),
-        patch("tkinter.Treeview.configure"),
         patch("tkinter.ttk.Frame.configure"),
         patch("tkinter.ttk.Label.configure"),
         patch("tkinter.ttk.Button.configure"),
@@ -241,7 +349,6 @@ def pathbrowser_mock_patches():
         patch("tkinter.Entry.pack"),
         patch("tkinter.Text.pack"),
         patch("tkinter.Scrollbar.pack"),
-        patch("tkinter.Treeview.pack"),
         patch("tkinter.ttk.Frame.pack"),
         patch("tkinter.ttk.Label.pack"),
         patch("tkinter.ttk.Button.pack"),
@@ -255,7 +362,6 @@ def pathbrowser_mock_patches():
         patch("tkinter.Entry.grid"),
         patch("tkinter.Text.grid"),
         patch("tkinter.Scrollbar.grid"),
-        patch("tkinter.Treeview.grid"),
         patch("tkinter.ttk.Frame.grid"),
         patch("tkinter.ttk.Label.grid"),
         patch("tkinter.ttk.Button.grid"),
@@ -269,7 +375,6 @@ def pathbrowser_mock_patches():
         patch("tkinter.Entry.place"),
         patch("tkinter.Text.place"),
         patch("tkinter.Scrollbar.place"),
-        patch("tkinter.Treeview.place"),
         patch("tkinter.ttk.Frame.place"),
         patch("tkinter.ttk.Label.place"),
         patch("tkinter.ttk.Button.place"),
@@ -283,7 +388,6 @@ def pathbrowser_mock_patches():
         patch("tkinter.Entry.cget"),
         patch("tkinter.Text.cget"),
         patch("tkinter.Scrollbar.cget"),
-        patch("tkinter.Treeview.cget"),
         patch("tkinter.ttk.Frame.cget"),
         patch("tkinter.ttk.Label.cget"),
         patch("tkinter.ttk.Button.cget"),
@@ -297,7 +401,6 @@ def pathbrowser_mock_patches():
         patch("tkinter.Entry.winfo_width"),
         patch("tkinter.Text.winfo_width"),
         patch("tkinter.Scrollbar.winfo_width"),
-        patch("tkinter.Treeview.winfo_width"),
         patch("tkinter.ttk.Frame.winfo_width"),
         patch("tkinter.ttk.Label.winfo_width"),
         patch("tkinter.ttk.Button.winfo_width"),
@@ -311,7 +414,6 @@ def pathbrowser_mock_patches():
         patch("tkinter.Entry.winfo_height"),
         patch("tkinter.Text.winfo_height"),
         patch("tkinter.Scrollbar.winfo_height"),
-        patch("tkinter.Treeview.winfo_height"),
         patch("tkinter.ttk.Frame.winfo_height"),
         patch("tkinter.ttk.Label.winfo_height"),
         patch("tkinter.ttk.Button.winfo_height"),
@@ -325,7 +427,6 @@ def pathbrowser_mock_patches():
         patch("tkinter.Entry.winfo_children"),
         patch("tkinter.Text.winfo_children"),
         patch("tkinter.Scrollbar.winfo_children"),
-        patch("tkinter.Treeview.winfo_children"),
         patch("tkinter.ttk.Frame.winfo_children"),
         patch("tkinter.ttk.Label.winfo_children"),
         patch("tkinter.ttk.Button.winfo_children"),
@@ -344,7 +445,6 @@ def pathbrowser_mock_patches():
         patch("tkinter.Entry.bind"),
         patch("tkinter.Text.bind"),
         patch("tkinter.Scrollbar.bind"),
-        patch("tkinter.Treeview.bind"),
         patch("tkinter.ttk.Frame.bind"),
         patch("tkinter.ttk.Label.bind"),
         patch("tkinter.ttk.Button.bind"),
@@ -353,20 +453,7 @@ def pathbrowser_mock_patches():
         patch("tkinter.ttk.Scrollbar.bind"),
         patch("tkinter.ttk.Treeview.bind"),
         patch("tkinter.ttk.LabelFrame.bind"),
-        patch("tkinter.Treeview.selection"),
-        patch("tkinter.Treeview.selection_set"),
-        patch("tkinter.Treeview.selection_remove"),
-        patch("tkinter.Treeview.selection_toggle"),
-        patch("tkinter.Treeview.get_children"),
-        patch("tkinter.Treeview.insert"),
-        patch("tkinter.Treeview.delete"),
-        patch("tkinter.Treeview.item"),
-        patch("tkinter.Treeview.see"),
-        patch("tkinter.Treeview.exists"),
-        patch("tkinter.Treeview.identify_row"),
-        patch("tkinter.Treeview.identify_column"),
-        patch("tkinter.Treeview.identify_region"),
-        patch("tkinter.Treeview.identify_element"),
+
         patch("tkinter.ttk.Treeview.selection"),
         patch("tkinter.ttk.Treeview.selection_set"),
         patch("tkinter.ttk.Treeview.selection_remove"),
@@ -406,7 +493,6 @@ def pathbrowser_mock_patches():
         patch("tkinter.ttk.Entry.get"),
         patch("tkinter.ttk.Entry.configure"),
         patch("tkinter.Toplevel"),
-        patch("tkinter.Toplevel.__init__", return_value=None),
         patch("tkinter.Toplevel.configure"),
         patch("tkinter.Toplevel.geometry"),
         patch("tkinter.Toplevel.title"),
@@ -430,6 +516,8 @@ def pathbrowser_mock_patches():
         patch("tkinter.Toplevel.focus_set"),
         patch("tkinter.Toplevel.clipboard_clear"),
         patch("tkinter.Toplevel.clipboard_append"),
+        # Language management patches
+        patch("tkface.lang.lang.LanguageManager.get", return_value="Go"),
     ]
     # Start all patches
     for p in patches:
