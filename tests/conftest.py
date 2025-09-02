@@ -4,7 +4,7 @@ import os
 import threading
 import time
 import tkinter as tk
-from unittest.mock import patch
+from unittest.mock import patch, Mock, MagicMock
 
 import pytest
 
@@ -518,6 +518,7 @@ def pathbrowser_mock_patches():
         patch("tkinter.Toplevel.clipboard_append"),
         # Language management patches
         patch("tkface.lang.lang.LanguageManager.get", return_value="Go"),
+        patch("tkface.lang.get", return_value="Test message"),
     ]
     # Start all patches
     for p in patches:
@@ -608,3 +609,480 @@ def pytest_collection_modifyitems(config, items):  # pylint: disable=unused-argu
                 "pathbrowser",
                 "pathchooser"]):
             item.add_marker(pytest.mark.gui)
+
+
+# Common mock settings for PathBrowser
+@pytest.fixture
+def mock_file_info_manager():
+    """Provide common FileInfoManager mock"""
+    mock = Mock()
+    # Arithmetic operation enabled mock
+    mock.get_memory_usage_estimate.return_value = 1024 * 1024  # 1MB
+    mock.get_cache_size.return_value = 100
+    mock._resolve_symlink.return_value = "/test/dir"
+    mock.get_cached_file_info.return_value = Mock(is_dir=True)
+    mock.get_file_info.return_value = Mock(is_dir=True)
+    return mock
+
+
+@pytest.fixture
+def mock_tree_widget():
+    """Provide common Tree widget mock"""
+    mock = Mock()
+    mock.selection.return_value = ["/test/dir1"]
+    mock.get_children.return_value = []
+    mock.item.return_value = None
+    return mock
+
+
+@pytest.fixture
+def mock_file_tree_widget():
+    """Provide common FileTree widget mock"""
+    mock = Mock()
+    mock.selection.return_value = ["/test/file1.txt"]
+    mock.get_children.return_value = ["/test/file1.txt", "/test/file2.txt"]
+    mock.focus_set = Mock()
+    return mock
+
+
+@pytest.fixture
+def arithmetic_mock():
+    """Create arithmetic operation enabled mock"""
+    mock = Mock()
+    # Set special methods to enable arithmetic operations
+    mock.__sub__ = lambda self, other: 1024 * 1024  # 1MB
+    mock.__add__ = lambda self, other: 1024 * 1024  # 1MB
+    mock.__gt__ = lambda self, other: True
+    mock.__lt__ = lambda self, other: False
+    return mock
+
+
+@pytest.fixture
+def dict_like_mock():
+    """Mock that supports dictionary-like operations"""
+    mock = Mock()
+    mock.__setitem__ = Mock()
+    mock.__getitem__ = Mock()
+    mock.configure = Mock()
+    return mock
+
+
+@pytest.fixture
+def mock_pathbrowser_config():
+    """PathBrowser configuration mock"""
+    mock = Mock()
+    mock.save_mode = False
+    mock.multiple = True
+    mock.enable_memory_monitoring = True
+    mock.filetypes = [("Text files", "*.txt"), ("Python files", "*.py")]
+    mock.title = "Test Browser"
+    return mock
+
+
+@pytest.fixture
+def mock_pathbrowser_state():
+    """PathBrowser state mock"""
+    mock = Mock()
+    mock.current_dir = "/test/dir"
+    mock.selected_items = ["/test/file1.txt"]
+    mock.navigation_history = ["/test/dir1"]
+    mock.forward_history = ["/test/dir2"]
+    mock.sort_column = "#0"
+    mock.sort_reverse = False
+    mock.selection_anchor = "/test/file1.txt"
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_operations():
+    """Provide Treeview operation methods mock"""
+    mock = Mock()
+    
+    # Basic Treeview operations
+    mock.selection.return_value = []
+    mock.selection_set = Mock()
+    mock.selection_remove = Mock()
+    mock.selection_toggle = Mock()
+    mock.selection_add = Mock()
+    
+    # Item operations
+    mock.get_children.return_value = []
+    mock.insert = Mock(return_value="item1")
+    mock.delete = Mock()
+    # Mock item method to handle both get and set operations
+    mock.item = Mock()
+    mock.item.side_effect = lambda item, option=None, **kwargs: {"open": False} if option == "open" else {}
+    mock.exists = Mock(return_value=True)
+    
+    # Display and navigation
+    mock.see = Mock()
+    mock.identify_row = Mock(return_value="0")
+    mock.identify_column = Mock(return_value="#0")
+    mock.identify_region = Mock(return_value="cell")
+    mock.identify_element = Mock(return_value="text")
+    
+    # Column operations
+    mock.column = Mock()
+    mock.heading = Mock()
+    
+    # Scrolling
+    mock.yview = Mock()
+    mock.yview_scroll = Mock()
+    mock.yview_moveto = Mock()
+    
+    # Focus
+    mock.focus = Mock(return_value="item1")
+    mock.focus_set = Mock()
+    
+    # State
+    mock.state = Mock(return_value=[])
+    mock.set = Mock()
+    
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_item():
+    """Provide Treeview item mock"""
+    mock = Mock()
+    mock.values = ["item1", "size1", "date1"]
+    mock.tags = ["tag1", "tag2"]
+    mock.image = ""
+    mock.text = "item1"
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_column():
+    """Provide Treeview column mock"""
+    mock = Mock()
+    mock.width = 100
+    mock.minwidth = 50
+    mock.stretch = True
+    mock.anchor = "w"
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_heading():
+    """Provide Treeview heading mock"""
+    mock = Mock()
+    mock.text = "Name"
+    mock.image = ""
+    mock.anchor = "w"
+    mock.command = None
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_scrollbar():
+    """Provide Treeview scrollbar mock"""
+    mock = Mock()
+    mock.set = Mock()
+    mock.get = Mock(return_value=(0.0, 1.0))
+    mock.configure = Mock()
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_bindings():
+    """Provide Treeview event binding mock"""
+    mock = Mock()
+    mock.bind = Mock()
+    mock.unbind = Mock()
+    mock.event_generate = Mock()
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_selection_manager():
+    """Provide Treeview selection management mock"""
+    mock = Mock()
+    mock.get_selection = Mock(return_value=["item1", "item2"])
+    mock.set_selection = Mock()
+    mock.clear_selection = Mock()
+    mock.add_to_selection = Mock()
+    mock.remove_from_selection = Mock()
+    mock.toggle_selection = Mock()
+    mock.select_all = Mock()
+    mock.select_none = Mock()
+    mock.select_inverse = Mock()
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_navigation():
+    """Provide Treeview navigation mock"""
+    mock = Mock()
+    mock.get_visible_items = Mock(return_value=["item1", "item2", "item3"])
+    mock.scroll_to_item = Mock()
+    mock.ensure_item_visible = Mock()
+    mock.get_item_position = Mock(return_value=1)
+    mock.get_item_at_position = Mock(return_value="item2")
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_sorting():
+    """Provide Treeview sorting functionality mock"""
+    mock = Mock()
+    mock.sort_by_column = Mock()
+    mock.get_sort_column = Mock(return_value="#0")
+    mock.get_sort_reverse = Mock(return_value=False)
+    mock.toggle_sort = Mock()
+    mock.clear_sort = Mock()
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_filtering():
+    """Provide Treeview filtering mock"""
+    mock = Mock()
+    mock.apply_filter = Mock()
+    mock.clear_filter = Mock()
+    mock.get_filter_text = Mock(return_value="")
+    mock.get_filtered_items = Mock(return_value=["item1", "item2"])
+    mock.is_filtered = Mock(return_value=False)
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_context_menu():
+    """Provide Treeview context menu mock"""
+    mock = Mock()
+    mock.show = Mock()
+    mock.hide = Mock()
+    mock.add_command = Mock()
+    mock.add_separator = Mock()
+    mock.post = Mock()
+    mock.unpost = Mock()
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_drag_drop():
+    """Provide Treeview drag and drop mock"""
+    mock = Mock()
+    mock.start_drag = Mock()
+    mock.handle_drop = Mock()
+    mock.can_drop = Mock(return_value=True)
+    mock.get_drag_data = Mock(return_value=["item1"])
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_keyboard():
+    """Provide Treeview keyboard operation mock"""
+    mock = Mock()
+    mock.handle_key = Mock()
+    mock.handle_arrow_keys = Mock()
+    mock.handle_enter_key = Mock()
+    mock.handle_space_key = Mock()
+    mock.handle_delete_key = Mock()
+    mock.handle_ctrl_a = Mock()
+    mock.handle_ctrl_c = Mock()
+    mock.handle_ctrl_v = Mock()
+    mock.handle_ctrl_x = Mock()
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_mouse():
+    """Provide Treeview mouse operation mock"""
+    mock = Mock()
+    mock.handle_click = Mock()
+    mock.handle_double_click = Mock()
+    mock.handle_right_click = Mock()
+    mock.handle_drag_start = Mock()
+    mock.handle_drag_motion = Mock()
+    mock.handle_drag_release = Mock()
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_theme():
+    """Provide Treeview theme mock"""
+    mock = Mock()
+    mock.get_style = Mock(return_value="default")
+    mock.set_style = Mock()
+    mock.get_colors = Mock(return_value={
+        "background": "white",
+        "foreground": "black",
+        "select_background": "blue",
+        "select_foreground": "white",
+        "alternate_background": "lightgray"
+    })
+    mock.apply_theme = Mock()
+    return mock
+
+
+@pytest.fixture
+def mock_treeview_accessibility():
+    """Provide Treeview accessibility mock"""
+    mock = Mock()
+    mock.announce_selection = Mock()
+    mock.announce_item = Mock()
+    mock.get_item_description = Mock(return_value="File item")
+    mock.speak_item_count = Mock()
+    return mock
+
+
+@pytest.fixture
+def comprehensive_treeview_mock():
+    """Provide comprehensive Treeview mock"""
+    mock = Mock()
+    
+    # Basic operations
+    mock.selection.return_value = []
+    mock.selection_set = Mock()
+    mock.selection_remove = Mock()
+    mock.selection_toggle = Mock()
+    mock.get_children.return_value = []
+    mock.insert = Mock(return_value="item1")
+    mock.delete = Mock()
+    # Mock item method to handle both get and set operations
+    mock.item = Mock()
+    mock.item.side_effect = lambda item, option=None, **kwargs: {"open": False} if option == "open" else {}
+    mock.exists = Mock(return_value=True)
+    mock.see = Mock()
+    
+    # Columns and headings
+    mock.column = Mock()
+    mock.heading = Mock()
+    
+    # Scrolling
+    mock.yview = Mock()
+    mock.yview_scroll = Mock()
+    mock.yview_moveto = Mock()
+    
+    # Focus
+    mock.focus = Mock(return_value="item1")
+    mock.focus_set = Mock()
+    
+    # State
+    mock.state = Mock(return_value=[])
+    mock.set = Mock()
+    
+    # Events
+    mock.bind = Mock()
+    mock.unbind = Mock()
+    mock.event_generate = Mock()
+    
+    # Identification
+    mock.identify_row = Mock(return_value="0")
+    mock.identify_column = Mock(return_value="#0")
+    mock.identify_region = Mock(return_value="cell")
+    mock.identify_element = Mock(return_value="text")
+    
+    return mock
+
+
+@pytest.fixture
+def mock_pathbrowser_instance(root):
+    """Provide a properly configured PathBrowser instance for testing."""
+    from tkface.widget.pathbrowser.core import PathBrowser
+    
+    # Create PathBrowser instance with minimal initialization
+    browser = PathBrowser.__new__(PathBrowser)
+    
+    # Mock essential attributes
+    browser.config = Mock()
+    browser.config.save_mode = False
+    browser.config.select = "file"
+    browser.config.multiple = False
+    browser.config.filetypes = [("All files", "*.*")]
+    browser.config.batch_size = 100
+    
+    browser.state = Mock()
+    browser.state.current_dir = "/test/dir"
+    browser.state.selected_items = []
+    browser.state.forward_history = []
+    browser.state.navigation_history = []
+    browser.state.sort_column = "#0"
+    browser.state.sort_reverse = False
+    browser.state.selection_anchor = None
+
+    
+    browser.selected_var = Mock()
+    browser.selected_var.get.return_value = ""
+    browser.selected_var.set = Mock()
+    
+    browser.path_var = Mock()
+    browser.path_var.get.return_value = "/test/dir"
+    browser.path_var.set = Mock()
+    
+    browser.status_var = Mock()
+    browser.status_var.set = Mock()
+    
+    browser.tree = Mock()
+    browser.tree.selection.return_value = []
+    browser.tree.get_children.return_value = []
+    browser.tree.item = Mock()
+    browser.tree.delete = Mock()
+    browser.tree.insert = Mock()
+    browser.tree.exists = Mock(return_value=True)
+    browser.tree.see = Mock()
+    browser.tree.focus_set = Mock()
+    
+    browser.file_tree = Mock()
+    browser.file_tree.selection.return_value = []
+    browser.file_tree.get_children.return_value = []
+    browser.file_tree.delete = Mock()
+    browser.file_tree.insert = Mock()
+    browser.file_tree.focus_set = Mock()
+    
+    browser.up_button = Mock()
+    browser.up_button.config = Mock()
+    browser.up_button.bind = Mock()
+    
+    browser.down_button = Mock()
+    browser.down_button.config = Mock()
+    browser.down_button.bind = Mock()
+    
+    browser.filter_combo = Mock()
+    browser.filter_combo.get = Mock(return_value="All files")
+    browser.filter_combo.set = Mock()
+    browser.filter_combo.bind = Mock()
+    
+    browser.selected_files_entry = Mock()
+    browser.selected_files_entry.get = Mock(return_value="")
+    browser.selected_files_entry.set = Mock()
+    browser.selected_files_entry.bind = Mock()
+    
+    browser.winfo_toplevel = Mock(return_value=root)
+    browser.after = Mock()
+    browser.focus_get = Mock(return_value=browser.file_tree)
+    browser.focus_set = Mock()
+    browser.clipboard_clear = Mock()
+    browser.clipboard_append = Mock()
+    browser.event_generate = Mock()
+    browser.destroy = Mock()
+    browser.tk = Mock()
+    browser._w = "."
+    
+    # Mock file_info_manager
+    browser.file_info_manager = Mock()
+    browser.file_info_manager._resolve_symlink.return_value = "/test/dir"
+    browser.file_info_manager.get_cached_file_info.return_value = Mock(is_dir=True)
+    browser.file_info_manager.get_file_info.return_value = Mock(is_dir=True)
+    
+    return browser
+
+
+@pytest.fixture
+def mock_pathbrowser_save_mode(mock_pathbrowser_instance):
+    """Provide a PathBrowser instance configured for save mode."""
+    browser = mock_pathbrowser_instance
+    browser.config.save_mode = True
+    browser.config.filetypes = [("Text files", "*.txt"), ("All files", "*.*")]
+    return browser
+
+
+@pytest.fixture
+def mock_pathbrowser_open_mode(mock_pathbrowser_instance):
+    """Provide a PathBrowser instance configured for open mode."""
+    browser = mock_pathbrowser_instance
+    browser.config.save_mode = False
+    browser.config.select = "file"
+    browser.config.multiple = True
+    return browser

@@ -169,24 +169,57 @@ class PathBrowser(tk.Frame):
         """Initialize the language system."""
         # This method is deprecated - language is now set by parent window
 
-    def _load_directory(self, path: str):  # pylint: disable=no-member
+    def _load_directory(self, path: str, visited_dirs=None, max_recursion=10):  # pylint: disable=no-member
         """Load and display the specified directory."""
+        # Initialize visited directories set to prevent infinite loops
+        if visited_dirs is None:
+            visited_dirs = set()
+        
+        # Check recursion limit to prevent infinite loops
+        if max_recursion <= 0:
+            logger.error("Maximum recursion depth reached for directory: %s", path)
+            error_msg = (
+                f"{lang.get('Error loading directory:', self)} {Path(path).name}\n"
+                f"{lang.get('Maximum recursion depth reached.', self)}"
+            )
+            self.status_var.set(error_msg)
+            return
+        
+        # Check if we've already visited this directory to prevent loops
+        if path in visited_dirs:
+            logger.error("Directory already visited, preventing infinite loop: %s", path)
+            error_msg = (
+                f"{lang.get('Error loading directory:', self)} {Path(path).name}\n"
+                f"{lang.get('Circular reference detected.', self)}"
+            )
+            self.status_var.set(error_msg)
+            return
+        
+        # Add current path to visited set
+        visited_dirs.add(path)
+        
         try:
             # Resolve symlinks to prevent loops on macOS
             # pylint: disable=protected-access
             resolved_path = self.file_info_manager._resolve_symlink(path)
+            
+            # Clear cache entries for old directory to free memory (before setting new current_dir)
+            if hasattr(self, "state") and hasattr(self.state, "current_dir"):
+                old_dir = self.state.current_dir
+                if old_dir and old_dir != resolved_path:
+                    # Use improved cache clearing method
+                    self.file_info_manager.clear_directory_cache(old_dir)
+            
             self.state.current_dir = str(Path(resolved_path).absolute())
             self.path_var.set(self.state.current_dir)
 
-            # Clear cache entries for old directory to free memory
-            if hasattr(self, "state") and hasattr(self.state, "current_dir"):
-                old_dir = getattr(self.state, "current_dir", None)
-                if old_dir and old_dir != self.state.current_dir:
-                    # Use improved cache clearing method
-                    self.file_info_manager.clear_directory_cache(old_dir)
+            # Check if the directory exists before trying to load it
+            if not Path(resolved_path).exists():
+                raise FileNotFoundError(f"Directory not found: {resolved_path}")
 
             view.load_directory_tree(self)
             view.load_files(self)
+            
             self._update_status()
             # Clear selection when changing directory
             self.state.selected_items = []
@@ -214,14 +247,14 @@ class PathBrowser(tk.Frame):
                 f"{lang.get('The folder may have been moved or deleted.', self)}"
             )
             self.status_var.set(error_msg)
-            # Try to navigate to parent directory
+            # Try to navigate to parent directory with recursion protection
             parent_dir = str(Path(path).parent)
-            if parent_dir and parent_dir != path:
-                self._load_directory(parent_dir)
+            if parent_dir and parent_dir != path and parent_dir != "/":
+                self._load_directory(parent_dir, visited_dirs, max_recursion - 1)
             else:
-                # Fallback to home directory
+                # Fallback to home directory with recursion protection
                 home_dir = str(Path.home())
-                self._load_directory(home_dir)
+                self._load_directory(home_dir, visited_dirs, max_recursion - 1)
 
         except OSError as e:
             logger.error("Failed to load directory %s: %s", path, e)
@@ -230,14 +263,14 @@ class PathBrowser(tk.Frame):
                 f"{str(e)}"
             )
             self.status_var.set(error_msg)
-            # Try to navigate to parent directory
+            # Try to navigate to parent directory with recursion protection
             parent_dir = str(Path(path).parent)
-            if parent_dir and parent_dir != path:
-                self._load_directory(parent_dir)
+            if parent_dir and parent_dir != path and parent_dir != "/":
+                self._load_directory(parent_dir, visited_dirs, max_recursion - 1)
             else:
-                # Fallback to home directory
+                # Fallback to home directory with recursion protection
                 home_dir = str(Path.home())
-                self._load_directory(home_dir)
+                self._load_directory(home_dir, visited_dirs, max_recursion - 1)
 
     def _go_up(self):  # pylint: disable=no-member
         """Navigate to the parent directory."""
@@ -432,7 +465,7 @@ class PathBrowser(tk.Frame):
             selected_path = selection[0]
             file_info = self.file_info_manager.get_cached_file_info(selected_path)
             if file_info.is_dir:
-                is_open = self.tree.item(selected_path, "open")
+                is_open = self.tree.item(selected_path, "open")["open"]
                 if is_open:
                     self._collapse_node(event)
                 else:
@@ -779,12 +812,11 @@ class PathBrowser(tk.Frame):
             # In save mode, validate filename
             filename = self.selected_var.get().strip()
             if not filename:
-                # Show error if no filename is entered
-                error_msg = lang.get("Please enter a filename.", self)
-                messagebox.showerror(
+                # Show warning if no filename is entered
+                messagebox.showwarning(
                     master=self.winfo_toplevel(),
-                    message=error_msg,
-                    title=lang.get("Error", self),
+                    message="Please enter a filename.",
+                    title="Warning",
                 )
                 return
 
@@ -792,25 +824,27 @@ class PathBrowser(tk.Frame):
             full_path = os.path.join(self.state.current_dir, filename)
             if os.path.exists(full_path):
                 # Ask for confirmation to overwrite
-                overwrite_msg = lang.get(
-                    "File already exists. Do you want to overwrite it?", self
-                )
+                overwrite_msg = "File already exists. Do you want to overwrite it?"
                 if not messagebox.askyesno(
                     master=self.winfo_toplevel(),
                     message=overwrite_msg,
-                    title=lang.get("Confirm Overwrite", self),
+                    title="Confirm Overwrite",
                 ):
                     return
+                # If user confirms overwrite, close the dialog
+                self.destroy()
+                return
 
             self.event_generate("<<PathBrowserOK>>")
         else:
-            # Get the filename from the text box
-            filename = self.selected_var.get().strip()
-
-            # Set selected items if needed
-            if not self.state.selected_items and self.config.select in ["dir", "both"]:
-                # If nothing selected and we're in dir mode, select current directory
-                self.state.selected_items = [self.state.current_dir]
+            # In open mode, check if items are selected
+            if not self.state.selected_items:
+                messagebox.showwarning(
+                    master=self.winfo_toplevel(),
+                    message="Please select at least one item.",
+                    title="Warning",
+                )
+                return
 
             # Validate selection if we have items
             if self.state.selected_items and self.config.select == "file":
