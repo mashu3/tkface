@@ -1302,15 +1302,14 @@ class TestPathBrowserCoreAdditionalCoverage:
 
         with patch('os.listdir') as mock_listdir:
             mock_listdir.side_effect = OSError("Permission denied")
-            with patch('pathlib.Path.parent') as mock_parent:
-                mock_parent.return_value = "/protected"
-                with patch('pathlib.Path.home') as mock_home:
-                    mock_home.return_value = "/home/user"
-                    with patch.object(browser, '_load_directory') as mock_load:
-                        browser._load_directory("/protected/directory")
-                        # Should fallback to home directory
-                        # The actual implementation calls _load_directory with the parent directory first
-                        mock_load.assert_called()
+            with patch('pathlib.Path') as mock_path_class:
+                mock_path_class.parent.return_value = "/protected"
+                mock_path_class.home.return_value = "/home/user"
+                with patch.object(browser, '_load_directory') as mock_load:
+                    browser._load_directory("/protected/directory")
+                    # Should fallback to home directory
+                    # The actual implementation calls _load_directory with the parent directory first
+                    mock_load.assert_called()
 
     def test_update_filter_options_all_files_first(self, root):
         """Test _update_filter_options method with All files first."""
@@ -1407,8 +1406,15 @@ class TestPathBrowserCoreAdditionalCoverage:
         browser.state.current_dir = "/old/directory"
 
         with patch('os.listdir', return_value=[]):
-            with patch('pathlib.Path') as mock_path:
-                mock_path.return_value.absolute.return_value = "/new/directory"
+            with patch('pathlib.Path') as mock_path_class:
+                # Create a proper mock for Path class
+                mock_path_instance = Mock()
+                mock_path_instance.absolute.return_value = "/new/directory"
+                mock_path_class.return_value = mock_path_instance
+                # Mock the class methods properly
+                mock_path_class.exists = Mock(return_value=True)
+                mock_path_class.home = Mock(return_value="/home/user")
+                
                 with patch.object(view, 'load_directory_tree') as mock_load_tree:
                     with patch.object(view, 'load_files') as mock_load_files:
                         with patch.object(browser, '_update_status') as mock_update:
@@ -1424,7 +1430,8 @@ class TestPathBrowserCoreAdditionalCoverage:
         """Test _load_directory method with PermissionError."""
         browser = mock_pathbrowser_instance
 
-        with patch('pathlib.Path.exists', return_value=False):
+        with patch('pathlib.Path') as mock_path_class:
+            mock_path_class.exists.return_value = False
             with patch('tkface.lang.get') as mock_lang:
                 mock_lang.side_effect = lambda key, obj: key
                 with patch.object(browser, '_load_directory') as mock_load:
@@ -1440,7 +1447,8 @@ class TestPathBrowserCoreAdditionalCoverage:
         browser.file_info_manager._resolve_symlink.return_value = "/missing/directory"
         
         # Mock Path.exists to return False
-        with patch('pathlib.Path.exists', return_value=False):
+        with patch('pathlib.Path') as mock_path_class:
+            mock_path_class.exists.return_value = False
             # Mock _load_directory to prevent infinite recursion
             with patch.object(browser, '_load_directory') as mock_load:
                 browser._load_directory("/missing/directory")
@@ -1455,13 +1463,13 @@ class TestPathBrowserCoreAdditionalCoverage:
         browser.file_info_manager._resolve_symlink.return_value = "/missing/directory"
         
         # Mock Path.exists to return False
-        with patch('pathlib.Path.exists', return_value=False):
-            with patch('pathlib.Path.home') as mock_home:
-                mock_home.return_value = "/home/user"
-                with patch.object(browser, '_load_directory') as mock_load:
-                    browser._load_directory("/missing/directory")
-                    # Should fallback to home directory
-                    mock_load.assert_called()
+        with patch('pathlib.Path') as mock_path_class:
+            mock_path_class.exists.return_value = False
+            mock_path_class.home.return_value = "/home/user"
+            with patch.object(browser, '_load_directory') as mock_load:
+                browser._load_directory("/missing/directory")
+                # Should fallback to home directory
+                mock_load.assert_called()
 
     def test_load_directory_os_error_with_parent(self, mock_pathbrowser_instance):
         """Test _load_directory method with OSError and parent directory fallback."""
@@ -1471,7 +1479,8 @@ class TestPathBrowserCoreAdditionalCoverage:
         browser.file_info_manager._resolve_symlink.return_value = "/error/directory"
         
         # Mock Path.exists to return False
-        with patch('pathlib.Path.exists', return_value=False):
+        with patch('pathlib.Path') as mock_path_class:
+            mock_path_class.exists.return_value = False
             with patch.object(browser, '_load_directory') as mock_load:
                 browser._load_directory("/error/directory")
                 # Should try to navigate to parent directory
@@ -1485,13 +1494,13 @@ class TestPathBrowserCoreAdditionalCoverage:
         browser.file_info_manager._resolve_symlink.return_value = "/error/directory"
         
         # Mock Path.exists to return False
-        with patch('pathlib.Path.exists', return_value=False):
-            with patch('pathlib.Path.home') as mock_home:
-                mock_home.return_value = "/home/user"
-                with patch.object(browser, '_load_directory') as mock_load:
-                    browser._load_directory("/error/directory")
-                    # Should fallback to home directory
-                    mock_load.assert_called()
+        with patch('pathlib.Path') as mock_path_class:
+            mock_path_class.exists.return_value = False
+            mock_path_class.home.return_value = "/home/user"
+            with patch.object(browser, '_load_directory') as mock_load:
+                browser._load_directory("/error/directory")
+                # Should fallback to home directory
+                mock_load.assert_called()
 
     def test_on_tree_open_with_placeholder_removal(self, mock_pathbrowser_instance, mock_file_info_manager):
         """Test _on_tree_open method with placeholder removal."""
