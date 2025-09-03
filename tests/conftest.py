@@ -1086,3 +1086,46 @@ def mock_pathbrowser_open_mode(mock_pathbrowser_instance):
     browser.config.select = "file"
     browser.config.multiple = True
     return browser
+
+
+@pytest.fixture
+def mock_pathlib_path():
+    """Provide a comprehensive mock for pathlib.Path to avoid AttributeError issues."""
+    with patch('tkface.widget.pathbrowser.core.Path') as mock_path_class:
+        # Create a proper mock for Path class
+        mock_path_instance = Mock()
+        mock_path_instance.absolute.return_value = "/test/directory"
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.parent.return_value = "/test"
+        mock_path_instance.name = "directory"
+        
+        # Mock the class methods properly
+        mock_path_class.return_value = mock_path_instance
+        mock_path_class.exists.return_value = True
+        mock_path_class.home.return_value = "/home/user"
+        mock_path_class.parent.return_value = "/test"
+        mock_path_class.cwd = Mock(return_value="/test/directory")
+        
+        # Create a custom Path class that behaves like the real one
+        class MockPath:
+            def __init__(self, path):
+                self._path = path
+                self._mock_instance = mock_path_instance
+            
+            def absolute(self):
+                return self._mock_instance.absolute()
+            
+            def exists(self):
+                return mock_path_class.exists()
+            
+            def parent(self):
+                return self._mock_instance.parent()
+            
+            @property
+            def name(self):
+                return self._mock_instance.name
+        
+        # Replace the Path class with our mock
+        mock_path_class.side_effect = MockPath
+        
+        yield mock_path_class
