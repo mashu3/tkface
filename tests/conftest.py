@@ -8,6 +8,9 @@ from unittest.mock import patch, Mock, MagicMock
 
 import pytest
 
+# Import tkface modules for fixtures
+import tkface.lang.lang
+
 # Global Tkinter instance management
 _TK_ROOT = None
 _TK_LOCK = threading.Lock()
@@ -1129,3 +1132,356 @@ def mock_pathlib_path():
         mock_path_class.side_effect = MockPath
         
         yield mock_path_class
+
+
+@pytest.fixture
+def mock_root():
+    """Create a mock Tkinter root for language tests."""
+    root = Mock()
+    root.tk = Mock()
+    root.tk.call = Mock()
+    root.tk.globalgetvar = Mock(return_value='/usr/lib/tk')
+    return root
+
+
+@pytest.fixture
+def mock_root_with_locale():
+    """Create a mock Tkinter root with locale support for language tests."""
+    root = Mock()
+    root.tk = Mock()
+    root.tk.call = Mock()
+    root.tk.globalgetvar = Mock(return_value='/usr/lib/tk')
+    return root
+
+
+@pytest.fixture
+def mock_root_tcl_error():
+    """Create a mock Tkinter root that raises TclError for language tests."""
+    root = Mock()
+    root.tk = Mock()
+    root.tk.call = Mock(side_effect=tk.TclError('Tcl error'))
+    root.tk.globalgetvar = Mock(return_value='/usr/lib/tk')
+    return root
+
+
+@pytest.fixture
+def mock_root_os_error():
+    """Create a mock Tkinter root that raises OSError for language tests."""
+    root = Mock()
+    root.tk = Mock()
+    root.tk.call = Mock(side_effect=OSError('File not found'))
+    root.tk.globalgetvar = Mock(return_value='/usr/lib/tk')
+    return root
+
+
+@pytest.fixture
+def lang_manager():
+    """Create a LanguageManager instance for testing."""
+    return tkface.lang.lang.LanguageManager()
+
+
+@pytest.fixture
+def sample_translations():
+    """Sample translation dictionaries for testing."""
+    return {
+        'ja': {'hello': 'こんにちは', 'goodbye': 'さようなら'},
+        'en': {'hello': 'Hello', 'goodbye': 'Goodbye'},
+        'fr': {'hello': 'Bonjour', 'goodbye': 'Au revoir'}
+    }
+
+
+@pytest.fixture
+def simpledialog_mock_patches():
+    """Provide comprehensive mock patches for SimpleDialog tests."""
+    patches = [
+        patch("tkinter.Toplevel.wait_window"),
+        patch("tkinter.Label"),
+        patch("tkinter.Button"),
+        patch("tkinter.Entry"),
+        patch("tkinter.Frame"),
+        patch("tkinter.Scrollbar"),
+        patch("tkinter.Listbox"),
+        patch("tkinter.StringVar"),
+    ]
+    # Start all patches
+    for p in patches:
+        p.start()
+    yield patches
+    # Stop all patches
+    for p in patches:
+        p.stop()
+
+
+@pytest.fixture
+def simpledialog_mock_widgets():
+    """Provide mock widgets for SimpleDialog tests."""
+    from unittest.mock import Mock, MagicMock
+    
+    # Create mock widgets
+    mock_toplevel = Mock()
+    mock_toplevel.wait_window = Mock()
+    mock_toplevel.grab_set = Mock()
+    mock_toplevel.lift = Mock()
+    mock_toplevel.focus_set = Mock()
+    mock_toplevel.bind = Mock()
+    mock_toplevel.destroy = Mock()
+    
+    mock_label = Mock()
+    mock_label.grid = Mock()
+    mock_label.pack = Mock()
+    
+    mock_button = Mock()
+    mock_button.pack = Mock()
+    mock_button.bind = Mock()
+    mock_button.focus_set = Mock()
+    mock_button.invoke = Mock()
+    mock_button.cget = Mock(return_value="Button Text")
+    
+    mock_entry = Mock()
+    mock_entry.grid = Mock()
+    mock_entry.bind = Mock()
+    mock_entry.focus_set = Mock()
+    
+    mock_frame = Mock()
+    mock_frame.pack = Mock()
+    mock_frame.grid = Mock()
+    
+    mock_listbox = Mock()
+    mock_listbox.pack = Mock()
+    mock_listbox.bind = Mock()
+    mock_listbox.insert = Mock()
+    mock_listbox.selection_set = Mock()
+    mock_listbox.curselection = Mock(return_value=[])
+    mock_listbox.yview = Mock()
+    
+    mock_scrollbar = Mock()
+    mock_scrollbar.pack = Mock()
+    mock_scrollbar.config = Mock()
+    
+    mock_stringvar = Mock()
+    mock_stringvar.get = Mock(return_value="")
+    mock_stringvar.set = Mock()
+    
+    return {
+        "toplevel": mock_toplevel,
+        "label": mock_label,
+        "button": mock_button,
+        "entry": mock_entry,
+        "frame": mock_frame,
+        "listbox": mock_listbox,
+        "scrollbar": mock_scrollbar,
+        "stringvar": mock_stringvar,
+    }
+
+
+@pytest.fixture
+def simpledialog_config():
+    """Provide a basic SimpleDialogConfig for testing."""
+    from tkface.dialog.simpledialog import SimpleDialogConfig
+    
+    return SimpleDialogConfig(
+        title="Test Dialog",
+        message="Test Message",
+        initialvalue="test",
+        show=None,
+        ok_label="OK",
+        cancel_label="Cancel",
+        language="en",
+        custom_translations=None,
+        choices=None,
+        multiple=False,
+        initial_selection=None,
+        validate_func=None,
+    )
+
+
+@pytest.fixture
+def simpledialog_position():
+    """Provide a basic WindowPosition for testing."""
+    from tkface.dialog.simpledialog import WindowPosition
+    
+    return WindowPosition(
+        x=None,
+        y=None,
+        x_offset=0,
+        y_offset=0,
+    )
+
+
+@pytest.fixture
+def simpledialog_complete_mock():
+    """Provide complete mocking for SimpleDialog tests to prevent Toplevel creation."""
+    with patch("tkinter.Toplevel") as mock_toplevel_class, \
+         patch("tkinter.Label") as mock_label_class, \
+         patch("tkinter.Button") as mock_button_class, \
+         patch("tkinter.Entry") as mock_entry_class, \
+         patch("tkinter.Frame") as mock_frame_class, \
+         patch("tkinter.Scrollbar") as mock_scrollbar_class, \
+         patch("tkinter.Listbox") as mock_listbox_class, \
+         patch("tkinter.StringVar") as mock_stringvar_class, \
+         patch("tkface.dialog.simpledialog._position_window") as mock_position_window, \
+         patch("tkface.dialog.simpledialog._setup_dialog_base") as mock_setup_dialog_base:
+        
+        # Create mock instances
+        mock_toplevel = Mock()
+        mock_toplevel.wait_window = Mock()
+        mock_toplevel.grab_set = Mock()
+        mock_toplevel.lift = Mock()
+        mock_toplevel.focus_set = Mock()
+        mock_toplevel.bind = Mock()
+        mock_toplevel.destroy = Mock()
+        mock_toplevel.configure = Mock()
+        mock_toplevel.geometry = Mock()
+        mock_toplevel.title = Mock()
+        mock_toplevel.transient = Mock()
+        mock_toplevel.winfo_toplevel = Mock(return_value=mock_toplevel)
+        mock_toplevel.winfo_rootx = Mock(return_value=100)
+        mock_toplevel.winfo_rooty = Mock(return_value=100)
+        mock_toplevel.winfo_width = Mock(return_value=300)
+        mock_toplevel.winfo_height = Mock(return_value=200)
+        mock_toplevel.winfo_reqwidth = Mock(return_value=300)
+        mock_toplevel.winfo_reqheight = Mock(return_value=200)
+        mock_toplevel.update_idletasks = Mock()
+        mock_toplevel.update = Mock()
+        mock_toplevel.after = Mock()
+        mock_toplevel.event_generate = Mock()
+        mock_toplevel.clipboard_clear = Mock()
+        mock_toplevel.clipboard_append = Mock()
+        
+        mock_label = Mock()
+        mock_label.grid = Mock()
+        mock_label.pack = Mock()
+        mock_label.configure = Mock()
+        
+        mock_button = Mock()
+        mock_button.pack = Mock()
+        mock_button.bind = Mock()
+        mock_button.focus_set = Mock()
+        mock_button.invoke = Mock()
+        mock_button.cget = Mock(return_value="Button Text")
+        mock_button.configure = Mock()
+        
+        mock_entry = Mock()
+        mock_entry.grid = Mock()
+        mock_entry.bind = Mock()
+        mock_entry.focus_set = Mock()
+        mock_entry.configure = Mock()
+        mock_entry.get = Mock(return_value="test")
+        mock_entry.insert = Mock()
+        mock_entry.delete = Mock()
+        
+        mock_frame = Mock()
+        mock_frame.pack = Mock()
+        mock_frame.grid = Mock()
+        mock_frame.configure = Mock()
+        
+        mock_listbox = Mock()
+        mock_listbox.pack = Mock()
+        mock_listbox.bind = Mock()
+        mock_listbox.insert = Mock()
+        mock_listbox.selection_set = Mock()
+        mock_listbox.curselection = Mock(return_value=[])
+        mock_listbox.yview = Mock()
+        mock_listbox.configure = Mock()
+        
+        mock_scrollbar = Mock()
+        mock_scrollbar.pack = Mock()
+        mock_scrollbar.config = Mock()
+        mock_scrollbar.configure = Mock()
+        
+        mock_stringvar = Mock()
+        mock_stringvar.get = Mock(return_value="")
+        mock_stringvar.set = Mock()
+        
+        # Set return values for constructors
+        mock_toplevel_class.return_value = mock_toplevel
+        mock_label_class.return_value = mock_label
+        mock_button_class.return_value = mock_button
+        mock_entry_class.return_value = mock_entry
+        mock_frame_class.return_value = mock_frame
+        mock_scrollbar_class.return_value = mock_scrollbar
+        mock_listbox_class.return_value = mock_listbox
+        mock_stringvar_class.return_value = mock_stringvar
+        
+        # Mock _position_window to do nothing
+        mock_position_window.return_value = None
+        
+        # Mock _setup_dialog_base to return a mock root and language
+        mock_setup_dialog_base.return_value = (Mock(), False, "en")
+        
+        yield {
+            "toplevel": mock_toplevel,
+            "label": mock_label,
+            "button": mock_button,
+            "entry": mock_entry,
+            "frame": mock_frame,
+            "listbox": mock_listbox,
+            "scrollbar": mock_scrollbar,
+            "stringvar": mock_stringvar,
+        }
+
+
+@pytest.fixture
+def simpledialog_class_mock():
+    """Provide a mock for CustomSimpleDialog class that can be instantiated."""
+    with patch("tkface.dialog.simpledialog.CustomSimpleDialog") as mock_class:
+        # Create a mock instance that behaves like CustomSimpleDialog
+        mock_instance = Mock()
+        
+        # Set up basic attributes
+        mock_instance.result = None
+        mock_instance.window = Mock()
+        mock_instance.window.destroy = Mock()
+        mock_instance.listbox = None
+        mock_instance.choices = None
+        mock_instance.multiple = False
+        mock_instance.initial_selection = []
+        mock_instance.validate_func = None  # Will be set by config
+        mock_instance.entry_var = Mock()
+        mock_instance.entry_var.get.return_value = ""
+        mock_instance.ok_btn = Mock()
+        mock_instance.ok_btn.cget.return_value = "Custom OK"
+        mock_instance.cancel_btn = Mock()
+        mock_instance.cancel_btn.cget.return_value = "Custom Cancel"
+        
+        # Set up methods
+        mock_instance.close = Mock()
+        
+        # Make _on_cancel actually set result to None and call close
+        def _on_cancel():
+            mock_instance.result = None
+            mock_instance.close()
+        mock_instance._on_cancel = _on_cancel
+        
+        # Make _on_ok actually set the result and call close
+        def _on_ok():
+            mock_instance.result = mock_instance._get_selection_result()
+            mock_instance.close()
+        mock_instance._on_ok = _on_ok
+        
+        mock_instance._get_selection_result = Mock(return_value=None)
+        mock_instance._on_double_click = Mock()
+        
+        # Make set_result actually set the result attribute
+        def set_result(value):
+            mock_instance.result = value
+        mock_instance.set_result = set_result
+        
+        mock_instance._create_content = Mock(return_value=None)
+        mock_instance._create_buttons = Mock()
+        mock_instance._set_window_position = Mock()
+        
+        # Make the class constructor return our mock instance and set up attributes
+        def mock_constructor(master=None, config=None, position=None):
+            # Set up attributes based on config
+            if config:
+                mock_instance.validate_func = config.validate_func
+                mock_instance.choices = config.choices
+                mock_instance.multiple = config.multiple
+                mock_instance.initial_selection = config.initial_selection or []
+            return mock_instance
+        
+        mock_class.side_effect = mock_constructor
+        
+        yield mock_class
+
