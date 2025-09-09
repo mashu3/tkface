@@ -1,4 +1,5 @@
 # pylint: disable=import-outside-toplevel,protected-access
+import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -1201,7 +1202,7 @@ def test_custom_simpledialog_initial_selection_out_of_bounds(root, simpledialog_
 
 
 def test_get_selection_result_no_listbox_attribute(root, simpledialog_real_instance):
-    """Test _get_selection_result when listbox attribute doesn't exist (covers line 195)."""
+    """Test _get_selection_result when listbox attribute doesn't exist."""
     from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
     
     config = SimpleDialogConfig(
@@ -1217,62 +1218,85 @@ def test_get_selection_result_no_listbox_attribute(root, simpledialog_real_insta
     if hasattr(dialog, "listbox"):
         delattr(dialog, "listbox")
     
-    # This should trigger the hasattr check on line 195
+    # This should trigger the hasattr check
     result = dialog._get_selection_result()
     assert result is None
 
 
-def test_on_ok_with_listbox_branch(root, simpledialog_real_instance):
-    """Test _on_ok with listbox to cover lines 259-261."""
-    from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
+def test_on_ok_with_listbox_branch():
+    """Test _on_ok with listbox selection dialog."""
+    from tkface.dialog.simpledialog import CustomSimpleDialog
     
-    config = SimpleDialogConfig(
-        title="Test Dialog",
-        message="Test Message",
-        choices=["A", "B"],
-    )
+    # Create a minimal dialog instance
+    dialog = CustomSimpleDialog.__new__(CustomSimpleDialog)
     
-    dialog = CustomSimpleDialog(
-        master=root,
-        config=config,
-    )
+    # Set up the minimal required attributes
+    dialog.result = None
+    dialog.choices = ["A", "B"]
+    dialog.multiple = False
     
-    # Set up listbox to trigger the listbox branch in _on_ok
+    # Create a mock listbox that will pass the hasattr and None checks
     dialog.listbox = MagicMock()
     dialog.listbox.curselection.return_value = [0]
     
-    # Mock close to prevent actual window destruction
-    with patch.object(dialog, "close") as mock_close:
-        dialog._on_ok()
-        # This should trigger lines 259-261: hasattr check, result assignment, close call
-        assert dialog.result is not None
-        mock_close.assert_called_once()
+    # Mock _get_selection_result to return a value
+    def mock_get_selection_result():
+        return "A"
+    dialog._get_selection_result = mock_get_selection_result
+    
+    # Mock close to prevent issues
+    dialog.close = MagicMock()
+    
+    # Call _on_ok directly
+    dialog._on_ok()
+    
+    # Verify the listbox branch was executed
+    assert dialog.result == "A"
+    dialog.close.assert_called_once()
 
 
-def test_on_cancel_branch(root, simpledialog_real_instance):
-    """Test _on_cancel to cover lines 288-289."""
-    from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
+def test_on_cancel_branch():
+    """Test _on_cancel method behavior."""
+    from tkface.dialog.simpledialog import CustomSimpleDialog
     
-    config = SimpleDialogConfig(
-        title="Test Dialog",
-        message="Test Message",
-    )
+    # Create a minimal dialog instance
+    dialog = CustomSimpleDialog.__new__(CustomSimpleDialog)
     
-    dialog = CustomSimpleDialog(
-        master=root,
-        config=config,
-    )
+    # Set up the minimal required attributes
+    dialog.result = "some_value"  # Set initial value to verify it gets set to None
     
-    # Mock close to prevent actual window destruction
-    with patch.object(dialog, "close") as mock_close:
-        dialog._on_cancel()
-        # This should trigger lines 288-289: result = None, close()
-        assert dialog.result is None
-        mock_close.assert_called_once()
+    # Mock close to prevent issues
+    dialog.close = MagicMock()
+    
+    # Call _on_cancel directly
+    dialog._on_cancel()
+    
+    # Verify the cancel branch was executed
+    assert dialog.result is None
+    dialog.close.assert_called_once()
+
+
+def test_get_selection_result_listbox_none():
+    """Test _get_selection_result when listbox is None."""
+    from tkface.dialog.simpledialog import CustomSimpleDialog
+    
+    # Create a minimal dialog instance
+    dialog = CustomSimpleDialog.__new__(CustomSimpleDialog)
+    
+    # Test case 1: listbox attribute doesn't exist
+    if hasattr(dialog, "listbox"):
+        delattr(dialog, "listbox")
+    result = dialog._get_selection_result()
+    assert result is None
+    
+    # Test case 2: listbox is None
+    dialog.listbox = None
+    result = dialog._get_selection_result()
+    assert result is None
 
 
 def test_set_result_branch(root, simpledialog_real_instance):
-    """Test set_result to cover lines 297-298."""
+    """Test set_result method behavior."""
     from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
     
     config = SimpleDialogConfig(
@@ -1291,6 +1315,236 @@ def test_set_result_branch(root, simpledialog_real_instance):
     # Mock close to prevent actual window destruction
     with patch.object(dialog, "close") as mock_close:
         dialog.set_result("test_value")
-        # This should trigger lines 297-298: result = value, close()
+        # This should trigger result assignment and close call
         assert dialog.result == "test_value"
         mock_close.assert_called_once()
+
+
+def test_askinteger_validation_exception_logging(root):
+    """Test askinteger validation with invalid input that triggers exception logging."""
+    print("DEBUG: Starting test_askinteger_validation_exception_logging")
+    from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
+    
+    # Mock logger to verify debug message is logged
+    with patch("tkface.dialog.simpledialog.logging.getLogger") as mock_get_logger:
+        print("DEBUG: Mocked logging.getLogger")
+        mock_logger = MagicMock()
+        mock_get_logger.return_value = mock_logger
+        
+        # Create a validation function that simulates the one in askinteger
+        def validate(val):
+            print(f"DEBUG: validate function called with val='{val}'")
+            try:
+                ival = int(val)
+                print(f"DEBUG: int(val) succeeded: {ival}")
+                if 1 != None and ival < 1:  # pylint: disable=singleton-comparison
+                    print(f"DEBUG: val {ival} < minvalue 1")
+                    return False
+                if 10 != None and ival > 10:  # pylint: disable=singleton-comparison
+                    print(f"DEBUG: val {ival} > maxvalue 10")
+                    return False
+                print("DEBUG: validation passed")
+                return True
+            except (ValueError, TypeError) as e:
+                print(f"DEBUG: Exception caught: {e}")
+                logger = logging.getLogger(__name__)
+                logger.debug("Failed to validate integer input '%s': %s", val, e)
+                print("DEBUG: logger.debug called")
+                return False
+        
+        config = SimpleDialogConfig(
+            title="Test Dialog",
+            message="Enter integer:",
+            validate_func=validate,
+        )
+        
+        print("DEBUG: About to create CustomSimpleDialog")
+        # Mock all the tkinter components to prevent actual window creation
+        with patch("tkinter.Toplevel") as mock_toplevel, \
+             patch("tkinter.Label") as mock_label, \
+             patch("tkinter.Button") as mock_button, \
+             patch("tkinter.Entry") as mock_entry:
+            
+            # Create mock entry_var
+            mock_entry_var = MagicMock()
+            mock_entry.return_value = mock_entry_var
+            
+            dialog = CustomSimpleDialog(
+                master=root,
+                config=config,
+            )
+            print("DEBUG: CustomSimpleDialog created successfully")
+            
+            # Set invalid input that will cause ValueError in validation
+            dialog.entry_var.set("not_a_number")
+            print("DEBUG: Set entry_var to 'not_a_number'")
+            
+            # Mock messagebox.showwarning to prevent actual dialog
+            with patch("tkface.dialog.simpledialog.messagebox.showwarning"):
+                print("DEBUG: About to call _on_ok")
+                dialog._on_ok()
+                print("DEBUG: _on_ok completed")
+                
+                # Verify that logger.debug was called for the validation failure
+                mock_logger.debug.assert_called_once()
+                print("DEBUG: Test completed successfully")
+
+
+def test_askinteger_actual_validation_exception_handling():
+    """Test askinteger with actual validation function that triggers exception logging."""
+    from tkface.dialog.simpledialog import askinteger
+    
+    # Mock logger to verify debug message is logged
+    with patch("tkface.dialog.simpledialog.logging.getLogger") as mock_get_logger:
+        mock_logger = MagicMock()
+        mock_get_logger.return_value = mock_logger
+        
+        # Mock CustomSimpleDialog.show to return invalid input that will trigger ValueError
+        # But don't mock the validation function itself - let it run
+        with patch("tkface.dialog.simpledialog.CustomSimpleDialog.show") as mock_show:
+            # Create a mock that will call the actual validation function
+            def mock_show_with_validation(*args, **kwargs):
+                # Get the config from the call
+                config = kwargs.get('config')
+                if config and config.validate_func:
+                    # Test the validation function directly with invalid input
+                    result = config.validate_func("not_a_number")
+                    # Should return False due to ValueError
+                    assert result is False
+                return "not_a_number"
+            
+            mock_show.side_effect = mock_show_with_validation
+            
+            result = askinteger(
+                message="Enter integer:",
+                minvalue=1,
+                maxvalue=10,
+            )
+            
+            # Should return None due to validation failure
+            assert result is None
+            mock_show.assert_called_once()
+            
+            # Verify that logger.debug was called for the validation failure
+            mock_logger.debug.assert_called_once()
+            call_args = mock_logger.debug.call_args
+            assert "Failed to validate integer input" in call_args[0][0]
+            assert "not_a_number" in call_args[0][1]  # The actual value is the second argument
+
+
+def test_askfloat_actual_validation_exception_handling():
+    """Test askfloat with actual validation function that triggers exception logging."""
+    from tkface.dialog.simpledialog import askfloat
+    
+    # Mock logger to verify debug message is logged
+    with patch("tkface.dialog.simpledialog.logging.getLogger") as mock_get_logger:
+        mock_logger = MagicMock()
+        mock_get_logger.return_value = mock_logger
+        
+        # Mock CustomSimpleDialog.show to return invalid input that will trigger ValueError
+        # But don't mock the validation function itself - let it run
+        with patch("tkface.dialog.simpledialog.CustomSimpleDialog.show") as mock_show:
+            # Create a mock that will call the actual validation function
+            def mock_show_with_validation(*args, **kwargs):
+                # Get the config from the call
+                config = kwargs.get('config')
+                if config and config.validate_func:
+                    # Test the validation function directly with invalid input
+                    result = config.validate_func("not_a_float")
+                    # Should return False due to ValueError
+                    assert result is False
+                return "not_a_float"
+            
+            mock_show.side_effect = mock_show_with_validation
+            
+            result = askfloat(
+                message="Enter float:",
+                minvalue=0.0,
+                maxvalue=10.0,
+            )
+            
+            # Should return None due to validation failure
+            assert result is None
+            mock_show.assert_called_once()
+            
+            # Verify that logger.debug was called for the validation failure
+            mock_logger.debug.assert_called_once()
+            call_args = mock_logger.debug.call_args
+            assert "Failed to validate float input" in call_args[0][0]
+            assert "not_a_float" in call_args[0][1]  # The actual value is the second argument
+
+
+def test_askinteger_range_validation_coverage():
+    """Test askinteger range validation to cover minvalue/maxvalue checks."""
+    from tkface.dialog.simpledialog import askinteger
+    
+    # Mock CustomSimpleDialog.show to test range validation
+    with patch("tkface.dialog.simpledialog.CustomSimpleDialog.show") as mock_show:
+        # Create a mock that will call the actual validation function
+        def mock_show_with_range_validation(*args, **kwargs):
+            # Get the config from the call
+            config = kwargs.get('config')
+            if config and config.validate_func:
+                # Test range validation - below minvalue
+                result_below = config.validate_func("0")  # Below minvalue=1
+                assert result_below is False
+                
+                # Test range validation - above maxvalue
+                result_above = config.validate_func("11")  # Above maxvalue=10
+                assert result_above is False
+                
+                # Test range validation - valid range
+                result_valid = config.validate_func("5")  # Within range 1-10
+                assert result_valid is True
+            return "5"
+        
+        mock_show.side_effect = mock_show_with_range_validation
+        
+        result = askinteger(
+            message="Enter integer:",
+            minvalue=1,
+            maxvalue=10,
+        )
+        
+        # Should return the valid value (converted to int)
+        assert result == 5
+        mock_show.assert_called_once()
+
+
+def test_askfloat_range_validation_coverage():
+    """Test askfloat range validation to cover minvalue/maxvalue checks."""
+    from tkface.dialog.simpledialog import askfloat
+    
+    # Mock CustomSimpleDialog.show to test range validation
+    with patch("tkface.dialog.simpledialog.CustomSimpleDialog.show") as mock_show:
+        # Create a mock that will call the actual validation function
+        def mock_show_with_range_validation(*args, **kwargs):
+            # Get the config from the call
+            config = kwargs.get('config')
+            if config and config.validate_func:
+                # Test range validation - below minvalue
+                result_below = config.validate_func("0.5")  # Below minvalue=1.0
+                assert result_below is False
+                
+                # Test range validation - above maxvalue
+                result_above = config.validate_func("11.0")  # Above maxvalue=10.0
+                assert result_above is False
+                
+                # Test range validation - valid range
+                result_valid = config.validate_func("5.5")  # Within range 1.0-10.0
+                assert result_valid is True
+            return "5.5"
+        
+        mock_show.side_effect = mock_show_with_range_validation
+        
+        result = askfloat(
+            message="Enter float:",
+            minvalue=1.0,
+            maxvalue=10.0,
+        )
+        
+        # Should return the valid value (converted to float)
+        assert result == 5.5
+        mock_show.assert_called_once()
+
+

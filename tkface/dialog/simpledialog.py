@@ -45,6 +45,10 @@ class CustomSimpleDialog:
     and validation.
     """
 
+    def __new__(cls, *args, **kwargs):
+        # Ensure compatibility with tests that patch __new__.
+        return super().__new__(cls)
+
     def __init__(
         self,
         master=None,
@@ -127,7 +131,8 @@ class CustomSimpleDialog:
         if self.choices:
             return self._create_selection_list(master)
         self.entry_var = tk.StringVar(
-            value=initialvalue if initialvalue is not None else ""
+            master=self.window,
+            value=initialvalue if initialvalue is not None else "",
         )
         entry = tk.Entry(master, textvariable=self.entry_var, show=show)
         entry.grid(row=1, padx=5, sticky="ew")
@@ -250,7 +255,11 @@ class CustomSimpleDialog:
             x, y: Absolute position (if specified).
             x_offset, y_offset: Offset from parent window center.
         """
-        _position_window(self.window, master, x, y, x_offset, y_offset)
+        try:
+            _position_window(self.window, master, x, y, x_offset, y_offset)
+        except tk.TclError:
+            # If master has been destroyed or is unavailable, fall back to self.window
+            _position_window(self.window, self.window, x, y, x_offset, y_offset)
 
     def _on_ok(self):
         """Handle OK button click with validation if specified."""
