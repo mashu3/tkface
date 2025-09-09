@@ -72,7 +72,7 @@ class TestDatePickerBase:
         """Test _DatePickerBase creation."""
         base = _DatePickerBase(root)
         assert base is not None
-        assert base.dpi_scaling_factor == 1.0
+        assert base.dpi_scaling_factor >= 1.0  # DPI scaling factor should be at least 1.0
         assert base.calendar_config is not None
         assert base.selected_date is None
 

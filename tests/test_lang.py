@@ -103,8 +103,8 @@ class TestLanguageManager:
 
     def test_parse_msg_file(self, mock_root, lang_manager):
         """Test _parse_msg_file method."""
-        # Create temporary message file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.msg', delete=False) as f:
+        # Create temporary message file with UTF-8 encoding
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.msg', delete=False, encoding='utf-8') as f:
             f.write("hello{こんにちは}\n")
             f.write("goodbye{さようなら}\n")
             f.write("# This is a comment\n")

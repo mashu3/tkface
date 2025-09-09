@@ -293,25 +293,23 @@ class DPIManager:
         def scaled_label_frame_init(self, parent=None, **kwargs):
             scaled_kwargs = kwargs.copy()
             if "padx" in scaled_kwargs:
-                scaled_kwargs["padx"] = int(scaled_kwargs["padx"] * scaling_factor)
-                if (
-                    isinstance(scaled_kwargs["padx"], (list, tuple))
-                    and len(scaled_kwargs["padx"]) == 2
-                ):
+                if isinstance(scaled_kwargs["padx"], (list, tuple)) and len(scaled_kwargs["padx"]) == 2:
                     scaled_kwargs["padx"] = (
                         int(scaled_kwargs["padx"][0] * scaling_factor),
                         int(scaled_kwargs["padx"][1] * scaling_factor),
                     )
+                else:
+                    scaled_kwargs["padx"] = int(scaled_kwargs["padx"] * scaling_factor)
             if "pady" in scaled_kwargs:
-                scaled_kwargs["pady"] = int(scaled_kwargs["pady"] * scaling_factor)
-                if (
-                    isinstance(scaled_kwargs["pady"], (list, tuple))
-                    and len(scaled_kwargs["pady"]) == 2
-                ):
+                if isinstance(scaled_kwargs["pady"], (list, tuple)) and len(scaled_kwargs["pady"]) == 2:
                     scaled_kwargs["pady"] = (
                         int(scaled_kwargs["pady"][0] * scaling_factor),
                         int(scaled_kwargs["pady"][1] * scaling_factor),
                     )
+                else:
+                    scaled_kwargs["pady"] = int(scaled_kwargs["pady"] * scaling_factor)
+            if "bd" in scaled_kwargs:
+                scaled_kwargs["bd"] = int(scaled_kwargs["bd"] * scaling_factor)
             return original_label_frame(self, parent, **scaled_kwargs)
 
         tk.LabelFrame.__init__ = scaled_label_frame_init
@@ -323,25 +321,21 @@ class DPIManager:
         def scaled_frame_init(self, parent=None, **kwargs):
             scaled_kwargs = kwargs.copy()
             if "padx" in scaled_kwargs:
-                scaled_kwargs["padx"] = int(scaled_kwargs["padx"] * scaling_factor)
-                if (
-                    isinstance(scaled_kwargs["padx"], (list, tuple))
-                    and len(scaled_kwargs["padx"]) == 2
-                ):
+                if isinstance(scaled_kwargs["padx"], (list, tuple)) and len(scaled_kwargs["padx"]) == 2:
                     scaled_kwargs["padx"] = (
                         int(scaled_kwargs["padx"][0] * scaling_factor),
                         int(scaled_kwargs["padx"][1] * scaling_factor),
                     )
+                else:
+                    scaled_kwargs["padx"] = int(scaled_kwargs["padx"] * scaling_factor)
             if "pady" in scaled_kwargs:
-                scaled_kwargs["pady"] = int(scaled_kwargs["pady"] * scaling_factor)
-                if (
-                    isinstance(scaled_kwargs["pady"], (list, tuple))
-                    and len(scaled_kwargs["pady"]) == 2
-                ):
+                if isinstance(scaled_kwargs["pady"], (list, tuple)) and len(scaled_kwargs["pady"]) == 2:
                     scaled_kwargs["pady"] = (
                         int(scaled_kwargs["pady"][0] * scaling_factor),
                         int(scaled_kwargs["pady"][1] * scaling_factor),
                     )
+                else:
+                    scaled_kwargs["pady"] = int(scaled_kwargs["pady"] * scaling_factor)
             return original_frame(self, parent, **scaled_kwargs)
 
         tk.Frame.__init__ = scaled_frame_init

@@ -481,7 +481,10 @@ def askinteger(  # pylint: disable=R0917
     )
     if result is None:
         return None
-    return int(result)
+    try:
+        return int(result)
+    except (ValueError, TypeError):
+        return None
 
 
 def askfloat(  # pylint: disable=R0917
@@ -565,7 +568,10 @@ def askfloat(  # pylint: disable=R0917
     )
     if result is None:
         return None
-    return float(result)
+    try:
+        return float(result)
+    except (ValueError, TypeError):
+        return None
 
 
 def askfromlistbox(  # pylint: disable=R0917
