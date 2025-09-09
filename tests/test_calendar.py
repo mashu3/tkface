@@ -160,7 +160,7 @@ class TestCalendarConfiguration:
 
     def test_set_date(self, calendar_widget, common_test_date):
         """Test setting date."""
-        from tests.conftest import test_set_date_common
+        from conftest import test_set_date_common
         test_set_date_common(calendar_widget, common_test_date)
 
     def test_set_holidays(self, calendar_widget):
@@ -171,17 +171,17 @@ class TestCalendarConfiguration:
 
     def test_set_day_colors(self, calendar_widget, common_day_colors):
         """Test setting day colors."""
-        from tests.conftest import test_set_day_colors_common
+        from conftest import test_set_day_colors_common
         test_set_day_colors_common(calendar_widget, common_day_colors)
 
     def test_set_week_start(self, calendar_widget, common_week_start_values):
         """Test changing week start."""
-        from tests.conftest import test_set_week_start_common
+        from conftest import test_set_week_start_common
         test_set_week_start_common(calendar_widget, common_week_start_values)
 
     def test_set_show_week_numbers(self, calendar_widget, common_show_week_numbers_values):
         """Test toggling week numbers."""
-        from tests.conftest import test_set_show_week_numbers_common
+        from conftest import test_set_show_week_numbers_common
         test_set_show_week_numbers_common(calendar_widget, common_show_week_numbers_values)
 
     def test_get_day_names_sunday_start(self, root):
@@ -761,17 +761,17 @@ class TestDateFrameConfiguration:
 
     def test_set_day_colors(self, dateframe_widget, common_day_colors):
         """Test set_day_colors method."""
-        from tests.conftest import test_set_day_colors_common
+        from conftest import test_set_day_colors_common
         test_set_day_colors_common(dateframe_widget, common_day_colors)
 
     def test_set_week_start(self, dateframe_widget, common_week_start_values):
         """Test set_week_start method."""
-        from tests.conftest import test_set_week_start_common
+        from conftest import test_set_week_start_common
         test_set_week_start_common(dateframe_widget, common_week_start_values)
 
     def test_set_show_week_numbers(self, dateframe_widget, common_show_week_numbers_values):
         """Test set_show_week_numbers method."""
-        from tests.conftest import test_set_show_week_numbers_common
+        from conftest import test_set_show_week_numbers_common
         test_set_show_week_numbers_common(dateframe_widget, common_show_week_numbers_values)
 
 
@@ -789,24 +789,24 @@ class TestDateFrameFunctionality:
 
     def test_set_date(self, dateframe_widget, common_test_date):
         """Test setting date."""
-        from tests.conftest import test_set_date_common
+        from conftest import test_set_date_common
         test_set_date_common(dateframe_widget, common_test_date)
 
     def test_set_date_with_custom_format(self, root, common_test_date, common_date_format):
         """Test setting date with custom format."""
         df = DateFrame(root, date_format=common_date_format)
-        from tests.conftest import test_set_date_common
+        from conftest import test_set_date_common
         test_set_date_common(df, common_test_date, common_date_format)
 
     def test_date_callback(self, root, common_test_date, common_callback_data):
         """Test date callback functionality."""
-        from tests.conftest import test_date_callback_common
+        from conftest import test_date_callback_common
         df = DateFrame(root)
         test_date_callback_common(df, common_callback_data, common_test_date)
 
     def test_refresh_language(self, dateframe_widget):
         """Test refresh_language method."""
-        from tests.conftest import test_refresh_language_common
+        from conftest import test_refresh_language_common
         test_refresh_language_common(dateframe_widget)
 
 
@@ -882,27 +882,27 @@ class TestDateEntryConfiguration:
 
     def test_set_today_color(self, dateentry_widget, common_today_color):
         """Test setting today color."""
-        from tests.conftest import test_set_today_color_common
+        from conftest import test_set_today_color_common
         test_set_today_color_common(dateentry_widget, common_today_color)
 
     def test_set_theme(self, dateentry_widget, common_theme):
         """Test setting theme."""
-        from tests.conftest import test_set_theme_common
+        from conftest import test_set_theme_common
         test_set_theme_common(dateentry_widget, common_theme)
 
     def test_set_day_colors(self, dateentry_widget, common_day_colors):
         """Test setting day colors."""
-        from tests.conftest import test_set_day_colors_common
+        from conftest import test_set_day_colors_common
         test_set_day_colors_common(dateentry_widget, common_day_colors)
 
     def test_set_week_start(self, dateentry_widget, common_week_start_values):
         """Test setting week start."""
-        from tests.conftest import test_set_week_start_common
+        from conftest import test_set_week_start_common
         test_set_week_start_common(dateentry_widget, common_week_start_values)
 
     def test_set_show_week_numbers(self, dateentry_widget, common_show_week_numbers_values):
         """Test setting week numbers display."""
-        from tests.conftest import test_set_show_week_numbers_common
+        from conftest import test_set_show_week_numbers_common
         test_set_show_week_numbers_common(dateentry_widget, common_show_week_numbers_values)
 
 
@@ -912,24 +912,24 @@ class TestDateEntryFunctionality:
 
     def test_set_date(self, dateentry_widget, common_test_date):
         """Test setting a date."""
-        from tests.conftest import test_set_date_common
+        from conftest import test_set_date_common
         test_set_date_common(dateentry_widget, common_test_date)
 
     def test_set_date_with_custom_format(self, root, common_test_date, common_date_format):
         """Test setting a date with custom format."""
         de = DateEntry(root, date_format=common_date_format)
-        from tests.conftest import test_set_date_common
+        from conftest import test_set_date_common
         test_set_date_common(de, common_test_date, common_date_format)
 
     def test_date_callback(self, root, common_test_date, common_callback_data):
         """Test date callback functionality."""
-        from tests.conftest import test_date_callback_common
+        from conftest import test_date_callback_common
         de = DateEntry(root)
         test_date_callback_common(de, common_callback_data, common_test_date)
 
     def test_refresh_language(self, dateentry_widget):
         """Test language refresh functionality."""
-        from tests.conftest import test_refresh_language_common
+        from conftest import test_refresh_language_common
         test_refresh_language_common(dateentry_widget)
 
 
