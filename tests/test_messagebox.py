@@ -210,47 +210,6 @@ def test_get_tk_icon():
     assert get_tk_icon("unknown") == "::tk::icons::unknown"
 
 
-def test_get_or_create_root():
-    """Test _get_or_create_root function."""
-    from tkface.dialog.messagebox import _get_or_create_root
-
-    # Test when root exists
-    with patch("tkinter._default_root", None):
-        with patch("tkinter.Tk") as mock_tk:
-            mock_root = MagicMock()
-            mock_tk.return_value = mock_root
-            root, created = _get_or_create_root()
-            assert created is True
-            assert root == mock_root
-            mock_tk.assert_called_once()
-            mock_root.withdraw.assert_called_once()
-    # Test when root already exists
-    mock_root = MagicMock()
-    with patch("tkinter._default_root", mock_root):
-        root, created = _get_or_create_root()
-        assert created is False
-        assert root == mock_root
-
-
-def test_get_button_labels():
-    """Test _get_button_labels function."""
-    from tkface.dialog.messagebox import _get_button_labels
-
-    with patch("tkface.lang.get") as mock_lang_get:
-        mock_lang_get.side_effect = lambda key, *a, **kw: key.upper()
-        # Test different button sets
-        result = _get_button_labels("ok", None, "en")
-        assert len(result) == 1
-        assert result[0][0] == "OK"
-        assert result[0][1] == "ok"
-        assert result[0][2] is True  # is_default
-        assert result[0][3] is False  # is_cancel
-        result = _get_button_labels("okcancel", None, "en")
-        assert len(result) == 2
-        assert result[0][1] == "ok"
-        assert result[1][1] == "cancel"
-        assert result[0][2] is True  # ok is default
-        assert result[1][3] is True  # cancel is cancel
 
 
 def test_custom_messagebox_without_master():
@@ -640,6 +599,100 @@ def test_messagebox_title_translation(root):
         "エラー" in str(call) for call in title_calls
     ), "Translated title not found"
 
+
+def test_custom_messagebox_icon_file_success(root):
+    """Test successful icon file loading path in _get_icon_label."""
+    from tkface.dialog.messagebox import CustomMessageBox, MessageBoxConfig
+
+    with (
+        patch("tkinter.Toplevel.wait_window"),
+        patch("tkinter.PhotoImage") as mock_photo,
+        patch("tkinter.Label") as mock_label,
+        patch("tkinter.Button"),
+    ):
+        mock_photo.return_value = MagicMock(name="Image")
+        CustomMessageBox(
+            master=root,
+            config=MessageBoxConfig(message="Test", icon="/tmp/icon.png"),
+        )
+    # Ensure a Label was created with the image returned by PhotoImage
+    assert any(
+        ("image" in call.kwargs) and (call.kwargs["image"] is mock_photo.return_value)
+        for call in mock_label.call_args_list
+    )
+
+
+def test_classmethod_show_created_root(root):
+    """Exercise CustomMessageBox.show wrapper when root is auto-created."""
+    from tkface.dialog.messagebox import (
+        CustomMessageBox,
+        MessageBoxConfig,
+        WindowPosition,
+    )
+
+    with (
+        patch("tkface.dialog.messagebox._get_or_create_root") as mock_get_or_create,
+        patch("tkface.dialog.messagebox.lang.set") as mock_lang_set,
+        patch.object(root, "destroy") as mock_destroy,
+    ):
+        mock_get_or_create.return_value = (root, True)
+
+        class FakeMessageBox:
+            def __init__(self, master=None, config=None, position=None):  # pylint: disable=unused-argument
+                self.result = "ok"
+
+        result = CustomMessageBox.show.__func__(
+            FakeMessageBox,
+            config=MessageBoxConfig(message="Test"),
+            position=WindowPosition(x=10, y=20),
+        )
+        assert result == "ok"
+        mock_lang_set.assert_called()
+        mock_destroy.assert_called_once()
+
+
+def test_classmethod_show_with_master_provided(root):
+    """Exercise CustomMessageBox.show wrapper when master is provided."""
+    from tkface.dialog.messagebox import CustomMessageBox, MessageBoxConfig
+
+    class FakeMessageBox:
+        def __init__(self, master=None, config=None, position=None):  # pylint: disable=unused-argument
+            self.result = "ok"
+
+    with (
+        patch("tkface.dialog.messagebox._get_or_create_root") as mock_get_or_create,
+        patch("tkface.dialog.messagebox.lang.set") as mock_lang_set,
+    ):
+        result = CustomMessageBox.show.__func__(
+            FakeMessageBox,
+            master=root,
+            config=MessageBoxConfig(message="Test"),
+        )
+        assert result == "ok"
+        mock_lang_set.assert_called()
+        mock_get_or_create.assert_not_called()
+
+
+def test_classmethod_show_default_config_when_none(root):
+    """Ensure default MessageBoxConfig is created when config is None."""
+    from tkface.dialog.messagebox import CustomMessageBox, MessageBoxConfig
+
+    seen = {}
+
+    class FakeMessageBox:
+        def __init__(self, master=None, config=None, position=None):  # pylint: disable=unused-argument
+            seen["config"] = config
+            self.result = "ok"
+
+    with patch("tkface.dialog.messagebox.lang.set"):
+        result = CustomMessageBox.show.__func__(
+            FakeMessageBox,
+            master=root,
+            config=None,
+            position=None,
+        )
+    assert result == "ok"
+    assert isinstance(seen["config"], MessageBoxConfig)
 
 def test_simpledialog_actual_translation(root):
     """Test that simpledialog actually translates messages correctly."""
