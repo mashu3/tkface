@@ -4043,4 +4043,268 @@ class TestCalendarViewAdditionalCoverage:
             pass
 
 
+class TestCalendarCoreHelpers:
+    """Additional test cases to increase coverage for tkface.widget.calendar.core"""
+
+    def test_is_year_first_in_format_variations(self, root):
+        cal1 = Calendar(root, date_format="%Y/%m/%d")
+        assert cal1._is_year_first_in_format() is True
+
+        cal2 = Calendar(root, date_format="%m/%d/%Y")
+        assert cal2._is_year_first_in_format() is False
+
+        cal3 = Calendar(root, date_format="%d-%m-%Y")
+        assert cal3._is_year_first_in_format() is False
+
+        cal4 = Calendar(root, date_format="%m-%d")  # no year -> defaults True
+        assert cal4._is_year_first_in_format() is True
+
+        # Non-string date_format -> handled and defaults True
+        cal5 = Calendar(root)
+        cal5.date_format = None
+        assert cal5._is_year_first_in_format() is True
+
+    def test_get_week_start_offset_and_ref_date(self, root):
+        cal_sun = Calendar(root, week_start="Sunday")
+        cal_mon = Calendar(root, week_start="Monday")
+        cal_sat = Calendar(root, week_start="Saturday")
+
+        monday = datetime.date(2024, 4, 1)  # Monday
+        assert cal_mon._get_week_start_offset(monday) == 0
+        assert cal_sat._get_week_start_offset(monday) == (monday.weekday() + 2) % 7
+        assert cal_sun._get_week_start_offset(monday) == (monday.weekday() + 1) % 7
+
+        # Week reference date selection
+        week_dates = [
+            datetime.date(2024, 3, 31),  # Sunday
+            datetime.date(2024, 4, 1),   # Monday
+            datetime.date(2024, 4, 2),
+            datetime.date(2024, 4, 3),
+            datetime.date(2024, 4, 4),
+            datetime.date(2024, 4, 5),
+            datetime.date(2024, 4, 6),
+        ]
+        assert cal_mon._get_week_ref_date(week_dates) == week_dates[0]
+        assert cal_sat._get_week_ref_date(week_dates) == week_dates[2]
+        assert cal_sun._get_week_ref_date(week_dates) == week_dates[1]
+
+    def test_get_display_date_overflow(self, root):
+        cal = Calendar(root, year=2024, month=12)
+        # next month index crosses into next year
+        assert cal._get_display_date(1) == datetime.date(2025, 1, 1)
+        # negative index goes to previous year
+        assert cal._get_display_date(-1) == datetime.date(2024, 11, 1)
+
+    def test_get_day_cell_value(self, root):
+        cal = Calendar(root, year=2024, month=1)
+        month_days = [0, 0, 1, 2]  # simplified sample
+        # zero -> adjacent
+        use_adjacent, day_num = cal._get_day_cell_value(2024, 1, 0, month_days)
+        assert use_adjacent is True and day_num is None
+        # in-range normal day
+        use_adjacent, day_num = cal._get_day_cell_value(2024, 1, 2, month_days)
+        assert use_adjacent is False and day_num == 1
+        # out of range -> adjacent
+        use_adjacent, day_num = cal._get_day_cell_value(2024, 1, 10, month_days)
+        assert use_adjacent is True and day_num is None
+
+    def test_set_adjacent_month_day_adjacent_and_empty(self, root, calendar_theme_colors):
+        cal = Calendar(root, year=2024, month=1)
+        # Inject known theme colors for assertions
+        cal.theme_colors = calendar_theme_colors
+        label = Mock()
+        # Position before first day -> previous month date
+        cal._set_adjacent_month_day(label, 2024, 1, week=0, day=0)
+        assert label.config.called
+        kwargs = label.config.call_args.kwargs
+        assert kwargs["bg"] == cal.theme_colors["adjacent_day_bg"]
+        assert kwargs["fg"] == cal.theme_colors["adjacent_day_fg"]
+        assert kwargs["text"].isdigit()
+
+        label.reset_mock()
+        # Position exactly at first day -> empty cell in current month branch
+        # Compute first weekday offset for (2024-01-01)
+        first_day = datetime.date(2024, 1, 1)
+        first_offset = cal._get_week_start_offset(first_day)
+        cal._set_adjacent_month_day(label, 2024, 1, week=0, day=first_offset)
+        kwargs = label.config.call_args.kwargs
+        assert kwargs["text"] == ""
+        assert kwargs["bg"] == cal.theme_colors["day_bg"]
+        assert kwargs["fg"] == cal.theme_colors["day_fg"]
+
+    def test_navigation_prev_next_month_year(self, root):
+        cal = Calendar(root, year=2024, month=1)
+        with patch.object(cal, "set_date") as m_set_date:
+            cal._on_prev_month(0)
+            m_set_date.assert_called_with(2023, 12)
+            m_set_date.reset_mock()
+
+            cal._on_next_month(0)
+            m_set_date.assert_called_with(2024, 2)
+            m_set_date.reset_mock()
+
+            cal._on_prev_year(0)
+            m_set_date.assert_called_with(2023, 1)
+            m_set_date.reset_mock()
+
+            cal._on_next_year(0)
+            m_set_date.assert_called_with(2025, 1)
+
+    def test_on_date_click_single_and_range_with_callback(self, root):
+        cal = Calendar(root, year=2024, month=1, week_start="Sunday")
+        captured = {}
+
+        def cb(value):  # noqa: ANN001
+            captured["value"] = value
+
+        cal.bind_date_selected(cb)
+        with patch("tkface.widget.calendar.view._update_display"):
+            # Click a cell corresponding to Jan 1, 2024
+            first_day = datetime.date(2024, 1, 1)
+            offset = cal._get_week_start_offset(first_day)
+            cal._on_date_click(month_index=0, week=0, day=offset)
+            assert cal.selected_date == datetime.date(2024, 1, 1)
+            assert isinstance(captured.get("value"), datetime.date)
+
+            # Range selection
+            cal.selectmode = "range"
+            cal._on_date_click(0, 0, offset)  # start
+            assert cal.selected_range is not None
+            # end earlier than start -> swapped
+            cal._on_date_click(0, 0, offset - 1)
+            start, end = cal.selected_range
+            assert start <= end
+
+    def test_year_view_and_selection_toggles(self, root):
+        cal = Calendar(root, year=2024, month=6)
+        with patch("tkface.widget.calendar.view._create_year_selection_content") as m_sel:
+            cal._on_year_header_click()
+            assert cal.year_selection_mode is True and cal.month_selection_mode is False
+            assert cal.year_range_start == cal._calculate_year_range(cal.year)[0]
+            assert m_sel.called
+
+        with patch("tkface.widget.calendar.view._create_year_view_content") as m_view:
+            cal._on_year_selection_header_click()
+            assert cal.month_selection_mode is True and cal.year_selection_mode is False
+            assert m_view.called
+
+        with patch("tkface.widget.calendar.view._update_year_view") as m_update:
+            cal._on_prev_year_view()
+            assert cal.year == 2023
+            cal._on_next_year_view()
+            assert cal.year == 2024
+            assert m_update.called
+
+        cal._initialize_year_range(2020)
+        with patch(
+            "tkface.widget.calendar.view._update_year_selection_display"
+        ) as m_range:
+            start0 = cal.year_range_start
+            end0 = cal.year_range_end
+            cal._on_prev_year_range()
+            assert cal.year_range_start == start0 - 10
+            assert cal.year_range_end == end0 - 10
+            cal._on_next_year_range()
+            assert cal.year_range_start == start0
+            assert cal.year_range_end == end0
+            assert m_range.called
+
+    def test_year_view_month_click_and_callbacks(self, root):
+        config = {
+            "month_selection_mode": True,
+            "date_callback_called": False,
+        }
+
+        def date_cb(year, month):  # noqa: ANN001
+            # simple recorder
+            config["date_callback_called"] = True
+            config["ym"] = (year, month)
+
+        cal = Calendar(
+            root,
+            config=None,
+            year=2024,
+            month=5,
+            months=1,
+            week_start="Sunday",
+            date_callback=date_cb,
+            month_selection_mode=True,
+        )
+        with patch("tkface.widget.calendar.view._destroy_year_container") as m_destroy, \
+            patch("tkface.widget.calendar.view._create_widgets") as m_create, \
+            patch("tkface.widget.calendar.view._update_display") as m_update:
+            cal._on_year_view_month_click(3)
+            assert cal.month == 3
+            assert cal.month_selection_mode is False
+            assert cal.year_selection_mode is False
+            assert m_destroy.called and m_create.called and m_update.called
+            assert config["date_callback_called"] is True
+            assert config["ym"] == (cal.year, 3)
+
+    def test_set_date_updates_based_on_mode(self, root):
+        cal = Calendar(root, year=2024, month=1)
+        with patch("tkface.widget.calendar.view._update_display") as m_display:
+            cal.month_selection_mode = False
+            cal.set_date(2025, 2)
+            assert cal.year == 2025 and cal.month == 2
+            assert m_display.called
+
+        with patch("tkface.widget.calendar.view._update_year_view") as m_year_view:
+            cal.month_selection_mode = True
+            cal.set_date(2026, 3)
+            assert cal.year == 2026 and cal.month == 3
+            assert m_year_view.called
+
+    def test_set_theme_invalid_raises(self, root):
+        cal = Calendar(root)
+        with pytest.raises(ValueError):
+            cal.set_theme("__invalid_theme__")
+
+    def test_set_today_color_variants(self, root):
+        cal = Calendar(root)
+        with patch("tkface.widget.calendar.view._update_display"):
+            cal.set_today_color("none")
+            assert cal.today_color is None and cal.today_color_set is False
+
+            cal.set_today_color("red")
+            assert cal.today_color == "red" and cal.today_color_set is True
+
+    def test_update_dpi_scaling_changes_and_exceptions(self, root):
+        cal = Calendar(root)
+        # Simulate change
+        cal.dpi_scaling_factor = 1.0
+        with patch(
+            "tkface.widget.calendar.core.get_scaling_factor", return_value=2.0
+        ):
+            # Only verify that the call does not raise
+            cal.month_selection_mode = False
+            cal.year_selection_mode = False
+            cal.update_dpi_scaling()
+
+        # Simulate exception -> fallback to 1.0
+        with patch(
+            "tkface.widget.calendar.core.get_scaling_factor", side_effect=OSError("dpi")
+        ):
+            cal.dpi_scaling_factor = 2.0
+            cal.update_dpi_scaling()
+            assert cal.dpi_scaling_factor == 1.0
+
+    def test_popup_size_and_geometry(self, root):
+        cal = Calendar(root, months=2, show_week_numbers=True)
+        cal.set_popup_size(width=250, height=180)
+        # Mock a parent widget
+        parent = Mock()
+        parent.update_idletasks = Mock()
+        parent.winfo_rootx.return_value = 100
+        parent.winfo_rooty.return_value = 200
+        parent.winfo_height.return_value = 20
+        parent.winfo_screenwidth.return_value = 300
+        parent.winfo_screenheight.return_value = 250
+
+        geom = cal.get_popup_geometry(parent)
+        # width = (250 + 20) * 2 = 540, height = 180 -> will be clamped to screen
+        assert isinstance(geom, str)
+        assert "x" in geom and "+" in geom
+
+
 
