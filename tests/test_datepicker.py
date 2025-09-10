@@ -1768,3 +1768,397 @@ class TestDatePickerComplexEventHandling:
             
             # Should use original geometry on error
             base.popup.geometry.assert_called_once_with("invalid_geometry")
+
+
+class TestDatePickerAdditionalCoverage:
+    """Extra tests to cover remaining branches in datepicker."""
+
+    def test_on_popup_click_normal_mode_inside_calendar(self, root):
+        """Click inside calendar in normal mode should focus calendar, not hide."""
+        base = _DatePickerBase(root)
+        base.calendar = Mock()
+        base.calendar.year_selection_mode = False
+        base.calendar.month_selection_mode = False
+
+        popup_window = Mock()
+        calendar_widget = Mock()
+        hide_callback = Mock()
+
+        base._is_child_of_calendar = Mock(return_value=True)
+
+        event = Mock()
+        event.widget = Mock()
+
+        result = base._on_popup_click(event, popup_window, calendar_widget, hide_callback)
+
+        assert result == "break"
+        calendar_widget.focus_set.assert_called_once()
+        hide_callback.assert_not_called()
+
+    def test_on_popup_click_normal_mode_outside_calendar(self, root):
+        """Click outside calendar in normal mode should hide."""
+        base = _DatePickerBase(root)
+        base.calendar = Mock()
+        base.calendar.year_selection_mode = False
+        base.calendar.month_selection_mode = False
+
+        popup_window = Mock()
+        calendar_widget = Mock()
+        hide_callback = Mock()
+
+        base._is_child_of_calendar = Mock(return_value=False)
+
+        event = Mock()
+        event.widget = Mock()
+
+        result = base._on_popup_click(event, popup_window, calendar_widget, hide_callback)
+
+        assert result == "break"
+        hide_callback.assert_called_once()
+
+    def test_on_main_window_click_inside_popup(self, root):
+        """Click inside popup should not hide."""
+        base = _DatePickerBase(root)
+        base.master = Mock()
+        mock_toplevel = Mock()
+        mock_toplevel.winfo_rootx.return_value = 0
+        mock_toplevel.winfo_rooty.return_value = 0
+        base.master.winfo_toplevel.return_value = mock_toplevel
+
+        popup_window = Mock()
+        popup_window.winfo_exists.return_value = True
+        popup_window.winfo_rootx.return_value = 100
+        popup_window.winfo_rooty.return_value = 100
+        popup_window.winfo_width.return_value = 200
+        popup_window.winfo_height.return_value = 200
+
+        hide_callback = Mock()
+
+        event = Mock()
+        event.widget = Mock()
+        event.x = 150  # inside horizontally
+        event.y = 150  # inside vertically
+
+        result = base._on_main_window_click(event, popup_window, hide_callback)
+
+        assert result == "break"
+        hide_callback.assert_not_called()
+
+    def test_get_date_with_calendar(self, root):
+        """get_date should delegate to calendar when it exists."""
+        base = _DatePickerBase(root)
+        base.calendar = Mock()
+        expected = datetime.date(2024, 4, 1)
+        base.calendar.get_selected_date.return_value = expected
+
+        assert base.get_date() == expected
+
+    def test_dateentry_on_date_selected_resets_state(self, root):
+        """_on_date_selected should reset pressed state for DateEntry."""
+        de = DateEntry(root)
+        de._update_entry_text = Mock()
+        de.hide_calendar = Mock()
+        de.state = Mock()
+
+        test_date = datetime.date(2024, 5, 20)
+        de._on_date_selected(test_date)
+
+        de._update_entry_text.assert_called_once_with("2024-05-20")
+        de.hide_calendar.assert_called_once()
+        de.state.assert_called_with(["!pressed"])
+
+    def test_show_year_view_withdraws_popup(self, root):
+        """show_year_view should withdraw existing popup before showing."""
+        with patch('tkface.dialog.datepicker.Calendar') as mock_calendar_class, \
+             patch('tkface.dialog.datepicker.get_calendar_theme') as mock_get_theme, \
+             patch('tkface.dialog.datepicker.tk.Toplevel') as mock_toplevel:
+
+            mock_calendar = Mock()
+            mock_calendar_class.return_value = mock_calendar
+            mock_calendar.get_popup_geometry.return_value = "300x200+100+100"
+            mock_get_theme.return_value = {"background": "white"}
+            mock_tl = Mock()
+            mock_toplevel.return_value = mock_tl
+
+            base = _DatePickerBase(root)
+            base.popup = Mock()
+            base.show_year_view()
+
+            base.popup.withdraw.assert_called_once()
+
+    def test_on_focus_out_other_widget_hides_calendar(self, root):
+        """Focus moves to other widget should hide calendar."""
+        base = _DatePickerBase(root)
+        base.calendar = Mock()
+        base.calendar.year_selection_mode = False
+        base.calendar.month_selection_mode = False
+        other_widget = Mock()
+        base.focus_get = Mock(return_value=other_widget)
+        base._is_child_of_calendar = Mock(return_value=False)
+        base.hide_calendar = Mock()
+
+        result = base._on_focus_out(Mock())
+
+        assert result == "break"
+        base.hide_calendar.assert_called_once()
+
+    def test_dateentry_hide_calendar_resets_state(self, root):
+        """hide_calendar should reset pressed state for DateEntry."""
+        de = DateEntry(root)
+        de._unbind_parent_movement_events = Mock()
+        de.popup = Mock()
+        de.calendar = Mock()
+        de.state = Mock()
+
+        de.hide_calendar()
+
+        de._unbind_parent_movement_events.assert_called_once()
+        de.state.assert_called_with(["!pressed"])
+
+    def test_on_focus_out_pointer_inside_try_except_path(self, root):
+        """When selection mode and pointer inside, focuses and returns via try path."""
+        base = _DatePickerBase(root)
+        base.calendar = Mock()
+        base.calendar.year_selection_mode = True
+        base.focus_get = Mock(return_value=None)
+        base.popup = Mock()
+        base.popup.winfo_pointerxy.return_value = (150, 150)
+        base.popup.winfo_rootx.return_value = 100
+        base.popup.winfo_rooty.return_value = 100
+        base.popup.winfo_width.return_value = 200
+        base.popup.winfo_height.return_value = 200
+
+        result = base._on_focus_out(Mock())
+        assert result == "break"
+        base.calendar.focus_force.assert_called_once()
+
+    def test_on_focus_out_pointer_inside_except_path(self, root):
+        """When selection mode and pointer check raises, returns via except path."""
+        base = _DatePickerBase(root)
+        base.calendar = Mock()
+        base.calendar.year_selection_mode = True
+        base.focus_get = Mock(return_value=None)
+        base.popup = Mock()
+        base.popup.winfo_pointerxy.side_effect = Exception("boom")
+
+        result = base._on_focus_out(Mock())
+        assert result == "break"
+
+    def test_on_focus_out_no_focus_pointer_inside(self, root):
+        """No focus widget, pointer inside -> focus calendar; outside -> hide; attribute error -> hide."""
+        base = _DatePickerBase(root)
+        base.calendar = Mock()
+        base.calendar.year_selection_mode = False
+        base.calendar.month_selection_mode = False
+        base.focus_get = Mock(return_value=None)
+        base.popup = Mock()
+        # inside
+        base.popup.winfo_pointerxy.return_value = (150, 150)
+        base.popup.winfo_rootx.return_value = 100
+        base.popup.winfo_rooty.return_value = 100
+        base.popup.winfo_width.return_value = 200
+        base.popup.winfo_height.return_value = 200
+        result = base._on_focus_out(Mock())
+        assert result == "break"
+        base.calendar.focus_force.assert_called()
+        # outside
+        base.hide_calendar = Mock()
+        base.popup.winfo_pointerxy.return_value = (10, 10)
+        result2 = base._on_focus_out(Mock())
+        assert result2 == "break"
+        base.hide_calendar.assert_called_once()
+        # attribute error path
+        base.hide_calendar = Mock()
+        base.popup.winfo_pointerxy.side_effect = tk.TclError("err")
+        base._on_focus_out(Mock())
+        base.hide_calendar.assert_called_once()
+
+    def test_on_popup_click_inner_focus_set_exception(self, root):
+        """Cover inner try/except: calendar_widget.focus_set raises and is ignored."""
+        base = _DatePickerBase(root)
+        popup_window = Mock()
+        calendar_widget = Mock()
+        calendar_widget.focus_set.side_effect = Exception("focus fail")
+        hide_callback = Mock()
+        event = Mock()
+        # Force outer exception to execute inner try
+        base._is_child_of_calendar = Mock(side_effect=Exception("boom"))
+        base.calendar = Mock()
+        base.calendar.year_selection_mode = True
+
+        result = base._on_popup_click(event, popup_window, calendar_widget, hide_callback)
+        assert result == "break"
+
+    def test_on_focus_out_outer_try_exception(self, root):
+        """Cover outer try/except where _is_child_of_calendar raises; then hide occurs."""
+        base = _DatePickerBase(root)
+        base.calendar = Mock()
+        base.calendar.year_selection_mode = False
+        base.calendar.month_selection_mode = False
+        focus_w = Mock()
+        base.focus_get = Mock(return_value=focus_w)
+        base._is_child_of_calendar = Mock(side_effect=Exception("oops"))
+        base.hide_calendar = Mock()
+
+        result = base._on_focus_out(Mock())
+        assert result == "break"
+        base.hide_calendar.assert_called_once()
+
+    def test_on_main_window_click_no_toplevel(self, root):
+        """Cover else branch when no toplevel is available (root_x/y from event)."""
+        base = _DatePickerBase(root)
+        base.master = Mock()
+        base.master.winfo_toplevel.return_value = None
+        popup_window = Mock()
+        popup_window.winfo_exists.return_value = True
+        popup_window.winfo_rootx.return_value = 100
+        popup_window.winfo_rooty.return_value = 100
+        popup_window.winfo_width.return_value = 200
+        popup_window.winfo_height.return_value = 200
+        hide_callback = Mock()
+        event = Mock()
+        event.widget = Mock()
+        event.x = 10
+        event.y = 10
+        result = base._on_main_window_click(event, popup_window, hide_callback)
+        assert result == "break"
+        hide_callback.assert_called_once()
+
+    def test_show_calendar_today_color_applied(self, root):
+        """When today_color set, calendar.set_today_color should be called."""
+        with patch('tkface.dialog.datepicker.Calendar') as mock_calendar_class, \
+             patch('tkface.dialog.datepicker.get_calendar_theme') as mock_get_theme, \
+             patch('tkface.dialog.datepicker.tk.Toplevel') as mock_toplevel:
+
+            mock_calendar = Mock()
+            mock_calendar.winfo_children.return_value = []
+            mock_calendar.get_popup_geometry.return_value = "300x200+100+100"
+            mock_calendar_class.return_value = mock_calendar
+            mock_get_theme.return_value = {"background": "white"}
+            mock_toplevel.return_value = Mock()
+
+            base = _DatePickerBase(root, today_color="blue")
+            base.winfo_toplevel = Mock(return_value=Mock())
+            base.show_calendar()
+            mock_calendar.set_today_color.assert_called_once_with("blue")
+
+    def test_set_selected_date_with_calendar(self, root):
+        """set_selected_date should call calendar.set_selected_date when calendar exists."""
+        base = _DatePickerBase(root)
+        base.calendar = Mock()
+        base._update_entry_text = Mock()
+        d = datetime.date(2024, 7, 1)
+        base.set_selected_date(d)
+        base.calendar.set_selected_date.assert_called_once_with(d)
+        base._update_entry_text.assert_called_once_with("2024-07-01")
+
+    def test_update_dpi_scaling_le_one_geometry_path(self, root):
+        """When new scaling <= 1.0, popup.geometry should be set and return early."""
+        with patch('tkface.dialog.datepicker.get_scaling_factor') as mock_get_scaling:
+            base = _DatePickerBase(root)
+            base.dpi_scaling_factor = 2.0
+            base.popup = Mock()
+            base.popup.winfo_exists.return_value = True
+            base.calendar = Mock()
+            base.calendar.get_popup_geometry.return_value = "300x200+100+100"
+            mock_get_scaling.return_value = 1.0
+
+            base.update_dpi_scaling()
+            base.popup.geometry.assert_called_once_with("300x200+100+100")
+
+    def test_on_popup_click_broad_except_path(self, root):
+        """Force exception in _on_popup_click to cover broad-except branch."""
+        base = _DatePickerBase(root)
+        popup_window = Mock()
+        calendar_widget = Mock()
+        hide_callback = Mock()
+        event = Mock()
+        # Make _is_child_of_calendar raise
+        base._is_child_of_calendar = Mock(side_effect=Exception("boom"))
+        base.calendar = Mock()
+        base.calendar.year_selection_mode = True
+
+        result = base._on_popup_click(event, popup_window, calendar_widget, hide_callback)
+        assert result == "break"
+        calendar_widget.focus_set.assert_called_once()
+
+    def test_show_calendar_logger_debug_on_valueerror(self, root):
+        """Cover ValueError path in show_calendar DPI scaling try/except."""
+        with patch('tkface.dialog.datepicker.Calendar') as mock_calendar_class, \
+             patch('tkface.dialog.datepicker.get_calendar_theme') as mock_get_theme, \
+             patch('tkface.dialog.datepicker.re') as mock_re, \
+             patch('tkface.dialog.datepicker.tk.Toplevel') as mock_toplevel:
+
+            mock_calendar = Mock()
+            mock_calendar.winfo_children.return_value = []
+            mock_calendar_class.return_value = mock_calendar
+            mock_calendar.get_popup_geometry.return_value = "300x200+100+100"
+            mock_get_theme.return_value = {"background": "white"}
+            mock_re.match.side_effect = ValueError("bad")
+            mock_toplevel.return_value = Mock()
+
+            base = _DatePickerBase(root)
+            base.dpi_scaling_factor = 2.0
+            base.winfo_toplevel = Mock(return_value=Mock())
+            base.show_calendar()
+            # Should have used original geometry without raising
+
+    def test_on_parent_configure_logger_debug_paths(self, root):
+        """Cover logger.debug except branches in _on_parent_configure for popup/year view."""
+        with patch('tkface.dialog.datepicker.re') as mock_re:
+            base = _DatePickerBase(root)
+            # popup active without year view -> ValueError in match
+            base.popup = Mock()
+            base.popup.winfo_exists.return_value = True
+            base.calendar = Mock()
+            base.calendar.get_popup_geometry.return_value = "300x200+100+100"
+            base.year_view_window = None
+            base.dpi_scaling_factor = 2.0
+            mock_re.match.side_effect = ValueError("bad")
+            base._on_parent_configure(Mock())
+
+        with patch('tkface.dialog.datepicker.re') as mock_re2:
+            base2 = _DatePickerBase(root)
+            # year view active -> AttributeError path
+            base2.popup = Mock()
+            base2.year_view_window = Mock()
+            base2.year_view_window.winfo_exists.return_value = True
+            base2.year_view_calendar = Mock()
+            base2.year_view_calendar.get_popup_geometry.return_value = "300x200+100+100"
+            base2.dpi_scaling_factor = 2.0
+            mock_re2.match.side_effect = AttributeError("oops")
+            base2._on_parent_configure(Mock())
+
+    def test_update_dpi_scaling_attribute_error_debug_path(self, root):
+        """Cover AttributeError in update_dpi_scaling except path for geometry scaling."""
+        with patch('tkface.dialog.datepicker.get_scaling_factor') as mock_get_scaling, \
+             patch('tkface.dialog.datepicker.re') as mock_re:
+            base = _DatePickerBase(root)
+            base.dpi_scaling_factor = 1.0
+            base.popup = Mock()
+            base.popup.winfo_exists.return_value = True
+            base.calendar = Mock()
+            base.calendar.get_popup_geometry.return_value = "300x200+100+100"
+            mock_get_scaling.return_value = 2.0
+            mock_re.match.side_effect = AttributeError("boom")
+            base.update_dpi_scaling()
+            base.popup.geometry.assert_called_with("300x200+100+100")
+
+    def test_show_year_view_attribute_error_debug_path(self, root):
+        """Cover AttributeError path in show_year_view DPI scaling try/except."""
+        with patch('tkface.dialog.datepicker.Calendar') as mock_calendar_class, \
+             patch('tkface.dialog.datepicker.get_calendar_theme') as mock_get_theme, \
+             patch('tkface.dialog.datepicker.re') as mock_re, \
+             patch('tkface.dialog.datepicker.tk.Toplevel') as mock_toplevel:
+
+            mock_calendar = Mock()
+            mock_calendar_class.return_value = mock_calendar
+            mock_calendar.get_popup_geometry.return_value = "300x200+100+100"
+            mock_get_theme.return_value = {"background": "white"}
+            mock_re.match.side_effect = AttributeError("fail")
+            mock_toplevel.return_value = Mock()
+
+            base = _DatePickerBase(root)
+            base.dpi_scaling_factor = 2.0
+            base.popup = Mock()
+            base.show_year_view()
