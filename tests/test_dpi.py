@@ -2970,3 +2970,128 @@ class TestDPICoverageImprovements:
         
         assert result == "not a dict"
 
+    def test_get_hwnd_dpi_outer_exception(self, manager):
+        """Force outer try/except in _get_hwnd_dpi by raising before inner try."""
+        with patch('tkface.win.dpi.is_windows', return_value=True), \
+             patch('tkface.win.dpi.ctypes') as mock_ctypes:
+            # Raise at MonitorFromWindow so inner try block is not entered
+            mock_ctypes.windll.user32.MonitorFromWindow.side_effect = Exception("Boom")
+            result = manager._get_hwnd_dpi(12345)
+            assert result == (96, 96, 1.0)
+
+    def test_pack_grid_place_wrappers_execute_paths(self, manager):
+        """Execute scaled pack/grid/place wrappers including branches without keys."""
+        calls = []
+
+        def dummy_pack(self, **kwargs):  # pylint: disable=unused-argument
+            calls.append(("pack", kwargs))
+        def dummy_grid(self, **kwargs):  # pylint: disable=unused-argument
+            calls.append(("grid", kwargs))
+        def dummy_place(self, **kwargs):  # pylint: disable=unused-argument
+            calls.append(("place", kwargs))
+
+        # Save originals and replace with dummies before patching
+        orig_pack, orig_grid, orig_place = tk.Widget.pack, tk.Widget.grid, tk.Widget.place
+        try:
+            tk.Widget.pack = dummy_pack
+            tk.Widget.grid = dummy_grid
+            tk.Widget.place = dummy_place
+
+            # Apply patches
+            manager._patch_pack_method(2.0)
+            manager._patch_grid_method(2.0)
+            manager._patch_place_method(2.0)
+
+            dummy = object()
+            # pack with padding
+            tk.Widget.pack(dummy, padx=10, pady=(5, 7))
+            # pack without padding keys
+            tk.Widget.pack(dummy, other=1)
+            # grid with padding
+            tk.Widget.grid(dummy, padx=(2, 3), pady=4)
+            # grid without padding keys
+            tk.Widget.grid(dummy, sticky='nsew')
+            # place with only x
+            tk.Widget.place(dummy, x=10)
+            # place with only y
+            tk.Widget.place(dummy, y=20)
+
+            # Verify calls were routed to dummy originals with scaled values when applicable
+            # Find first pack call with padding
+            pack_call = next(name_kwargs for name_kwargs in calls if name_kwargs[0] == 'pack' and 'padx' in name_kwargs[1])
+            assert pack_call[1]['padx'] == 20
+            assert pack_call[1]['pady'] == (10, 14)
+            # Grid padding scaled
+            grid_call = next(name_kwargs for name_kwargs in calls if name_kwargs[0] == 'grid' and 'padx' in name_kwargs[1])
+            assert grid_call[1]['padx'] == (4, 6)
+            assert grid_call[1]['pady'] == 8
+            # place x-only and y-only scaled
+            place_x_call = next(name_kwargs for name_kwargs in calls if name_kwargs[0] == 'place' and 'x' in name_kwargs[1])
+            assert place_x_call[1]['x'] == 20
+            place_y_call = next(name_kwargs for name_kwargs in calls if name_kwargs[0] == 'place' and 'y' in name_kwargs[1])
+            assert place_y_call[1]['y'] == 40
+        finally:
+            tk.Widget.pack, tk.Widget.grid, tk.Widget.place = orig_pack, orig_grid, orig_place
+
+    def test_canvas_constructor_width_and_height_individual(self, manager):
+        """Cover Canvas constructor branches for width-only and height-only."""
+        with patch('tkinter.Canvas.__init__', return_value=None) as mock_init:
+            manager._patch_canvas_constructor(2.0)
+            # width only
+            widget = tk.Canvas.__new__(tk.Canvas)
+            tk.Canvas.__init__(widget, None, width=50)
+            assert mock_init.call_args[1]['width'] == 100
+        with patch('tkinter.Canvas.__init__', return_value=None) as mock_init:
+            manager._patch_canvas_constructor(2.0)
+            # height only
+            widget = tk.Canvas.__new__(tk.Canvas)
+            tk.Canvas.__init__(widget, None, height=30)
+            assert mock_init.call_args[1]['height'] == 60
+
+    def test_enable_dpi_awareness_public_windows_paths(self, manager):
+        """Exercise public enable_dpi_awareness success and fallbacks on Windows."""
+        with patch('tkface.win.dpi.is_windows', return_value=True), \
+             patch('tkface.win.dpi.ctypes') as mock_ctypes:
+            # Success via shcore
+            mock_ctypes.windll.shcore.SetProcessDpiAwareness.return_value = None
+            assert manager.enable_dpi_awareness() is True
+        with patch('tkface.win.dpi.is_windows', return_value=True), \
+             patch('tkface.win.dpi.ctypes') as mock_ctypes:
+            # Fallback to user32
+            mock_ctypes.windll.shcore.SetProcessDpiAwareness.side_effect = AttributeError()
+            mock_ctypes.windll.user32.SetProcessDPIAware.return_value = None
+            assert manager.enable_dpi_awareness() is True
+        with patch('tkface.win.dpi.is_windows', return_value=True), \
+             patch('tkface.win.dpi.ctypes') as mock_ctypes:
+            # Both unavailable -> False
+            mock_ctypes.windll.shcore.SetProcessDpiAwareness.side_effect = AttributeError()
+            mock_ctypes.windll.user32.SetProcessDPIAware.side_effect = AttributeError()
+            assert manager.enable_dpi_awareness() is False
+        with patch('tkface.win.dpi.is_windows', return_value=True), \
+             patch('tkface.win.dpi.ctypes') as mock_ctypes:
+            # Outer exception path -> False (unexpected exception in shcore call)
+            mock_ctypes.windll.shcore.SetProcessDpiAwareness.side_effect = Exception("boom")
+            assert manager.enable_dpi_awareness() is False
+
+    def test_scale_font_size_outer_exception_returns_original(self, manager):
+        """Force outer exception in scale_font_size to return original size."""
+        with patch('tkface.win.dpi.is_windows', return_value=True):
+            mock_root = create_basic_mock_root()
+            # tk.call fails, DPI_scaling missing, and _get_hwnd_dpi raises
+            mock_root.tk.call.side_effect = Exception("fail")
+            if hasattr(mock_root, 'DPI_scaling'):
+                delattr(mock_root, 'DPI_scaling')
+            with patch.object(manager, '_get_hwnd_dpi', side_effect=Exception("oops")):
+                result = manager.scale_font_size(12, root=mock_root)
+                assert result == 12
+
+    def test_scale_icon_between_1_0_and_1_25(self):
+        """Cover scale_icon branch where 1.0 < scaling < 1.25 (scale_factor set to 1)."""
+        with patch('tkface.win.dpi.is_windows', return_value=True), \
+             patch('tkface.win.dpi.get_scaling_factor', return_value=1.1):
+            parent = create_mock_parent()
+            parent.tk.call.return_value = None
+            from tkface.win.dpi import scale_icon
+            result = scale_icon('error', parent)
+            assert result == 'scaled_error_large'
+
