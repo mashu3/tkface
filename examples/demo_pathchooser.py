@@ -104,7 +104,8 @@ class FileDialogDemo:
             ],
             parent=self.root,
             x=None,  # Center horizontally
-            y=None   # Center vertically
+            y=None,  # Center vertically
+            unround=True  # Enable unround for Windows
         )
         self.display_result("Single File Selection", result)
     
@@ -119,7 +120,8 @@ class FileDialogDemo:
             ],
             parent=self.root,
             x=None,  # Center horizontally
-            y=None   # Center vertically
+            y=None,  # Center vertically
+            unround=True  # Enable unround for Windows
         )
         self.display_result("Multiple File Selection", result)
     
@@ -129,7 +131,8 @@ class FileDialogDemo:
             title="Select a Directory",
             parent=self.root,
             x=None,  # Center horizontally
-            y=None   # Center vertically
+            y=None,  # Center vertically
+            unround=True  # Enable unround for Windows
         )
         self.display_result("Directory Selection", result)
     
@@ -141,7 +144,8 @@ class FileDialogDemo:
             title="Select Files or Directories",
             parent=self.root,
             x=None,  # Center horizontally
-            y=None   # Center vertically
+            y=None,  # Center vertically
+            unround=True  # Enable unround for Windows
         )
         self.display_result("File or Directory Selection", result)
     
@@ -153,7 +157,8 @@ class FileDialogDemo:
             filetypes=[("Text files", "*.txt"), ("Log files", "*.log")],
             parent=self.root,
             x=None,  # Center horizontally
-            y=None   # Center vertically
+            y=None,  # Center vertically
+            unround=True  # Enable unround for Windows
         )
         self.display_result("Text File Selection", result)
     
@@ -169,7 +174,8 @@ class FileDialogDemo:
             ],
             parent=self.root,
             x=None,  # Center horizontally
-            y=None   # Center vertically
+            y=None,  # Center vertically
+            unround=True  # Enable unround for Windows
         )
         self.display_result("Image File Selection", result)
     
@@ -184,7 +190,8 @@ class FileDialogDemo:
             ],
             parent=self.root,
             x=None,  # Center horizontally
-            y=None   # Center vertically
+            y=None,  # Center vertically
+            unround=True  # Enable unround for Windows
         )
         
         if result:

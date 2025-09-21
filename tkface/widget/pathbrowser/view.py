@@ -34,11 +34,12 @@ def _create_path_navigation(pathbrowser_instance):
     pathbrowser_instance.path_frame.pack(fill=tk.X)
 
     # Up button
+    button_width = 3 if utils.IS_WINDOWS else 1
     pathbrowser_instance.up_button = ttk.Button(
         pathbrowser_instance.path_frame,
         text="<",
         command=pathbrowser_instance._go_up,  # pylint: disable=protected-access
-        width=3,
+        width=button_width,
     )
     pathbrowser_instance.up_button.pack(side=tk.LEFT, padx=(0, 5))
 
@@ -47,7 +48,7 @@ def _create_path_navigation(pathbrowser_instance):
         pathbrowser_instance.path_frame,
         text=">",
         command=pathbrowser_instance._go_down,  # pylint: disable=protected-access
-        width=3,
+        width=button_width,
     )
     pathbrowser_instance.down_button.pack(side=tk.LEFT, padx=(0, 5))
 
@@ -94,14 +95,15 @@ def _create_main_paned_window(pathbrowser_instance):
         pathbrowser_instance.tree_frame,
         show="tree",
         selectmode="browse",
-        height=15,  # Set reasonable height
+        height=10,  # Reduced height for smaller dialog
     )
     pathbrowser_instance.tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
     # Configure tree style for better appearance
     style = ttk.Style()
-    # Increase row height for better visibility
-    style.configure("Treeview", rowheight=25)
+    # Set row height based on OS - Windows uses original spacing, others use compact
+    row_height = 25 if utils.IS_WINDOWS else 20
+    style.configure("Treeview", rowheight=row_height)
 
 
 def _create_file_list(pathbrowser_instance):
@@ -117,7 +119,7 @@ def _create_file_list(pathbrowser_instance):
         columns=("size", "modified", "type"),
         show="tree headings",
         selectmode=select_mode,
-        height=15,  # Set reasonable height
+        height=10,  # Reduced height for smaller dialog
     )
 
     # Configure columns with sorting
@@ -151,23 +153,32 @@ def _create_file_list(pathbrowser_instance):
     pathbrowser_instance.file_tree.column("modified", width=120, minwidth=100)
     pathbrowser_instance.file_tree.column("type", width=100, minwidth=80)
 
+    # Apply OS-specific row height to file tree as well
+    style = ttk.Style()
+    row_height = 25 if utils.IS_WINDOWS else 20
+    style.configure("Treeview", rowheight=row_height)
+
     pathbrowser_instance.file_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
 
 def _create_status_and_buttons(pathbrowser_instance):
-    """Create status bar and bottom buttons."""
-    # Status bar (bottom)
+    """Create status bar and bottom buttons in a horizontal layout."""
+    # Bottom frame containing status bar and buttons
+    pathbrowser_instance.bottom_frame = ttk.Frame(pathbrowser_instance)
+    pathbrowser_instance.bottom_frame.pack(fill=tk.X, padx=5, pady=5, side=tk.BOTTOM)
+
+    # Status bar (left side)
     pathbrowser_instance.status_var = tk.StringVar()
     pathbrowser_instance.status_bar = ttk.Label(
-        pathbrowser_instance,
+        pathbrowser_instance.bottom_frame,
         textvariable=pathbrowser_instance.status_var,
-        relief=tk.SUNKEN,
+        relief=tk.FLAT,
     )
-    pathbrowser_instance.status_bar.pack(fill=tk.X, padx=5, pady=(0, 5), side=tk.BOTTOM)
+    pathbrowser_instance.status_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
 
-    # Bottom buttons (above status bar)
-    pathbrowser_instance.button_frame = ttk.Frame(pathbrowser_instance)
-    pathbrowser_instance.button_frame.pack(fill=tk.X, padx=5, pady=5, side=tk.BOTTOM)
+    # Button frame (right side)
+    pathbrowser_instance.button_frame = ttk.Frame(pathbrowser_instance.bottom_frame)
+    pathbrowser_instance.button_frame.pack(side=tk.RIGHT)
 
     # Set button labels based on save mode
     if getattr(pathbrowser_instance.config, "save_mode", False):

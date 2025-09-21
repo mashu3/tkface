@@ -24,6 +24,7 @@ class FileDialogConfig:
     title: Optional[str] = None
     save_mode: bool = False
     initialfile: Optional[str] = None
+    unround: bool = False
 
 
 @dataclass
@@ -94,6 +95,7 @@ def askpath(
     y_offset: int = 0,
     config: Optional[FileDialogConfig] = None,
     position: Optional[WindowPosition] = None,
+    unround: bool = False,
 ) -> List[str]:
     """
     Show a file/directory selection dialog.
@@ -111,6 +113,7 @@ def askpath(
         y_offset: Y offset from calculated position
         config: FileDialogConfig object (overrides individual parameters)
         position: WindowPosition object (overrides individual position parameters)
+        unround: Enable unround for Windows (overrides config.unround if config is provided)
 
     Returns:
         List of selected file/directory paths (empty list if cancelled)
@@ -122,6 +125,9 @@ def askpath(
         initialdir = config.initialdir
         filetypes = config.filetypes
         title = config.title
+        # Use unround parameter from config if not explicitly provided
+        if unround is False:  # Only override if not explicitly set
+            unround = config.unround
 
     if position is not None:
         x = position.x
@@ -136,9 +142,9 @@ def askpath(
     scaled_sizes = win.calculate_dpi_sizes(
         {
             "min_width": 900,
-            "min_height": 650,
+            "min_height": 450,
             "default_width": 1000,
-            "default_height": 700,
+            "default_height": 450,
             "padding": 10,
         },
         dialog,
@@ -206,6 +212,10 @@ def askpath(
     # Focus on the browser
     browser.focus_set()
 
+    # Apply unround if enabled (Windows only)
+    if unround:
+        win.unround(dialog, auto_toplevel=False)
+
     # Show dialog and wait (after position is set)
     dialog.deiconify()  # Show the dialog
     dialog.lift()
@@ -226,6 +236,7 @@ def askopenfile(  # pylint: disable=too-many-arguments,too-many-positional-argum
     y_offset: int = 0,
     config: Optional[FileDialogConfig] = None,
     position: Optional[WindowPosition] = None,
+    unround: bool = False,
 ) -> List[str]:
     """
     Show a single file selection dialog.
@@ -241,6 +252,7 @@ def askopenfile(  # pylint: disable=too-many-arguments,too-many-positional-argum
         y_offset: Y offset from calculated position
         config: FileDialogConfig object (overrides individual parameters)
         position: WindowPosition object (overrides individual position parameters)
+        unround: Enable unround for Windows
 
     Returns:
         List with single selected file path (empty list if cancelled)
@@ -257,7 +269,7 @@ def askopenfile(  # pylint: disable=too-many-arguments,too-many-positional-argum
     if position is None:
         position = WindowPosition(x=x, y=y, x_offset=x_offset, y_offset=y_offset)
 
-    return askpath(parent=parent, config=config, position=position)
+    return askpath(parent=parent, config=config, position=position, unround=unround)
 
 
 def askopenfiles(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -271,6 +283,7 @@ def askopenfiles(  # pylint: disable=too-many-arguments,too-many-positional-argu
     y_offset: int = 0,
     config: Optional[FileDialogConfig] = None,
     position: Optional[WindowPosition] = None,
+    unround: bool = False,
 ) -> List[str]:
     """
     Show a multiple file selection dialog.
@@ -286,6 +299,7 @@ def askopenfiles(  # pylint: disable=too-many-arguments,too-many-positional-argu
         y_offset: Y offset from calculated position
         config: FileDialogConfig object (overrides individual parameters)
         position: WindowPosition object (overrides individual position parameters)
+        unround: Enable unround for Windows
 
     Returns:
         List of selected file paths (empty list if cancelled)
@@ -302,7 +316,7 @@ def askopenfiles(  # pylint: disable=too-many-arguments,too-many-positional-argu
     if position is None:
         position = WindowPosition(x=x, y=y, x_offset=x_offset, y_offset=y_offset)
 
-    return askpath(parent=parent, config=config, position=position)
+    return askpath(parent=parent, config=config, position=position, unround=unround)
 
 
 def askdirectory(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -315,6 +329,7 @@ def askdirectory(  # pylint: disable=too-many-arguments,too-many-positional-argu
     y_offset: int = 0,
     config: Optional[FileDialogConfig] = None,
     position: Optional[WindowPosition] = None,
+    unround: bool = False,
 ) -> List[str]:
     """
     Show a directory selection dialog.
@@ -329,6 +344,7 @@ def askdirectory(  # pylint: disable=too-many-arguments,too-many-positional-argu
         y_offset: Y offset from calculated position
         config: FileDialogConfig object (overrides individual parameters)
         position: WindowPosition object (overrides individual position parameters)
+        unround: Enable unround for Windows
 
     Returns:
         List with single selected directory path (empty list if cancelled)
@@ -345,7 +361,7 @@ def askdirectory(  # pylint: disable=too-many-arguments,too-many-positional-argu
     if position is None:
         position = WindowPosition(x=x, y=y, x_offset=x_offset, y_offset=y_offset)
 
-    return askpath(parent=parent, config=config, position=position)
+    return askpath(parent=parent, config=config, position=position, unround=unround)
 
 
 def asksavefile(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -360,6 +376,7 @@ def asksavefile(  # pylint: disable=too-many-arguments,too-many-positional-argum
     y_offset: int = 0,
     config: Optional[FileDialogConfig] = None,
     position: Optional[WindowPosition] = None,
+    unround: bool = False,
 ) -> List[str]:
     """
     Show a file save dialog.
@@ -376,6 +393,7 @@ def asksavefile(  # pylint: disable=too-many-arguments,too-many-positional-argum
         y_offset: Y offset from calculated position
         config: FileDialogConfig object (overrides individual parameters)
         position: WindowPosition object (overrides individual position parameters)
+        unround: Enable unround for Windows
 
     Returns:
         List with single selected file path (empty list if cancelled)
@@ -396,6 +414,6 @@ def asksavefile(  # pylint: disable=too-many-arguments,too-many-positional-argum
 
     # For save dialog, we need to modify the PathBrowser to handle save mode
     # This will be implemented by adding a save_mode parameter to PathBrowser
-    result = askpath(parent=parent, config=config, position=position)
+    result = askpath(parent=parent, config=config, position=position, unround=unround)
 
     return result
