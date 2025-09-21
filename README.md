@@ -4,6 +4,8 @@
 [![GitHub Release](https://img.shields.io/github/release/mashu3/tkface?color=orange)](https://github.com/mashu3/tkface/releases)
 [![PyPi Version](https://img.shields.io/pypi/v/tkface?color=yellow)](https://pypi.org/project/tkface/)
 [![Downloads](https://static.pepy.tech/badge/tkface)](https://pepy.tech/project/tkface)
+[![Tests](https://github.com/mashu3/tkface/actions/workflows/codecov.yml/badge.svg?branch=main)](https://github.com/mashu3/tkface/actions/workflows/codecov.yml)
+[![codecov](https://codecov.io/gh/mashu3/tkface/graph/badge.svg?token=B9R7XJ43YI)](https://codecov.io/gh/mashu3/tkface)
 
 **Restore the "face" to your Tkinter!**
 
