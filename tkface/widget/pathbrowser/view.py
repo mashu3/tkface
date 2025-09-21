@@ -222,13 +222,6 @@ def _create_toolbar(pathbrowser_instance):
     pathbrowser_instance.selected_label.pack(side=tk.LEFT, padx=(0, 5))
 
     pathbrowser_instance.selected_var = tk.StringVar()
-    # Set initial filename for save mode
-    save_mode = getattr(pathbrowser_instance.config, "save_mode", False)
-    initialfile = getattr(pathbrowser_instance.config, "initialfile", None)
-    if save_mode and initialfile:
-        pathbrowser_instance.selected_var.set(initialfile)
-    else:
-        pathbrowser_instance.selected_var.set("")
     pathbrowser_instance.selected_files_entry = ttk.Entry(
         pathbrowser_instance.toolbar_frame,
         textvariable=pathbrowser_instance.selected_var,
@@ -238,6 +231,14 @@ def _create_toolbar(pathbrowser_instance):
     pathbrowser_instance.selected_files_entry.pack(
         side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10)
     )
+    
+    # Set initial filename for save mode (after Entry is created)
+    save_mode = getattr(pathbrowser_instance.config, "save_mode", False)
+    initialfile = getattr(pathbrowser_instance.config, "initialfile", None)
+    if save_mode and initialfile:
+        pathbrowser_instance.selected_var.set(initialfile)
+    else:
+        pathbrowser_instance.selected_var.set("")
 
     # Bind focus event to select all text when focused
     pathbrowser_instance.selected_files_entry.bind(

@@ -156,6 +156,10 @@ class PathBrowser(tk.Frame):
 
         # Language system is initialized by parent window
 
+        # Set initial filename for save mode after all widgets are created
+        if self.config.save_mode and self.config.initialfile:
+            self.selected_var.set(self.config.initialfile)
+
         # Start memory monitoring if enabled
         if self.config.enable_memory_monitoring:
             self._schedule_memory_monitoring()
