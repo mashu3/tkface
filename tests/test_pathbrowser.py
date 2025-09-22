@@ -4,29 +4,30 @@ Tests for PathBrowser widget module.
 This module tests the new modular structure of PathBrowser.
 """
 
+import configparser
 import os
 import tempfile
-import configparser
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-import pytest
 import tkinter as tk
 import tkinter.ttk as ttk
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 from tkface.widget.pathbrowser import (
+    FileInfo,
+    FileInfoManager,
     PathBrowser,
     PathBrowserConfig,
     PathBrowserState,
-    FileInfoManager,
-    FileInfo,
+    PathBrowserTheme,
     format_size,
     get_pathbrowser_theme,
     get_pathbrowser_themes,
-    PathBrowserTheme
+    style,
+    utils,
+    view,
 )
-from tkface.widget.pathbrowser import utils
-from tkface.widget.pathbrowser import style
-from tkface.widget.pathbrowser import view
 
 
 class TestPathBrowserModule:

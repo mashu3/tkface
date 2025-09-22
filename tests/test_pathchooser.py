@@ -261,7 +261,11 @@ class TestPathBrowser:
         temp_dir, _ = sample_files
         
         # Test only the configuration and state, not actual widget creation
-        from tkface.widget.pathbrowser import PathBrowserConfig, PathBrowserState, format_size
+        from tkface.widget.pathbrowser import (
+            PathBrowserConfig,
+            PathBrowserState,
+            format_size,
+        )
         
         config = PathBrowserConfig(
             select="file",

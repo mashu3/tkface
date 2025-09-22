@@ -1,11 +1,11 @@
 from . import dialog, lang, widget, win
 
 # Export messagebox and simpledialog for backward compatibility
-from .dialog import messagebox, simpledialog, pathchooser
+from .dialog import messagebox, pathchooser, simpledialog
+from .dialog.datepicker import DateEntry, DateFrame
 
 # Export Calendar and DateEntry for backward compatibility
 from .widget.calendar import Calendar
-from .dialog.datepicker import DateEntry, DateFrame
 
 # Export Windows-specific flat button as Button
 from .win.button import FlatButton as Button
@@ -13,7 +13,7 @@ from .win.button import FlatButton as Button
 # Export DPI functions for easy access
 from .win.dpi import enable_dpi_geometry as dpi
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __all__ = [
     "lang",
     "win",

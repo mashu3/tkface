@@ -8,15 +8,14 @@ These tests focus on exercising branches in:
 - show_context_menu
 """
 
-from unittest.mock import Mock, patch
-from types import SimpleNamespace
+import tkinter as tk
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 import pytest
-import tkinter as tk
 
-from tkface.widget.pathbrowser import PathBrowser
-from tkface.widget.pathbrowser import view
+from tkface.widget.pathbrowser import PathBrowser, view
 
 
 def _make_file_item(name, path, is_dir, size_str, modified, file_type, size_bytes):

@@ -4,14 +4,15 @@ Tests for tkface.widget.__init__ module.
 This module tests the widget module initialization and fallback functions.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
-import sys
-import types
-import tempfile
-import os
-import inspect
 import importlib.util
+import inspect
+import os
+import sys
+import tempfile
+import types
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 class TestWidgetInit:
@@ -20,9 +21,9 @@ class TestWidgetInit:
     def test_constants_defined(self):
         """Test that all constants are properly defined."""
         from tkface.widget import (
-            DEFAULT_POPUP_WIDTH,
             DEFAULT_POPUP_HEIGHT,
-            WEEK_NUMBERS_WIDTH_OFFSET
+            DEFAULT_POPUP_WIDTH,
+            WEEK_NUMBERS_WIDTH_OFFSET,
         )
         
         assert DEFAULT_POPUP_WIDTH == 235
@@ -40,7 +41,7 @@ class TestWidgetInit:
         """Test that DPI functions are imported successfully when available."""
         # This test verifies the normal import path works
         from tkface.widget import get_scaling_factor, scale_font_size
-        
+
         # These should be the real functions from win.dpi, not fallbacks
         assert callable(get_scaling_factor)
         assert callable(scale_font_size)
@@ -52,7 +53,7 @@ class TestWidgetInit:
         
         # Create a temporary test to verify fallback functions work
         import tkface.widget.__init__ as widget_init_module
-        
+
         # Test the fallback functions defined in the module
         root_mock = MagicMock()
         
@@ -77,7 +78,7 @@ class TestWidgetInit:
     def test_fallback_functions_directly(self):
         """Test the fallback functions that are defined in the module."""
         import tkface.widget.__init__ as widget_init_module
-        
+
         # Test that the module is imported and accessible
         assert widget_init_module is not None
         
@@ -127,7 +128,7 @@ class TestWidgetInit:
         # This test ensures that the widget __init__ module is executed
         # which will help with coverage
         import tkface.widget.__init__ as widget_init
-        
+
         # Access all the attributes to ensure they're loaded
         assert hasattr(widget_init, 'get_scaling_factor')
         assert hasattr(widget_init, 'scale_font_size')
@@ -210,9 +211,9 @@ class TestWidgetInit:
     def test_constants_types(self):
         """Test that constants have correct types."""
         from tkface.widget import (
-            DEFAULT_POPUP_WIDTH,
             DEFAULT_POPUP_HEIGHT,
-            WEEK_NUMBERS_WIDTH_OFFSET
+            DEFAULT_POPUP_WIDTH,
+            WEEK_NUMBERS_WIDTH_OFFSET,
         )
         
         assert isinstance(DEFAULT_POPUP_WIDTH, int)
@@ -255,9 +256,9 @@ class TestWidgetInitIntegration:
 
     def test_widget_module_imports_successfully(self):
         """Test that the widget module can be imported without errors."""
-        import tkface.widget.__init__ as widget_init_module
         import tkface.widget
-        
+        import tkface.widget.__init__ as widget_init_module
+
         # Should not raise any exceptions
         assert tkface.widget is not None
         assert widget_init_module is not None
@@ -271,8 +272,8 @@ class TestWidgetInitIntegration:
 
     def test_constants_accessible_from_package(self):
         """Test that constants are accessible from the main package."""
-        import tkface.widget.__init__ as widget_init_module
         import tkface.widget
+        import tkface.widget.__init__ as widget_init_module
         
         assert hasattr(tkface.widget, 'DEFAULT_POPUP_WIDTH')
         assert hasattr(tkface.widget, 'DEFAULT_POPUP_HEIGHT')
@@ -286,7 +287,7 @@ class TestWidgetInitIntegration:
     def test_all_attribute_completeness(self):
         """Test that __all__ contains all public exports."""
         from tkface.widget import __all__
-        
+
         # Check that the expected items are in __all__
         expected_items = ["Calendar", "PathBrowser", "get_scaling_factor", "scale_font_size"]
         assert __all__ == expected_items
@@ -444,7 +445,7 @@ __all__ = ["Calendar", "PathBrowser", "get_scaling_factor", "scale_font_size"]
         """Test the ImportError scenario by examining the code structure."""
         # Read the actual widget/__init__.py file
         import tkface.widget.__init__ as widget_init
-        
+
         # Get the source code
         source = inspect.getsource(widget_init)
         
@@ -485,7 +486,7 @@ __all__ = ["Calendar", "PathBrowser", "get_scaling_factor", "scale_font_size"]
     def test_widget_init_complete_coverage(self):
         """Test to ensure complete coverage of widget/__init__.py."""
         import tkface.widget.__init__ as widget_init
-        
+
         # Test all module attributes
         assert hasattr(widget_init, '__doc__')
         assert widget_init.__doc__ == "Widget module for tkface."
@@ -542,7 +543,7 @@ __all__ = ["Calendar", "PathBrowser", "get_scaling_factor", "scale_font_size"]
             
             # Import the modified module
             import tkface.widget.__init__ as widget_init
-            
+
             # Test that the fallback functions are used
             root_mock = MagicMock()
             result1 = widget_init.get_scaling_factor(root_mock)

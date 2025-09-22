@@ -4,13 +4,14 @@ Tests for tkface.win.dpi module.
 This module tests the DPI management functionality for Windows applications.
 """
 
-import pytest
+import contextlib
+import ctypes
 import sys
 import tkinter as tk
-from unittest.mock import patch, MagicMock, call
-import ctypes
 from ctypes import wintypes
-import contextlib
+from unittest.mock import MagicMock, call, patch
+
+import pytest
 
 
 # Common mock fixtures for DPI testing
@@ -337,7 +338,7 @@ def _test_scale_icon_with_scaling(scaling_factor, icon_name="error", max_scale=N
         expected_result = f"scaled_{icon_name}_large"
     
     with WindowsPatchContext(is_windows=True) as patch_ctx:
-        from tkface.win.dpi import scale_icon, get_scaling_factor
+        from tkface.win.dpi import get_scaling_factor, scale_icon
         
         with GetScalingFactorMockContext(return_value=scaling_factor) as mock_ctx:
             mock_parent = create_mock_parent()
@@ -394,7 +395,7 @@ def _test_scale_icon_with_exception(exception, icon_name="error", parent=None):
         The result of scale_icon call
     """
     with WindowsPatchContext(is_windows=True) as patch_ctx:
-        from tkface.win.dpi import scale_icon, get_scaling_factor
+        from tkface.win.dpi import get_scaling_factor, scale_icon
         
         with GetScalingFactorMockContext(side_effect=exception) as mock_ctx:
             result = scale_icon(icon_name, parent)
@@ -614,7 +615,7 @@ def with_test_context(
 def _test_widget_method_patch(manager, method_name, patch_method_name, scaling_factor=2.0):
     """Helper function to test widget method patching."""
     import tkinter as tk
-    
+
     # Store original method for comparison
     original_method = getattr(tk.Widget, method_name)
     
@@ -653,7 +654,7 @@ def _test_tkinter_constructor_patch_with_context(manager, tk_class, patch_method
 def test_treeview_column_patch_basic(manager, scaling_factor=2.0):
     """Helper function to test basic treeview column method patching."""
     from tkinter import ttk
-    
+
     # Store original method for comparison
     original_column = ttk.Treeview.column
     
@@ -666,7 +667,7 @@ def test_treeview_column_patch_basic(manager, scaling_factor=2.0):
 def test_treeview_column_patch_with_parameters(manager, scaling_factor=2.0):
     """Helper function to test treeview column method patching with width and minwidth parameters."""
     from tkinter import ttk
-    
+
     # Mock the original method before patching
     mock_original_column = create_mock_original_method()
     ttk.Treeview.column = mock_original_column
@@ -707,7 +708,7 @@ def test_treeview_column_patch_without_scaling_params(manager, scaling_factor=2.
 def test_treeview_style_patch_basic(manager, scaling_factor=2.0):
     """Helper function to test basic treeview style method patching."""
     from tkinter import ttk
-    
+
     # Store original method for comparison
     original_configure = ttk.Style.configure
     
@@ -720,7 +721,7 @@ def test_treeview_style_patch_basic(manager, scaling_factor=2.0):
 def test_treeview_style_patch_with_rowheight(manager, scaling_factor=2.0):
     """Helper function to test treeview style method patching with rowheight parameter."""
     from tkinter import ttk
-    
+
     # Mock the original method before patching
     mock_original_configure = create_mock_original_method()
     ttk.Style.configure = mock_original_configure
@@ -1109,9 +1110,17 @@ def tkinter_patch_context():
 def backward_compatibility_functions():
     """Common backward compatibility functions for testing."""
     from tkface.win.dpi import (
-        dpi, enable_dpi_awareness, enable_dpi_geometry, get_scaling_factor,
-        get_effective_dpi, logical_to_physical, physical_to_logical,
-        scale_font_size, get_actual_window_size, calculate_dpi_sizes, scale_icon
+        calculate_dpi_sizes,
+        dpi,
+        enable_dpi_awareness,
+        enable_dpi_geometry,
+        get_actual_window_size,
+        get_effective_dpi,
+        get_scaling_factor,
+        logical_to_physical,
+        physical_to_logical,
+        scale_font_size,
+        scale_icon,
     )
     return {
         'dpi': dpi,
@@ -1236,7 +1245,7 @@ class TestDPIManager(BaseTestHelper):
     def test_is_windows_function(self):
         """Test is_windows function."""
         from tkface.win.dpi import is_windows
-        
+
         # This should return True on Windows, False on other platforms
         result = is_windows()
         assert isinstance(result, bool)
@@ -2045,16 +2054,16 @@ class TestDPIBackwardCompatibility:
     def test_placeholder_functions(self):
         """Test placeholder functions that are not implemented."""
         from tkface.win.dpi import (
-            enable_auto_dpi_scaling,
+            add_scalable_property,
             disable_auto_dpi_scaling,
+            enable_auto_dpi_scaling,
+            get_scalable_properties,
             is_auto_dpi_scaling_enabled,
+            remove_scalable_property,
             scale_widget_dimensions,
             scale_widget_tree,
-            get_scalable_properties,
-            add_scalable_property,
-            remove_scalable_property
         )
-        
+
         # Test enable_auto_dpi_scaling
         result = enable_auto_dpi_scaling(None)
         assert result is False

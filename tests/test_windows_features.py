@@ -162,6 +162,7 @@ def test_bell_sound_type_mapping():
 def test_bell_case_insensitive():
     """Test that bell function handles case insensitive sound types."""
     from tkface.win.bell import bell
+
     # Should not raise any exceptions for uppercase
     try:
         bell("ERROR")
@@ -176,6 +177,7 @@ def test_bell_case_insensitive():
 def test_unround_disable_window_corner_round():
     """Test disable_window_corner_round function."""
     from tkface.win.unround import disable_window_corner_round
+
     # Test with invalid hwnd
     result = disable_window_corner_round(0)
     assert isinstance(result, bool)
@@ -202,11 +204,11 @@ def test_unround_disable_window_corner_round_dwmapi_error(mock_windll):
 def test_unround_auto_toplevel_functions():
     """Test auto-unround enable/disable functions."""
     from tkface.win.unround import (
-        enable_auto_unround,
         disable_auto_unround,
+        enable_auto_unround,
         is_auto_unround_enabled,
     )
-    
+
     # Test initial state
     initial_state = is_auto_unround_enabled()
     
@@ -226,7 +228,7 @@ def test_unround_auto_toplevel_functions():
 @patch("sys.platform", "darwin")
 def test_unround_auto_toplevel_non_windows():
     """Test auto-unround functions on non-Windows platform."""
-    from tkface.win.unround import enable_auto_unround, disable_auto_unround
+    from tkface.win.unround import disable_auto_unround, enable_auto_unround
     result = enable_auto_unround()
     assert result is False
     result = disable_auto_unround()
@@ -236,11 +238,11 @@ def test_unround_auto_toplevel_non_windows():
 def test_unround_apply_to_toplevel_functions():
     """Test unround application helper functions."""
     from tkface.win.unround import (
+        _apply_unround_to_toplevel,
         _is_unround_applied,
         _mark_unround_applied,
-        _apply_unround_to_toplevel,
     )
-    
+
     # Create a mock toplevel
     class MockToplevel:
         def __init__(self):
@@ -382,7 +384,7 @@ def test_unround_main_exception_handling(mock_get_parent, root):
 def test_patched_toplevel_init():
     """Test _patched_toplevel_init function."""
     from tkface.win.unround import _patched_toplevel_init
-    
+
     # Create a mock toplevel
     class MockToplevel:
         def __init__(self):
@@ -442,7 +444,7 @@ def test_patched_toplevel_init_exception_handling(mock_original_init):
 def test_is_unround_applied_attribute_error():
     """Test _is_unround_applied handles AttributeError."""
     from tkface.win.unround import _is_unround_applied
-    
+
     # Create object without the attribute
     class MockToplevel:
         pass
@@ -611,6 +613,7 @@ def test_apply_unround_to_toplevel_successful_application(mock_disable_round, mo
 def test_unround_import_except_block(monkeypatch):
     """Cover lines 10-13: ImportError fallback during module import on Windows."""
     import importlib
+
     # Ensure a clean import
     sys.modules.pop("tkface.win.unround", None)
 
@@ -767,11 +770,11 @@ def test_disable_auto_unround_exception_handling(mock_tk):
 def test_unround_global_state_management():
     """Test global state management for auto-unround."""
     from tkface.win.unround import (
-        enable_auto_unround,
         disable_auto_unround,
+        enable_auto_unround,
         is_auto_unround_enabled,
     )
-    
+
     # Test initial state
     initial_state = is_auto_unround_enabled()
     
@@ -1098,8 +1101,9 @@ def test_button_is_windows_function_non_windows():
 
 def test_configure_button_for_windows_with_button(root_function):
     """Test configure_button_for_windows with actual button."""
-    from tkface.win.button import configure_button_for_windows
     import tkinter as tk
+
+    from tkface.win.button import configure_button_for_windows
     
     button = tk.Button(root_function, text="Test")
     configure_button_for_windows(button)
@@ -1118,8 +1122,9 @@ def test_configure_button_for_windows_with_none():
 @patch("sys.platform", "darwin")
 def test_configure_button_for_windows_non_windows(root_function):
     """Test configure_button_for_windows on non-Windows platform."""
-    from tkface.win.button import configure_button_for_windows
     import tkinter as tk
+
+    from tkface.win.button import configure_button_for_windows
     
     button = tk.Button(root_function, text="Test")
     configure_button_for_windows(button)
@@ -1131,8 +1136,9 @@ def test_configure_button_for_windows_non_windows(root_function):
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
 def test_configure_button_for_windows_windows_styling(root_function):
     """Test configure_button_for_windows applies Windows styling."""
-    from tkface.win.button import configure_button_for_windows
     import tkinter as tk
+
+    from tkface.win.button import configure_button_for_windows
     
     button = tk.Button(root_function, text="Test")
     configure_button_for_windows(button)
@@ -1145,7 +1151,7 @@ def test_configure_button_for_windows_windows_styling(root_function):
 def test_get_button_label_with_shortcut_none_inputs():
     """Test get_button_label_with_shortcut with None inputs."""
     from tkface.win.button import get_button_label_with_shortcut
-    
+
     # Test with both None
     result = get_button_label_with_shortcut(None, None)
     assert result == ""
@@ -1172,7 +1178,7 @@ def test_get_button_label_with_shortcut_non_windows():
 def test_get_button_label_with_shortcut_windows_shortcuts():
     """Test get_button_label_with_shortcut with Windows shortcuts."""
     from tkface.win.button import get_button_label_with_shortcut
-    
+
     # Test all supported shortcuts
     test_cases = [
         ("yes", "はい", "はい(Y)"),
@@ -1191,7 +1197,7 @@ def test_get_button_label_with_shortcut_windows_shortcuts():
 def test_get_button_label_with_shortcut_case_insensitive():
     """Test get_button_label_with_shortcut is case insensitive."""
     from tkface.win.button import get_button_label_with_shortcut
-    
+
     # Test uppercase
     result = get_button_label_with_shortcut("YES", "はい")
     assert result == "はい(Y)"
@@ -1221,8 +1227,9 @@ def test_flat_button_creation(root_function):
 
 def test_flat_button_inheritance(root_function):
     """Test FlatButton inherits from tk.Button."""
-    from tkface.win.button import FlatButton
     import tkinter as tk
+
+    from tkface.win.button import FlatButton
     
     button = FlatButton(root_function, text="Test")
     assert isinstance(button, tk.Button)
@@ -1280,7 +1287,7 @@ def test_create_flat_button_with_kwargs(root_function):
 
 def test_create_flat_button_returns_flat_button(root_function):
     """Test create_flat_button returns FlatButton instance."""
-    from tkface.win.button import create_flat_button, FlatButton
+    from tkface.win.button import FlatButton, create_flat_button
     
     button = create_flat_button(root_function, "Test")
     assert isinstance(button, FlatButton)
@@ -1321,7 +1328,7 @@ def test_get_button_label_with_shortcut_empty_button_value():
 def test_configure_button_for_windows_with_invalid_button():
     """Test configure_button_for_windows with invalid button object."""
     from tkface.win.button import configure_button_for_windows
-    
+
     # Create object that's not a button
     class MockButton:
         def configure(self, **kwargs):
@@ -1363,7 +1370,7 @@ def test_create_flat_button_command_none(root_function):
 def test_get_button_label_with_shortcut_whitespace():
     """Test get_button_label_with_shortcut with whitespace in button_value."""
     from tkface.win.button import get_button_label_with_shortcut
-    
+
     # The function uses .lower() which doesn't strip whitespace, so " yes " doesn't match "yes"
     result = get_button_label_with_shortcut(" yes ", "はい")
     assert result == "はい"
@@ -1372,8 +1379,9 @@ def test_get_button_label_with_shortcut_whitespace():
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
 def test_configure_button_for_windows_button_configure_exception(root_function):
     """Test configure_button_for_windows handles button.configure exceptions."""
-    from tkface.win.button import configure_button_for_windows
     import tkinter as tk
+
+    from tkface.win.button import configure_button_for_windows
     
     button = tk.Button(root_function, text="Test")
     
@@ -1446,7 +1454,7 @@ def test_unround_non_windows_return_true():
 def test_patched_toplevel_init_function(mock_original_init):
     """Test _patched_toplevel_init function (lines 88-101)."""
     from tkface.win.unround import _patched_toplevel_init
-    
+
     # Create a mock toplevel
     class MockToplevel:
         def __init__(self):
@@ -1480,7 +1488,7 @@ def test_patched_toplevel_init_function(mock_original_init):
 def test_patched_toplevel_init_exception_handling(mock_original_init):
     """Test _patched_toplevel_init handles exceptions (lines 98-101)."""
     from tkface.win.unround import _patched_toplevel_init
-    
+
     # Create a mock toplevel that raises exception on after_idle
     class MockToplevel:
         def __init__(self):

@@ -6,7 +6,6 @@ import pytest
 
 # Import the module at the top level to ensure it's loaded for coverage
 import tkface.dialog.simpledialog
-
 from tkface import simpledialog
 
 
@@ -314,9 +313,7 @@ def test_custom_simpledialog_show_class_method():
 
 def test_custom_simpledialog_close(root, simpledialog_complete_mock, simpledialog_class_mock):
     """Test close method."""
-    from tkface.dialog.simpledialog import CustomSimpleDialog
-
-    from tkface.dialog.simpledialog import SimpleDialogConfig
+    from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
 
     dialog = CustomSimpleDialog(
         master=root,
@@ -332,9 +329,7 @@ def test_custom_simpledialog_close(root, simpledialog_complete_mock, simpledialo
 
 def test_custom_simpledialog_on_cancel(root, simpledialog_complete_mock, simpledialog_class_mock):
     """Test _on_cancel method."""
-    from tkface.dialog.simpledialog import CustomSimpleDialog
-
-    from tkface.dialog.simpledialog import SimpleDialogConfig
+    from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
 
     dialog = CustomSimpleDialog(
         master=root,
@@ -563,7 +558,7 @@ def test_ask_functions_with_all_parameters(root, simpledialog_complete_mock, fun
 def test_custom_simpledialog_show_with_root_creation(root, simpledialog_complete_mock, created_root):
     """Test CustomSimpleDialog.show with and without root creation."""
     from tkface.dialog.simpledialog import CustomSimpleDialog
-    
+
     # Mock the _setup_dialog_base function
     with patch("tkface.dialog.simpledialog._setup_dialog_base") as mock_setup, \
          patch("tkface.lang.set"):
@@ -1073,7 +1068,7 @@ def test_custom_simpledialog_on_ok_validation_failure_with_error_message(root, s
 def test_custom_simpledialog_create_selection_list_height_limit(root, simpledialog_real_instance):
     """Test _create_selection_list with many choices (height limit)."""
     from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
-    
+
     # Create many choices to test height limit
     choices = [f"Option {i}" for i in range(15)]  # More than 10 items
     
@@ -1226,7 +1221,7 @@ def test_get_selection_result_no_listbox_attribute(root, simpledialog_real_insta
 def test_on_ok_with_listbox_branch():
     """Test _on_ok with listbox selection dialog."""
     from tkface.dialog.simpledialog import CustomSimpleDialog
-    
+
     # Create a minimal dialog instance
     dialog = CustomSimpleDialog.__new__(CustomSimpleDialog)
     
@@ -1258,7 +1253,7 @@ def test_on_ok_with_listbox_branch():
 def test_on_cancel_branch():
     """Test _on_cancel method behavior."""
     from tkface.dialog.simpledialog import CustomSimpleDialog
-    
+
     # Create a minimal dialog instance
     dialog = CustomSimpleDialog.__new__(CustomSimpleDialog)
     
@@ -1279,7 +1274,7 @@ def test_on_cancel_branch():
 def test_get_selection_result_listbox_none():
     """Test _get_selection_result when listbox is None."""
     from tkface.dialog.simpledialog import CustomSimpleDialog
-    
+
     # Create a minimal dialog instance
     dialog = CustomSimpleDialog.__new__(CustomSimpleDialog)
     
@@ -1324,7 +1319,7 @@ def test_askinteger_validation_exception_logging(root):
     """Test askinteger validation with invalid input that triggers exception logging."""
     print("DEBUG: Starting test_askinteger_validation_exception_logging")
     from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
-    
+
     # Mock logger to verify debug message is logged
     with patch("tkface.dialog.simpledialog.logging.getLogger") as mock_get_logger:
         print("DEBUG: Mocked logging.getLogger")
@@ -1393,7 +1388,7 @@ def test_askinteger_validation_exception_logging(root):
 def test_askinteger_actual_validation_exception_handling():
     """Test askinteger with actual validation function that triggers exception logging."""
     from tkface.dialog.simpledialog import askinteger
-    
+
     # Mock logger to verify debug message is logged
     with patch("tkface.dialog.simpledialog.logging.getLogger") as mock_get_logger:
         mock_logger = MagicMock()
@@ -1435,7 +1430,7 @@ def test_askinteger_actual_validation_exception_handling():
 def test_askfloat_actual_validation_exception_handling():
     """Test askfloat with actual validation function that triggers exception logging."""
     from tkface.dialog.simpledialog import askfloat
-    
+
     # Mock logger to verify debug message is logged
     with patch("tkface.dialog.simpledialog.logging.getLogger") as mock_get_logger:
         mock_logger = MagicMock()
@@ -1477,7 +1472,7 @@ def test_askfloat_actual_validation_exception_handling():
 def test_askinteger_range_validation_coverage():
     """Test askinteger range validation to cover minvalue/maxvalue checks."""
     from tkface.dialog.simpledialog import askinteger
-    
+
     # Mock CustomSimpleDialog.show to test range validation
     with patch("tkface.dialog.simpledialog.CustomSimpleDialog.show") as mock_show:
         # Create a mock that will call the actual validation function
@@ -1514,7 +1509,7 @@ def test_askinteger_range_validation_coverage():
 def test_askfloat_range_validation_coverage():
     """Test askfloat range validation to cover minvalue/maxvalue checks."""
     from tkface.dialog.simpledialog import askfloat
-    
+
     # Mock CustomSimpleDialog.show to test range validation
     with patch("tkface.dialog.simpledialog.CustomSimpleDialog.show") as mock_show:
         # Create a mock that will call the actual validation function

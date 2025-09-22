@@ -9,7 +9,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from tkface.dialog.datepicker import DateEntry, DateFrame, DatePickerConfig, _DatePickerBase
+from tkface.dialog.datepicker import (
+    DateEntry,
+    DateFrame,
+    DatePickerConfig,
+    _DatePickerBase,
+)
 
 
 class TestDatePickerConfig:

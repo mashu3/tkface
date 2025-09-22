@@ -4,7 +4,7 @@ import os
 import threading
 import time
 import tkinter as tk
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -237,7 +237,7 @@ def calendar_theme_colors():
 def calendar_mock_widgets():
     """Provide mock widgets for Calendar tests."""
     from unittest.mock import Mock
-    
+
     # Create mock widgets
     mock_label = Mock()
     mock_label.config = Mock()
@@ -262,7 +262,7 @@ def calendar_mock_widgets():
 def pathbrowser_mock_widgets():
     """Provide mock widgets for PathBrowser tests."""
     from unittest.mock import Mock
-    
+
     # Create mock widgets
     mock_frame = Mock()
     mock_frame.config = Mock()
@@ -535,8 +535,8 @@ def pathbrowser_mock_patches():
 @pytest.fixture
 def temp_dir():
     """Create a temporary directory for testing."""
-    import tempfile  # pylint: disable=import-outside-toplevel
     import shutil  # pylint: disable=import-outside-toplevel
+    import tempfile  # pylint: disable=import-outside-toplevel
 
     temp_dir_path = tempfile.mkdtemp()  # pylint: disable=redefined-outer-name
     yield temp_dir_path
@@ -984,7 +984,7 @@ def comprehensive_treeview_mock():
 def mock_pathbrowser_instance(root):
     """Provide a properly configured PathBrowser instance for testing."""
     from tkface.widget.pathbrowser.core import PathBrowser
-    
+
     # Create PathBrowser instance with minimal initialization
     browser = PathBrowser.__new__(PathBrowser)
     
@@ -1215,8 +1215,8 @@ def simpledialog_mock_patches():
 @pytest.fixture
 def simpledialog_mock_widgets():
     """Provide mock widgets for SimpleDialog tests."""
-    from unittest.mock import Mock, MagicMock
-    
+    from unittest.mock import MagicMock, Mock
+
     # Create mock widgets
     mock_toplevel = Mock()
     mock_toplevel.wait_window = Mock()

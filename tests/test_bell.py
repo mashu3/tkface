@@ -29,7 +29,7 @@ def test_bell_non_windows_returns_false():
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
 def test_bell_invalid_type_maps_to_default():
     """Invalid sound types should fall back to MB_OK (default)."""
-    from tkface.win.bell import bell, MB_OK
+    from tkface.win.bell import MB_OK, bell
 
     with patch("ctypes.windll.user32.MessageBeep") as mock_beep:
         mock_beep.return_value = 1

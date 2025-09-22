@@ -1091,7 +1091,7 @@ class TestDatePickerAdvanced:
     def test_datepicker_base_dpi_scaling_error_handling(self, root):
         """Test DPI scaling error handling in _DatePickerBase."""
         from tkface.dialog.datepicker import _DatePickerBase
-        
+
         # Create a mock parent that will cause DPI scaling to fail
         class MockParent:
             def __init__(self):
@@ -1780,8 +1780,9 @@ class TestCalendarStyleAdvanced:
 
     def test_load_theme_file_config_error(self):
         """Test _load_theme_file with config error."""
+        from unittest.mock import Mock, patch
+
         from tkface.widget.calendar.style import _load_theme_file
-        from unittest.mock import patch, Mock
         
         with patch('configparser.ConfigParser') as mock_config:
             mock_parser = Mock()
@@ -1793,8 +1794,9 @@ class TestCalendarStyleAdvanced:
 
     def test_get_calendar_theme_config_error(self):
         """Test get_calendar_theme with config error."""
-        from tkface.widget.calendar.style import get_calendar_theme
         from unittest.mock import patch
+
+        from tkface.widget.calendar.style import get_calendar_theme
         
         with patch('tkface.widget.calendar.style._load_theme_file') as mock_load:
             mock_load.side_effect = Exception("Config error")
@@ -1804,8 +1806,9 @@ class TestCalendarStyleAdvanced:
 
     def test_determine_day_colors_selection(self):
         """Test _determine_day_colors with selection."""
-        from tkface.widget.calendar.style import _determine_day_colors, DayColorContext
         import datetime
+
+        from tkface.widget.calendar.style import DayColorContext, _determine_day_colors
         
         context = DayColorContext(
             theme_colors={"day_bg": "white", "day_fg": "black", "selected_bg": "blue", "selected_fg": "white"},
@@ -1828,8 +1831,9 @@ class TestCalendarStyleAdvanced:
 
     def test_determine_day_colors_range(self):
         """Test _determine_day_colors with range selection."""
-        from tkface.widget.calendar.style import _determine_day_colors, DayColorContext
         import datetime
+
+        from tkface.widget.calendar.style import DayColorContext, _determine_day_colors
         
         context = DayColorContext(
             theme_colors={"day_bg": "white", "day_fg": "black", "range_bg": "lightblue", "range_fg": "black"},
@@ -1852,8 +1856,9 @@ class TestCalendarStyleAdvanced:
 
     def test_determine_day_colors_today(self):
         """Test _determine_day_colors with today."""
-        from tkface.widget.calendar.style import _determine_day_colors, DayColorContext
         import datetime
+
+        from tkface.widget.calendar.style import DayColorContext, _determine_day_colors
         
         today = datetime.date.today()
         context = DayColorContext(
@@ -1877,8 +1882,9 @@ class TestCalendarStyleAdvanced:
 
     def test_determine_day_colors_custom_today_color(self):
         """Test _determine_day_colors with custom today color."""
-        from tkface.widget.calendar.style import _determine_day_colors, DayColorContext
         import datetime
+
+        from tkface.widget.calendar.style import DayColorContext, _determine_day_colors
         
         today = datetime.date.today()
         context = DayColorContext(
@@ -1902,8 +1908,9 @@ class TestCalendarStyleAdvanced:
 
     def test_determine_day_colors_today_color_none(self):
         """Test _determine_day_colors with today color set to none."""
-        from tkface.widget.calendar.style import _determine_day_colors, DayColorContext
         import datetime
+
+        from tkface.widget.calendar.style import DayColorContext, _determine_day_colors
 
         # Use a specific Sunday date to ensure consistent test results
         sunday_date = datetime.date(2024, 1, 7)  # This is a Sunday
@@ -1929,8 +1936,9 @@ class TestCalendarStyleAdvanced:
 
     def test_determine_day_colors_holiday(self):
         """Test _determine_day_colors with holiday."""
-        from tkface.widget.calendar.style import _determine_day_colors, DayColorContext
         import datetime
+
+        from tkface.widget.calendar.style import DayColorContext, _determine_day_colors
         
         context = DayColorContext(
             theme_colors={"day_bg": "white", "day_fg": "black", "weekend_bg": "lightgray", "weekend_fg": "black"},
@@ -1953,8 +1961,9 @@ class TestCalendarStyleAdvanced:
 
     def test_determine_day_colors_day_of_week(self):
         """Test _determine_day_colors with day of week color."""
-        from tkface.widget.calendar.style import _determine_day_colors, DayColorContext
         import datetime
+
+        from tkface.widget.calendar.style import DayColorContext, _determine_day_colors
         
         context = DayColorContext(
             theme_colors={"day_bg": "white", "day_fg": "black", "weekend_bg": "lightgray", "weekend_fg": "black"},
@@ -1977,8 +1986,9 @@ class TestCalendarStyleAdvanced:
 
     def test_determine_day_colors_weekend_default(self):
         """Test _determine_day_colors with weekend default colors."""
-        from tkface.widget.calendar.style import _determine_day_colors, DayColorContext
         import datetime
+
+        from tkface.widget.calendar.style import DayColorContext, _determine_day_colors
         
         context = DayColorContext(
             theme_colors={"day_bg": "white", "day_fg": "black", "weekend_bg": "lightgray", "weekend_fg": "black"},
@@ -2001,8 +2011,9 @@ class TestCalendarStyleAdvanced:
 
     def test_get_selection_colors_single_date(self):
         """Test _get_selection_colors with single date."""
-        from tkface.widget.calendar.style import _get_selection_colors
         import datetime
+
+        from tkface.widget.calendar.style import _get_selection_colors
         
         theme_colors = {"selected_bg": "blue", "selected_fg": "white"}
         selected_date = datetime.date(2024, 1, 15)
@@ -2015,8 +2026,9 @@ class TestCalendarStyleAdvanced:
 
     def test_get_selection_colors_range_start(self):
         """Test _get_selection_colors with range start."""
-        from tkface.widget.calendar.style import _get_selection_colors
         import datetime
+
+        from tkface.widget.calendar.style import _get_selection_colors
         
         theme_colors = {"selected_bg": "blue", "selected_fg": "white", "range_bg": "lightblue", "range_fg": "black"}
         selected_date = None
@@ -2029,8 +2041,9 @@ class TestCalendarStyleAdvanced:
 
     def test_get_selection_colors_range_end(self):
         """Test _get_selection_colors with range end."""
-        from tkface.widget.calendar.style import _get_selection_colors
         import datetime
+
+        from tkface.widget.calendar.style import _get_selection_colors
         
         theme_colors = {"selected_bg": "blue", "selected_fg": "white", "range_bg": "lightblue", "range_fg": "black"}
         selected_date = None
@@ -2043,8 +2056,9 @@ class TestCalendarStyleAdvanced:
 
     def test_get_selection_colors_range_middle(self):
         """Test _get_selection_colors with range middle."""
-        from tkface.widget.calendar.style import _get_selection_colors
         import datetime
+
+        from tkface.widget.calendar.style import _get_selection_colors
         
         theme_colors = {"selected_bg": "blue", "selected_fg": "white", "range_bg": "lightblue", "range_fg": "black"}
         selected_date = None
@@ -2057,8 +2071,9 @@ class TestCalendarStyleAdvanced:
 
     def test_get_today_colors_today(self):
         """Test _get_today_colors with today."""
-        from tkface.widget.calendar.style import _get_today_colors
         import datetime
+
+        from tkface.widget.calendar.style import _get_today_colors
         
         today = datetime.date.today()
         theme_colors = {"today_bg": "yellow", "today_fg": "black"}
@@ -2069,8 +2084,9 @@ class TestCalendarStyleAdvanced:
 
     def test_get_today_colors_custom_color(self):
         """Test _get_today_colors with custom color."""
-        from tkface.widget.calendar.style import _get_today_colors
         import datetime
+
+        from tkface.widget.calendar.style import _get_today_colors
         
         today = datetime.date.today()
         theme_colors = {"today_bg": "yellow", "today_fg": "black"}
@@ -2081,8 +2097,9 @@ class TestCalendarStyleAdvanced:
 
     def test_get_today_colors_not_today(self):
         """Test _get_today_colors with not today."""
-        from tkface.widget.calendar.style import _get_today_colors
         import datetime
+
+        from tkface.widget.calendar.style import _get_today_colors
         
         today = datetime.date.today()
         theme_colors = {"today_bg": "yellow", "today_fg": "black"}
@@ -2109,8 +2126,9 @@ class TestCalendarStyleAdvanced:
 
     def test_get_day_of_week_colors_custom(self):
         """Test _get_day_of_week_colors with custom color."""
-        from tkface.widget.calendar.style import _get_day_of_week_colors
         import datetime
+
+        from tkface.widget.calendar.style import _get_day_of_week_colors
         
         theme_colors = {"day_bg": "white", "day_fg": "black", "weekend_bg": "lightgray", "weekend_fg": "black"}
         day_colors = {"Sunday": "red"}
@@ -2122,8 +2140,9 @@ class TestCalendarStyleAdvanced:
 
     def test_get_day_of_week_colors_weekend_default(self):
         """Test _get_day_of_week_colors with weekend default."""
-        from tkface.widget.calendar.style import _get_day_of_week_colors
         import datetime
+
+        from tkface.widget.calendar.style import _get_day_of_week_colors
         
         theme_colors = {"day_bg": "white", "day_fg": "black", "weekend_bg": "lightgray", "weekend_fg": "black"}
         day_colors = {}
@@ -2135,8 +2154,9 @@ class TestCalendarStyleAdvanced:
 
     def test_get_day_of_week_colors_weekday(self):
         """Test _get_day_of_week_colors with weekday."""
-        from tkface.widget.calendar.style import _get_day_of_week_colors
         import datetime
+
+        from tkface.widget.calendar.style import _get_day_of_week_colors
         
         theme_colors = {"day_bg": "white", "day_fg": "black", "weekend_bg": "lightgray", "weekend_fg": "black"}
         day_colors = {}
@@ -2902,7 +2922,7 @@ class TestCalendarCoverage:
         """Test ImportError fallback functions."""
         # Test the fallback functions directly
         from tkface.widget.calendar.core import get_scaling_factor, scale_font_size
-        
+
         # Create a mock that simulates ImportError scenario
         with patch('tkface.win.dpi.get_scaling_factor', side_effect=ImportError):
             # Test fallback get_scaling_factor
@@ -3145,7 +3165,7 @@ class TestCalendarCoverage:
     def test_style_theme_loading_errors(self, root):
         """Test style theme loading error cases."""
         from tkface.widget.calendar.style import get_calendar_theme, get_calendar_themes
-        
+
         # Test with non-existent theme
         with patch('tkface.widget.calendar.style._load_theme_file', side_effect=FileNotFoundError("Theme not found")):
             try:
@@ -3163,7 +3183,7 @@ class TestCalendarCoverage:
     def test_style_theme_file_errors(self, root):
         """Test style theme file error cases."""
         from tkface.widget.calendar.style import _load_theme_file
-        
+
         # Test with non-existent theme file
         try:
             _load_theme_file("nonexistent")
@@ -3181,7 +3201,7 @@ class TestCalendarCoverage:
     def test_style_theme_section_error(self, root):
         """Test style theme section error (line 89)."""
         from tkface.widget.calendar.style import _load_theme_file
-        
+
         # Mock a config that doesn't have the theme section
         mock_config = Mock()
         mock_config.__contains__ = Mock(return_value=False)
@@ -3196,9 +3216,10 @@ class TestCalendarCoverage:
 
     def test_style_theme_warning_logging(self, root):
         """Test style theme warning logging (lines 117-121)."""
-        from tkface.widget.calendar.style import get_calendar_themes
         from pathlib import Path
-        
+
+        from tkface.widget.calendar.style import get_calendar_themes
+
         # Mock theme directory to return Path objects that will cause errors
         mock_path1 = Mock(spec=Path)
         mock_path1.stem = "invalid1"
@@ -3234,7 +3255,7 @@ class TestCalendarCoverage:
         # Create a temporary module to test the fallback functions
         import sys
         import types
-        
+
         # Create a mock module that will trigger ImportError
         mock_module = types.ModuleType('mock_dpi')
         sys.modules['tkface.win.dpi'] = mock_module
@@ -3256,7 +3277,7 @@ class TestCalendarCoverage:
         try:
             # Import the core module which should trigger the fallback
             from tkface.widget.calendar.core import get_scaling_factor, scale_font_size
-            
+
             # Test the fallback functions
             result = get_scaling_factor(root)
             assert result == 1.0

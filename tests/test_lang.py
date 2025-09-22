@@ -2,10 +2,10 @@
 
 import os
 import tempfile
+from tkinter import TclError
 from unittest.mock import Mock, patch
 
 import pytest
-from tkinter import TclError
 
 import tkface.lang.lang
 

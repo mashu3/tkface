@@ -5,13 +5,13 @@ This module focuses on testing the uncovered parts of the core.py file.
 """
 
 import os
+import tkinter as tk
 from pathlib import Path
 from unittest.mock import Mock, patch
+
 import pytest
-import tkinter as tk
-from tkface.widget.pathbrowser import PathBrowser
-from tkface.widget.pathbrowser import utils
-from tkface.widget.pathbrowser import view
+
+from tkface.widget.pathbrowser import PathBrowser, utils, view
 from tkface.widget.pathbrowser.core import PathBrowserConfig
 
 
@@ -41,6 +41,7 @@ class TestPathBrowserCoreAdditionalCoverage:
             config = pathbrowser_params['config']
             if hasattr(config, '_mock_name'):  # It's a Mock object
                 from tkface.widget.pathbrowser.core import PathBrowserConfig
+
                 # Create a proper config with Mock attributes as overrides
                 proper_config = PathBrowserConfig()
                 for attr in ['select', 'multiple', 'initialdir', 'filetypes', 'ok_label', 
@@ -76,7 +77,7 @@ class TestPathBrowserCoreAdditionalCoverage:
     def _create_mock_browser_instance(self, root, **kwargs):
         """Create a properly configured mock PathBrowser instance for testing."""
         from tkface.widget.pathbrowser.core import PathBrowser
-        
+
         # Create PathBrowser instance with minimal initialization
         browser = PathBrowser.__new__(PathBrowser)
         

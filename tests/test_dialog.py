@@ -3,7 +3,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-
 # Note: We test internal helpers in tkface.dialog.__init__
 # - _get_or_create_root
 # - _get_button_labels

@@ -5,8 +5,8 @@ import re
 import sys
 import tkinter as tk
 import tkinter.font as tkfont
-from tkinter import ttk
 from ctypes import pointer, wintypes
+from tkinter import ttk
 
 
 def is_windows():
