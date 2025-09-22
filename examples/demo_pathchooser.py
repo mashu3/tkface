@@ -201,7 +201,7 @@ class FileDialogDemo:
         ttk.Label(config_row4, text="Initial Dir:").pack(side=tk.LEFT)
         initialdir_entry = ttk.Entry(config_row4, textvariable=self.initialdir_var, width=60)
         initialdir_entry.pack(side=tk.LEFT, padx=(5, 0), fill="x", expand=True)
-        initialdir_entry.bind("<KeyRelease>", lambda e: self.generate_code())
+        initialdir_entry.bind("<KeyRelease>", lambda e: self.validate_and_generate_code())
         
         # Button frame inside configuration section
         button_frame = tk.Frame(config_frame)
@@ -252,9 +252,105 @@ class FileDialogDemo:
         # Initialize dialog type settings and generate initial code
         self.update_dialog_type()
     
+    def validate_and_generate_code(self):
+        """Validate initial directory and generate code."""
+        try:
+            # Validate initial directory if provided
+            initialdir_raw = self.initialdir_var.get()
+            initialdir = initialdir_raw.strip()
+            if initialdir:  # Only validate if not empty
+                import os
+
+                # Reject multi-line or embedded newlines to avoid dumping logs into message body
+                if ("\n" in initialdir) or ("\r" in initialdir):
+                    tkface.messagebox.showerror(
+                        title="Invalid Path",
+                        message="Path must be a single line without newlines.",
+                        master=self.root,
+                    )
+                    return
+                # Prepare safe display string (truncate long text)
+                display_path = initialdir
+                if len(display_path) > 160:
+                    display_path = display_path[:160] + "..."
+                # Normalize for filesystem checks
+                initialdir_fs = os.path.normpath(os.path.expanduser(initialdir))
+                if not os.path.exists(initialdir_fs):
+                    tkface.messagebox.showerror(
+                        title="Invalid Path",
+                        message=f"Path does not exist: {display_path}",
+                        master=self.root,
+                    )
+                    return
+                if not os.path.isdir(initialdir_fs):
+                    tkface.messagebox.showerror(
+                        title="Invalid Path",
+                        message=f"Not a directory: {display_path}",
+                        master=self.root,
+                    )
+                    return
+            
+            # Generate code if validation passes or if no initialdir specified
+            self.generate_code()
+        except Exception as e:
+            # Log detailed error to console
+            print(f"Validation error: {e}")
+            import traceback
+            traceback.print_exc()
+            # Show user-friendly error message
+            tkface.messagebox.showerror(
+                title="Validation Error",
+                message="An error occurred while validating the path. Please check the console for details.",
+                master=self.root
+            )
+    
     def test_current_settings(self):
         """Test the current dialog settings."""
         dialog_type = self.dialog_type_var.get()
+        
+        # Validate initial directory if provided
+        try:
+            initialdir_raw = self.initialdir_var.get()
+            initialdir = initialdir_raw.strip()
+            if initialdir:  # Only validate if not empty
+                import os
+                if ("\n" in initialdir) or ("\r" in initialdir):
+                    tkface.messagebox.showerror(
+                        title="Invalid Path",
+                        message="Path must be a single line without newlines.",
+                        master=self.root,
+                    )
+                    return
+                display_path = initialdir
+                if len(display_path) > 160:
+                    display_path = display_path[:160] + "..."
+                initialdir_fs = os.path.normpath(os.path.expanduser(initialdir))
+                if not os.path.exists(initialdir_fs):
+                    tkface.messagebox.showerror(
+                        title="Invalid Path",
+                        message=f"Path does not exist: {display_path}",
+                        master=self.root,
+                    )
+                    return
+                if not os.path.isdir(initialdir_fs):
+                    tkface.messagebox.showerror(
+                        title="Invalid Path",
+                        message=f"Not a directory: {display_path}",
+                        master=self.root,
+                    )
+                    return
+        except Exception as e:
+            # Log detailed error to console
+            print(f"Validation error: {e}")
+            import traceback
+            traceback.print_exc()
+            # Show user-friendly error message
+            tkface.messagebox.showerror(
+                title="Validation Error",
+                message="An error occurred while validating the path. Please check the console for details.",
+                master=self.root
+            )
+            return
         
         try:
             # Parse filetypes if provided
@@ -287,6 +383,7 @@ class FileDialogDemo:
                 result = tkface.pathchooser.askopenfile(
                     title=self.title_var.get(),
                     filetypes=filetypes,
+                    initialdir=self.initialdir_var.get() if self.initialdir_var.get() else None,
                     parent=parent,
                     x=x_pos,
                     y=y_pos,
@@ -296,6 +393,7 @@ class FileDialogDemo:
                 result = tkface.pathchooser.askopenfiles(
                     title=self.title_var.get(),
                     filetypes=filetypes,
+                    initialdir=self.initialdir_var.get() if self.initialdir_var.get() else None,
                     parent=parent,
                     x=x_pos,
                     y=y_pos,
@@ -304,6 +402,7 @@ class FileDialogDemo:
             elif dialog_type == "askdirectory":
                 result = tkface.pathchooser.askdirectory(
                     title=self.title_var.get(),
+                    initialdir=self.initialdir_var.get() if self.initialdir_var.get() else None,
                     parent=parent,
                     x=x_pos,
                     y=y_pos,
@@ -315,6 +414,7 @@ class FileDialogDemo:
                     multiple=self.multiple_var.get(),
                     title=self.title_var.get(),
                     filetypes=filetypes,
+                    initialdir=self.initialdir_var.get() if self.initialdir_var.get() else None,
                     parent=parent,
                     x=x_pos,
                     y=y_pos,
@@ -324,6 +424,7 @@ class FileDialogDemo:
                 result = tkface.pathchooser.asksavefile(
                     title=self.title_var.get(),
                     initialfile="document.txt",
+                    initialdir=self.initialdir_var.get() if self.initialdir_var.get() else None,
                     parent=parent,
                     x=x_pos,
                     y=y_pos,
@@ -333,6 +434,11 @@ class FileDialogDemo:
             self.display_result(f"Test: {dialog_type}", result)
             
         except Exception as e:
+            # Log detailed error to console
+            print(f"Error executing dialog: {e}")
+            import traceback
+            traceback.print_exc()
+            # Show user-friendly error message
             error_msg = f"Error executing dialog: {e}"
             self.display_result("Error", [f"❌ {error_msg}"])
     
