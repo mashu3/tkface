@@ -228,6 +228,9 @@ class PathBrowser(tk.Frame):
             # Clear selection when changing directory
             self.state.selected_items = []
             view.update_selected_display(self)
+            # In save mode, restore initial filename after directory change
+            if self.config.save_mode and self.config.initialfile:
+                self.selected_var.set(self.config.initialfile)
             # Update navigation buttons state
             self._update_navigation_buttons()
 

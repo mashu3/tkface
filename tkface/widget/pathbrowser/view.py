@@ -666,7 +666,12 @@ def sort_items(pathbrowser_instance, items):
 def update_selected_display(pathbrowser_instance):
     """Update the selected files display."""
     if not pathbrowser_instance.state.selected_items:
-        pathbrowser_instance.selected_var.set("")
+        # In save mode, preserve initial filename if no items are selected
+        if pathbrowser_instance.config.save_mode and pathbrowser_instance.config.initialfile:
+            # Don't clear the filename entry in save mode if initialfile is set
+            pass
+        else:
+            pathbrowser_instance.selected_var.set("")
         pathbrowser_instance._update_status()  # pylint: disable=protected-access
         return
 
@@ -681,8 +686,13 @@ def update_selected_display(pathbrowser_instance):
 
             # Set display text based on selection
         if not files:
-            # Only directories selected, keep filename entry empty
-            pathbrowser_instance.selected_var.set("")
+            # Only directories selected
+            if pathbrowser_instance.config.save_mode and pathbrowser_instance.config.initialfile:
+                # In save mode, preserve initial filename when only directories are selected
+                pass
+            else:
+                # Keep filename entry empty
+                pathbrowser_instance.selected_var.set("")
         elif len(files) == 1:
             # Single file
             pathbrowser_instance.selected_var.set(files[0])
