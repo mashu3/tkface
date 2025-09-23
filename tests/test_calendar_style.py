@@ -557,3 +557,4 @@ class TestCalendarStyle:
                 themes = get_calendar_themes()
                 # Should return empty dict and log warnings
                 assert isinstance(themes, dict)
+
