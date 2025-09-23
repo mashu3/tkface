@@ -1395,4 +1395,86 @@ class TestStyleAdvancedComprehensive:
                 assert themes == ["light"]  # Should return default
 
 
+class TestFileInfoManagerErrorHandling:
+    """Test error handling in FileInfoManager."""
+
+    def test_get_file_info_with_oserror(self, root):
+        """Test get_file_info with OSError."""
+        manager = FileInfoManager(root)
+        
+        with patch('pathlib.Path.stat', side_effect=OSError("Permission denied")):
+            file_info = manager.get_file_info("/invalid/path")
+            
+            assert file_info.path == "/invalid/path"
+            assert file_info.name == "path"  # Path.name returns the last part
+            assert file_info.is_dir is False
+            assert file_info.size_bytes == 0
+            assert file_info.size_str == ""
+            assert file_info.modified == ""
+            assert file_info.file_type in ["Unknown", "不明"]  # Language-dependent
+
+    def test_get_file_info_with_permission_error(self, root):
+        """Test get_file_info with PermissionError."""
+        manager = FileInfoManager(root)
+        
+        with patch('pathlib.Path.stat', side_effect=PermissionError("Access denied")):
+            file_info = manager.get_file_info("/restricted/path")
+            
+            assert file_info.path == "/restricted/path"
+            assert file_info.is_dir is False
+            assert file_info.size_bytes == 0
+            assert file_info.size_str == ""
+            assert file_info.modified == ""
+            assert file_info.file_type in ["Unknown", "不明"]  # Language-dependent
+
+    def test_resolve_symlink_with_oserror(self, root):
+        """Test _resolve_symlink with OSError."""
+        manager = FileInfoManager(root)
+        
+        with patch('pathlib.Path.resolve', side_effect=OSError("Symlink error")):
+            result = manager._resolve_symlink("/symlink/path")
+            assert result == "/symlink/path"  # Should return original path
+
+    def test_resolve_symlink_with_permission_error(self, root):
+        """Test _resolve_symlink with PermissionError."""
+        manager = FileInfoManager(root)
+        
+        with patch('pathlib.Path.resolve', side_effect=PermissionError("Access denied")):
+            result = manager._resolve_symlink("/restricted/symlink")
+            assert result == "/restricted/symlink"  # Should return original path
+
+    def test_resolve_symlink_non_macos(self, root):
+        """Test _resolve_symlink on non-macOS systems."""
+        manager = FileInfoManager(root)
+        
+        with patch('tkface.widget.pathbrowser.utils.IS_MACOS', False):
+            result = manager._resolve_symlink("/any/path")
+            assert result == "/any/path"  # Should return original path without processing
+
+    def test_cache_management_methods(self, root):
+        """Test cache management methods directly."""
+        manager = FileInfoManager(root)
+        
+        # Test cache size management
+        assert manager.get_cache_size() == 0
+        
+        # Test clear cache
+        manager.clear_cache()
+        assert manager.get_cache_size() == 0
+        
+        # Test remove non-existent item
+        manager.remove_from_cache("/nonexistent")
+        assert manager.get_cache_size() == 0
+
+    def test_remove_from_cache_nonexistent(self, root):
+        """Test remove_from_cache with non-existent path."""
+        manager = FileInfoManager(root)
+        
+        # Try to remove non-existent path
+        manager.remove_from_cache("/nonexistent/path")
+        
+        # Should not raise exception
+        assert manager.get_cache_size() == 0
+
+
 

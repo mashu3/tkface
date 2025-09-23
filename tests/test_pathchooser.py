@@ -977,3 +977,73 @@ class TestPathChooserIntegration:
         # pylint: disable=import-outside-toplevel,reimported,redefined-outer-name
         from tkface.widget.pathbrowser import PathBrowser
         assert PathBrowser is not None
+
+    def test_create_dialog_window_with_none_parent(self):
+        """Test _create_dialog_window with None parent."""
+        from tkface.dialog.pathchooser import _create_dialog_window
+        
+        dialog = _create_dialog_window(None)
+        assert isinstance(dialog, tk.Toplevel)
+        dialog.destroy()
+
+    def test_askpath_with_unround_override(self, root):
+        """Test askpath with unround parameter overriding config."""
+        config = pathchooser.FileDialogConfig(
+            select="file",
+            unround=False  # Config says no unround
+        )
+        
+        with patch('tkface.dialog.pathchooser.PathBrowser') as mock_browser:
+            mock_browser_instance = mock_browser.return_value
+            mock_browser_instance.get_selection.return_value = ["/path/to/test.txt"]
+            mock_browser_instance.bind = lambda event, callback: None
+            mock_browser_instance.pack = lambda **kwargs: None
+            mock_browser_instance.focus_set = lambda: None
+            
+            with patch('tkface.dialog.pathchooser._create_dialog_window') as mock_create:
+                mock_dialog = tk.Toplevel(root)
+                mock_dialog.withdraw = lambda: None
+                mock_dialog.deiconify = lambda: None
+                mock_dialog.lift = lambda: None
+                mock_dialog.focus_set = lambda: None
+                mock_dialog.wait_window = lambda: None
+                mock_dialog.destroy = lambda: None
+                mock_dialog.transient = lambda parent: None
+                mock_dialog.grab_set = lambda: None
+                mock_dialog.title = lambda title: None
+                mock_dialog.resizable = lambda x, y: None
+                mock_dialog.minsize = lambda w, h: None
+                mock_dialog.geometry = lambda geom: None
+                mock_dialog.update_idletasks = lambda: None
+                mock_dialog.winfo_reqwidth = lambda: 500
+                mock_dialog.winfo_reqheight = lambda: 400
+                mock_dialog.winfo_screenwidth = lambda: 1920
+                mock_dialog.winfo_screenheight = lambda: 1080
+                mock_dialog.winfo_x = lambda: 100
+                mock_dialog.winfo_y = lambda: 200
+                mock_create.return_value = mock_dialog
+                
+                with patch('tkface.dialog.pathchooser.win.calculate_dpi_sizes') as mock_dpi:
+                    mock_dpi.return_value = {
+                        "min_width": 400,
+                        "min_height": 300,
+                        "default_width": 500,
+                        "default_height": 400,
+                        "padding": 10
+                    }
+                    
+                    with patch('tkface.dialog.pathchooser.lang.set'):
+                        with patch('tkface.dialog.pathchooser.win.unround') as mock_unround:
+                            # Mock the event binding to simulate OK button click
+                            def mock_bind(event, callback):
+                                if event == "<<PathBrowserOK>>":
+                                    callback()
+                            
+                            mock_browser_instance.bind = mock_bind
+                            
+                            # Call with unround=True to override config.unround=False
+                            result = pathchooser.askpath(config=config, unround=True)
+                            assert result == ["/path/to/test.txt"]
+                            
+                            # Verify that unround was called despite config saying False
+                            mock_unround.assert_called_once_with(mock_dialog, auto_toplevel=False)
