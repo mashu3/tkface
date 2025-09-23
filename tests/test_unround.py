@@ -945,6 +945,183 @@ def test_unround_import_error_handling_comprehensive():
                 assert result is False
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
+def test_unround_with_real_toplevel_windows():
+    """Test unround function with real Toplevel windows to cover lines 68-80."""
+    import tkinter as tk
+    from tkface.win.unround import unround
+    
+    # Create a real Tkinter root window
+    root = tk.Tk()
+    root.withdraw()  # Hide the window
+    
+    try:
+        # Create some Toplevel windows as children
+        toplevel1 = tk.Toplevel(root)
+        toplevel1.title("Test Window 1")
+        toplevel1.withdraw()
+        
+        toplevel2 = tk.Toplevel(root)
+        toplevel2.title("Test Window 2")
+        toplevel2.withdraw()
+        
+        # Apply unround to the root window (this should process child windows)
+        result = unround(root)
+        assert isinstance(result, bool)
+        
+    finally:
+        # Clean up
+        try:
+            toplevel1.destroy()
+        except:
+            pass
+        try:
+            toplevel2.destroy()
+        except:
+            pass
+        try:
+            root.destroy()
+        except:
+            pass
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
+def test_unround_with_toplevel_windows_exception_handling():
+    """Test unround function handles exceptions when processing child windows."""
+    import tkinter as tk
+    from tkface.win.unround import unround
+    
+    # Create a real Tkinter root window
+    root = tk.Tk()
+    root.withdraw()  # Hide the window
+    
+    try:
+        # Create a Toplevel window
+        toplevel = tk.Toplevel(root)
+        toplevel.title("Test Window")
+        toplevel.withdraw()
+        
+        # Mock winfo_id to raise an exception
+        original_winfo_id = toplevel.winfo_id
+        toplevel.winfo_id = lambda: (_ for _ in ()).throw(OSError("winfo_id failed"))
+        
+        # Apply unround to the root window
+        result = unround(root)
+        assert isinstance(result, bool)
+        
+    finally:
+        # Clean up
+        try:
+            toplevel.destroy()
+        except:
+            pass
+        try:
+            root.destroy()
+        except:
+            pass
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
+def test_unround_with_toplevel_windows_getparent_exception():
+    """Test unround function handles GetParent exceptions for child windows."""
+    import tkinter as tk
+    from tkface.win.unround import unround
+    
+    # Create a real Tkinter root window
+    root = tk.Tk()
+    root.withdraw()  # Hide the window
+    
+    try:
+        # Create a Toplevel window
+        toplevel = tk.Toplevel(root)
+        toplevel.title("Test Window")
+        toplevel.withdraw()
+        
+        # Mock GetParent to raise an exception
+        with patch("ctypes.windll.user32.GetParent", side_effect=OSError("GetParent failed")):
+            result = unround(root)
+            assert isinstance(result, bool)
+        
+    finally:
+        # Clean up
+        try:
+            toplevel.destroy()
+        except:
+            pass
+        try:
+            root.destroy()
+        except:
+            pass
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
+def test_unround_with_toplevel_windows_disable_round_exception():
+    """Test unround function handles disable_window_corner_round exceptions for child windows."""
+    import tkinter as tk
+    from tkface.win.unround import unround
+    
+    # Create a real Tkinter root window
+    root = tk.Tk()
+    root.withdraw()  # Hide the window
+    
+    try:
+        # Create a Toplevel window
+        toplevel = tk.Toplevel(root)
+        toplevel.title("Test Window")
+        toplevel.withdraw()
+        
+        # Mock disable_window_corner_round to raise an exception
+        with patch("tkface.win.unround.disable_window_corner_round", side_effect=OSError("disable failed")):
+            result = unround(root)
+            assert isinstance(result, bool)
+        
+    finally:
+        # Clean up
+        try:
+            toplevel.destroy()
+        except:
+            pass
+        try:
+            root.destroy()
+        except:
+            pass
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
+def test_unround_with_toplevel_windows_attribute_error():
+    """Test unround function handles AttributeError for child windows without winfo_id."""
+    import tkinter as tk
+    from tkface.win.unround import unround
+    
+    # Create a real Tkinter root window
+    root = tk.Tk()
+    root.withdraw()  # Hide the window
+    
+    try:
+        # Create a Toplevel window
+        toplevel = tk.Toplevel(root)
+        toplevel.title("Test Window")
+        toplevel.withdraw()
+        
+        # Mock winfo_id to raise AttributeError
+        toplevel.winfo_id = lambda: (_ for _ in ()).throw(AttributeError("winfo_id not available"))
+        
+        # Apply unround to the root window
+        result = unround(root)
+        assert isinstance(result, bool)
+        
+    finally:
+        # Clean up
+        try:
+            toplevel.destroy()
+        except:
+            pass
+        try:
+            root.destroy()
+        except:
+            pass
+
+
 @patch("sys.platform", "darwin")
 def test_unround_non_windows_return_true():
     """Test unround function returns True on non-Windows platforms (line 59)."""
