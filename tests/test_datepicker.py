@@ -478,12 +478,11 @@ class TestDatePickerWidgets:
         _test_dpi_scaling_error_handling(DateFrame, root)
         
         # Test update_dpi_scaling error during initialization
-        with patch('tkface.dialog.datepicker._DatePickerBase.update_dpi_scaling') as mock_update_dpi:
-            mock_update_dpi.side_effect = ImportError("Test error")
+        with patch('tkface.dialog.datepicker.get_scaling_factor') as mock_get_scaling:
+            mock_get_scaling.side_effect = ImportError("Test error")
             df = DateFrame(root)
-            # The DPI scaling factor should remain at its initial value (2.0 on this system)
-            # since update_dpi_scaling error doesn't reset the initial value
-            assert df.dpi_scaling_factor == 2.0
+            # When get_scaling_factor fails in update_dpi_scaling, it sets dpi_scaling_factor to 1.0 as fallback
+            assert df.dpi_scaling_factor == 1.0
 
 
     # DateEntry tests
@@ -528,12 +527,11 @@ class TestDatePickerWidgets:
     def test_dateentry_dpi_scaling_error_during_init(self, root):
         """Test DateEntry DPI scaling error during initialization."""
         # Test the specific error handling in DateEntry.__init__ for DPI scaling
-        with patch('tkface.dialog.datepicker._DatePickerBase.update_dpi_scaling') as mock_update_dpi:
-            mock_update_dpi.side_effect = ImportError("Test error")
+        with patch('tkface.dialog.datepicker.get_scaling_factor') as mock_get_scaling:
+            mock_get_scaling.side_effect = ImportError("Test error")
             de = DateEntry(root)
-            # The DPI scaling factor should remain at its initial value (2.0 on this system)
-            # since update_dpi_scaling error doesn't reset the initial value
-            assert de.dpi_scaling_factor == 2.0
+            # When get_scaling_factor fails in update_dpi_scaling, it sets dpi_scaling_factor to 1.0 as fallback
+            assert de.dpi_scaling_factor == 1.0
 
     def test_dateentry_button_text_removal(self, root):
         """Test DateEntry removes button_text from kwargs."""
