@@ -1,4 +1,5 @@
 # pylint: disable=import-outside-toplevel,protected-access
+import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -604,22 +605,32 @@ def test_custom_messagebox_icon_file_success(root):
     """Test successful icon file loading path in _get_icon_label."""
     from tkface.dialog.messagebox import CustomMessageBox, MessageBoxConfig
 
-    with (
-        patch("tkinter.Toplevel.wait_window"),
-        patch("tkinter.PhotoImage") as mock_photo,
-        patch("tkinter.Label") as mock_label,
-        patch("tkinter.Button"),
-    ):
-        mock_photo.return_value = MagicMock(name="Image")
-        CustomMessageBox(
-            master=root,
-            config=MessageBoxConfig(message="Test", icon="/tmp/icon.png"),
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
+        temp_icon_path = temp_file.name
+    
+    try:
+        with (
+            patch("tkinter.Toplevel.wait_window"),
+            patch("tkinter.PhotoImage") as mock_photo,
+            patch("tkinter.Label") as mock_label,
+            patch("tkinter.Button"),
+        ):
+            mock_photo.return_value = MagicMock(name="Image")
+            CustomMessageBox(
+                master=root,
+                config=MessageBoxConfig(message="Test", icon=temp_icon_path),
+            )
+        # Ensure a Label was created with the image returned by PhotoImage
+        assert any(
+            ("image" in call.kwargs) and (call.kwargs["image"] is mock_photo.return_value)
+            for call in mock_label.call_args_list
         )
-    # Ensure a Label was created with the image returned by PhotoImage
-    assert any(
-        ("image" in call.kwargs) and (call.kwargs["image"] is mock_photo.return_value)
-        for call in mock_label.call_args_list
-    )
+    finally:
+        import os
+        try:
+            os.unlink(temp_icon_path)
+        except OSError:
+            pass
 
 
 def test_classmethod_show_created_root(root):

@@ -650,17 +650,18 @@ class TestPathBrowserCore:
 
     def test_pathbrowser_initialization_with_params(self, root):
         """Test PathBrowser initialization with parameters."""
-        browser = PathBrowser(
-            root,
-            select="dir",
-            multiple=True,
-            initialdir="/tmp",
-            filetypes=[("Text files", "*.txt")]
-        )
-        assert browser.config.select == "dir"
-        assert browser.config.multiple is True
-        assert browser.config.initialdir == "/tmp"
-        assert browser.config.filetypes == [("Text files", "*.txt")]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            browser = PathBrowser(
+                root,
+                select="dir",
+                multiple=True,
+                initialdir=temp_dir,
+                filetypes=[("Text files", "*.txt")]
+            )
+            assert browser.config.select == "dir"
+            assert browser.config.multiple is True
+            assert browser.config.initialdir == temp_dir
+            assert browser.config.filetypes == [("Text files", "*.txt")]
 
     def test_pathbrowser_save_mode(self, root):
         """Test PathBrowser in save mode."""
@@ -669,16 +670,17 @@ class TestPathBrowserCore:
 
     def test_get_selection_save_mode(self, root, dict_like_mock):
         """Test get_selection in save mode."""
-        browser = PathBrowser(root, save_mode=True)
-        # Mock the selected_var
-        browser.selected_var = dict_like_mock
-        browser.selected_var.get.return_value = "test.txt"
-        browser.state.current_dir = "/tmp"
-        
-        selection = browser.get_selection()
-        # Handle Windows path separators
-        expected_path = os.path.join("/tmp", "test.txt")
-        assert selection == [expected_path]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            browser = PathBrowser(root, save_mode=True)
+            # Mock the selected_var
+            browser.selected_var = dict_like_mock
+            browser.selected_var.get.return_value = "test.txt"
+            browser.state.current_dir = temp_dir
+            
+            selection = browser.get_selection()
+            # Handle Windows path separators
+            expected_path = os.path.join(temp_dir, "test.txt")
+            assert selection == [expected_path]
 
     def test_get_selection_normal_mode(self, root):
         """Test get_selection in normal mode."""

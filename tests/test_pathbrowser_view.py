@@ -8,6 +8,7 @@ These tests focus on exercising branches in:
 - show_context_menu
 """
 
+import tempfile
 import tkinter as tk
 from pathlib import Path
 from types import SimpleNamespace
@@ -97,50 +98,56 @@ class TestUpdateSelectedDisplay:
             assert mock_status.called
 
     def test_update_selected_display_single_file(self, browser_with_state):
-        browser_with_state.state.selected_items = ["/tmp/a.txt"]
-        browser_with_state.selected_var = Mock()
-        browser_with_state.selected_var.set = Mock()
-        with patch.object(browser_with_state, "_update_status"):
-            with patch.object(
-                browser_with_state.file_info_manager,
-                "get_cached_file_info",
-                return_value=SimpleNamespace(is_dir=False, name="a.txt"),
-            ):
-                view.update_selected_display(browser_with_state)
-        browser_with_state.selected_var.set.assert_called_with("a.txt")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_file_path = f"{temp_dir}/a.txt"
+            browser_with_state.state.selected_items = [temp_file_path]
+            browser_with_state.selected_var = Mock()
+            browser_with_state.selected_var.set = Mock()
+            with patch.object(browser_with_state, "_update_status"):
+                with patch.object(
+                    browser_with_state.file_info_manager,
+                    "get_cached_file_info",
+                    return_value=SimpleNamespace(is_dir=False, name="a.txt"),
+                ):
+                    view.update_selected_display(browser_with_state)
+            browser_with_state.selected_var.set.assert_called_with("a.txt")
 
     def test_update_selected_display_multiple_files_compact(self, browser_with_state):
-        browser_with_state.state.selected_items = ["/tmp/a.txt", "/tmp/b.txt", "/tmp/c.txt", "/tmp/d.txt"]
-        browser_with_state.selected_var = Mock()
-        browser_with_state.selected_var.set = Mock()
-        # Return non-dir with distinct names
-        def _get_info(path):
-            name = Path(path).name
-            m = Mock()
-            m.is_dir = False
-            m.name = name
-            return m
-        with patch.object(browser_with_state, "_update_status"):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_files = [f"{temp_dir}/a.txt", f"{temp_dir}/b.txt", f"{temp_dir}/c.txt", f"{temp_dir}/d.txt"]
+            browser_with_state.state.selected_items = temp_files
+            browser_with_state.selected_var = Mock()
+            browser_with_state.selected_var.set = Mock()
+            # Return non-dir with distinct names
+            def _get_info(path):
+                name = Path(path).name
+                m = Mock()
+                m.is_dir = False
+                m.name = name
+                return m
+            with patch.object(browser_with_state, "_update_status"):
+                with patch.object(
+                    browser_with_state.file_info_manager,
+                    "get_cached_file_info",
+                    side_effect=_get_info,
+                ):
+                    view.update_selected_display(browser_with_state)
+            # Should show first with +n more
+            browser_with_state.selected_var.set.assert_called_with("a.txt (+3 more)")
+
+    def test_update_selected_display_dirs_only(self, browser_with_state):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_dirs = [f"{temp_dir}/dirA", f"{temp_dir}/dirB"]
+            browser_with_state.state.selected_items = temp_dirs
+            browser_with_state.selected_var = Mock()
+            browser_with_state.selected_var.set = Mock()
             with patch.object(
                 browser_with_state.file_info_manager,
                 "get_cached_file_info",
-                side_effect=_get_info,
+                return_value=Mock(is_dir=True, name="dirA"),
             ):
                 view.update_selected_display(browser_with_state)
-        # Should show first with +n more
-        browser_with_state.selected_var.set.assert_called_with("a.txt (+3 more)")
-
-    def test_update_selected_display_dirs_only(self, browser_with_state):
-        browser_with_state.state.selected_items = ["/tmp/dirA", "/tmp/dirB"]
-        browser_with_state.selected_var = Mock()
-        browser_with_state.selected_var.set = Mock()
-        with patch.object(
-            browser_with_state.file_info_manager,
-            "get_cached_file_info",
-            return_value=Mock(is_dir=True, name="dirA"),
-        ):
-            view.update_selected_display(browser_with_state)
-        browser_with_state.selected_var.set.assert_called_with("")
+            browser_with_state.selected_var.set.assert_called_with("")
 
 
 class TestUpdateDirectoryStatus:
@@ -182,9 +189,11 @@ class TestUpdateDirectoryStatus:
 class TestShowContextMenu:
     def test_show_context_menu_tree_expand_collapse(self, browser_with_state):
         # Prepare tree selection with a directory node
-        browser_with_state.tree = Mock()
-        browser_with_state.tree.selection.return_value = ["/tmp/dir"]
-        browser_with_state.tree.item.return_value = True
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_dir_path = f"{temp_dir}/dir"
+            browser_with_state.tree = Mock()
+            browser_with_state.tree.selection.return_value = [temp_dir_path]
+            browser_with_state.tree.item.return_value = True
         with patch.object(
             browser_with_state.file_info_manager,
             "get_file_info",
@@ -204,11 +213,13 @@ class TestShowContextMenu:
                 mock_menu.post.assert_called_once()
 
     def test_show_context_menu_file_menu(self, browser_with_state):
-        browser_with_state.file_tree = Mock()
-        browser_with_state.file_tree.selection.return_value = ["/tmp/a.txt"]
-        event = Mock()
-        event.x_root = 0
-        event.y_root = 0
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_file_path = f"{temp_dir}/a.txt"
+            browser_with_state.file_tree = Mock()
+            browser_with_state.file_tree.selection.return_value = [temp_file_path]
+            event = Mock()
+            event.x_root = 0
+            event.y_root = 0
         with patch("tkinter.Menu") as mock_menu_cls:
             mock_menu = Mock()
             mock_menu_cls.return_value = mock_menu
@@ -465,7 +476,9 @@ class TestLoadFiles:
 class TestUpdateSelectionStatus:
     def test_update_selection_status_single_folder(self, browser_with_state):
         """Test status update for single folder selection."""
-        browser_with_state.state.selected_items = ["/tmp/dir"]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_dir_path = f"{temp_dir}/dir"
+            browser_with_state.state.selected_items = [temp_dir_path]
         browser_with_state.status_var = Mock()
         
         mock_file_info = Mock()
@@ -485,7 +498,9 @@ class TestUpdateSelectionStatus:
 
     def test_update_selection_status_multiple_folders(self, browser_with_state):
         """Test status update for multiple folder selection."""
-        browser_with_state.state.selected_items = ["/tmp/dir1", "/tmp/dir2"]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_dirs = [f"{temp_dir}/dir1", f"{temp_dir}/dir2"]
+            browser_with_state.state.selected_items = temp_dirs
         browser_with_state.status_var = Mock()
         
         mock_file_info = Mock()
@@ -729,7 +744,9 @@ class TestLoadFilesAdditional:
 class TestUpdateSelectionStatusAdditional:
     def test_update_selection_status_single_file_with_size(self, browser_with_state):
         """Test status update for single file with size."""
-        browser_with_state.state.selected_items = ["/tmp/file.txt"]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_file_path = f"{temp_dir}/file.txt"
+            browser_with_state.state.selected_items = [temp_file_path]
         browser_with_state.status_var = Mock()
         
         mock_file_info = Mock()
@@ -750,7 +767,9 @@ class TestUpdateSelectionStatusAdditional:
 
     def test_update_selection_status_multiple_files_with_size(self, browser_with_state):
         """Test status update for multiple files with size."""
-        browser_with_state.state.selected_items = ["/tmp/file1.txt", "/tmp/file2.txt"]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_files = [f"{temp_dir}/file1.txt", f"{temp_dir}/file2.txt"]
+            browser_with_state.state.selected_items = temp_files
         browser_with_state.status_var = Mock()
         
         mock_file_info = Mock()
