@@ -282,9 +282,11 @@ class TestUtils:
             with patch('tkface.widget.pathbrowser.utils.IS_WINDOWS', False):
                 with patch('tkface.widget.pathbrowser.utils.IS_LINUX', False):
                     with patch('tkface.widget.pathbrowser.utils.subprocess.run') as mock_run:
-                        result = utils.open_file_with_default_app("/test/file.txt")
-                        assert result is True
-                        mock_run.assert_called_once_with(["open", "/test/file.txt"], check=False)
+                        with patch('tkface.widget.pathbrowser.utils.shutil.which') as mock_which:
+                            mock_which.return_value = "/usr/bin/open"
+                            result = utils.open_file_with_default_app("/test/file.txt")
+                            assert result is True
+                            mock_run.assert_called_once_with(["/usr/bin/open", "/test/file.txt"], check=False)
 
     def test_open_file_with_default_app_macos_exception(self):
         """Test open_file_with_default_app function on macOS with exception."""
@@ -292,9 +294,11 @@ class TestUtils:
             with patch('tkface.widget.pathbrowser.utils.IS_WINDOWS', False):
                 with patch('tkface.widget.pathbrowser.utils.IS_LINUX', False):
                     with patch('tkface.widget.pathbrowser.utils.subprocess.run') as mock_run:
-                        mock_run.side_effect = Exception("Command not found")
-                        result = utils.open_file_with_default_app("/test/file.txt")
-                        assert result is False
+                        with patch('tkface.widget.pathbrowser.utils.shutil.which') as mock_which:
+                            mock_which.return_value = "/usr/bin/open"
+                            mock_run.side_effect = Exception("Command not found")
+                            result = utils.open_file_with_default_app("/test/file.txt")
+                            assert result is False
 
     def test_open_file_with_default_app_linux(self):
         """Test open_file_with_default_app function on Linux."""
@@ -302,9 +306,11 @@ class TestUtils:
             with patch('tkface.widget.pathbrowser.utils.IS_WINDOWS', False):
                 with patch('tkface.widget.pathbrowser.utils.IS_MACOS', False):
                     with patch('tkface.widget.pathbrowser.utils.subprocess.run') as mock_run:
-                        result = utils.open_file_with_default_app("/test/file.txt")
-                        assert result is True
-                        mock_run.assert_called_once_with(["xdg-open", "/test/file.txt"], check=False)
+                        with patch('tkface.widget.pathbrowser.utils.shutil.which') as mock_which:
+                            mock_which.return_value = "/usr/bin/xdg-open"
+                            result = utils.open_file_with_default_app("/test/file.txt")
+                            assert result is True
+                            mock_run.assert_called_once_with(["/usr/bin/xdg-open", "/test/file.txt"], check=False)
 
     def test_open_file_with_default_app_linux_exception(self):
         """Test open_file_with_default_app function on Linux with exception."""
@@ -312,7 +318,29 @@ class TestUtils:
             with patch('tkface.widget.pathbrowser.utils.IS_WINDOWS', False):
                 with patch('tkface.widget.pathbrowser.utils.IS_MACOS', False):
                     with patch('tkface.widget.pathbrowser.utils.subprocess.run') as mock_run:
-                        mock_run.side_effect = Exception("Command not found")
+                        with patch('tkface.widget.pathbrowser.utils.shutil.which') as mock_which:
+                            mock_which.return_value = "/usr/bin/xdg-open"
+                            mock_run.side_effect = Exception("Command not found")
+                            result = utils.open_file_with_default_app("/test/file.txt")
+                            assert result is False
+
+    def test_open_file_with_default_app_macos_command_not_found(self):
+        """Test open_file_with_default_app function on macOS when command not found."""
+        with patch('tkface.widget.pathbrowser.utils.IS_MACOS', True):
+            with patch('tkface.widget.pathbrowser.utils.IS_WINDOWS', False):
+                with patch('tkface.widget.pathbrowser.utils.IS_LINUX', False):
+                    with patch('tkface.widget.pathbrowser.utils.shutil.which') as mock_which:
+                        mock_which.return_value = None
+                        result = utils.open_file_with_default_app("/test/file.txt")
+                        assert result is False
+
+    def test_open_file_with_default_app_linux_command_not_found(self):
+        """Test open_file_with_default_app function on Linux when command not found."""
+        with patch('tkface.widget.pathbrowser.utils.IS_LINUX', True):
+            with patch('tkface.widget.pathbrowser.utils.IS_WINDOWS', False):
+                with patch('tkface.widget.pathbrowser.utils.IS_MACOS', False):
+                    with patch('tkface.widget.pathbrowser.utils.shutil.which') as mock_which:
+                        mock_which.return_value = None
                         result = utils.open_file_with_default_app("/test/file.txt")
                         assert result is False
 

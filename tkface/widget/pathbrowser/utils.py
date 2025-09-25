@@ -7,6 +7,7 @@ widget components.
 
 import fnmatch
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -56,9 +57,17 @@ def open_file_with_default_app(file_path: str) -> bool:
         if IS_WINDOWS:
             os.startfile(file_path)  # pylint: disable=no-member
         elif IS_MACOS:
-            subprocess.run(["open", file_path], check=False)
+            open_cmd = shutil.which("open")
+            if open_cmd:
+                subprocess.run([open_cmd, file_path], check=False)
+            else:
+                return False
         else:
-            subprocess.run(["xdg-open", file_path], check=False)
+            xdg_open_cmd = shutil.which("xdg-open")
+            if xdg_open_cmd:
+                subprocess.run([xdg_open_cmd, file_path], check=False)
+            else:
+                return False
         return True
     except Exception:
         return False
