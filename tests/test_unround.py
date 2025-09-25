@@ -23,7 +23,8 @@ def test_unround_function_no_error(root):
     except (AttributeError, TypeError, ValueError, Exception) as e:
         # Allow TclError and other tkinter-related errors in test environment
         if "application has been destroyed" in str(e) or "can't invoke" in str(e):
-            pass  # Expected in test environment
+            # Expected in test environment - these are tkinter lifecycle issues
+            return
         else:
             pytest.fail(f"win.unround() raised {e} unexpectedly!")
 
@@ -129,6 +130,7 @@ def test_unround_apply_to_toplevel_functions():
     try:
         _apply_unround_to_toplevel(mock_toplevel)
     except Exception as e:
+        # This function should handle all exceptions internally
         pytest.fail(f"_apply_unround_to_toplevel raised {e} unexpectedly!")
 
 
@@ -159,7 +161,8 @@ def test_unround_with_auto_toplevel_false(root):
     except Exception as e:
         # Allow tkinter-related errors in test environment
         if "application has been destroyed" in str(e) or "can't invoke" in str(e):
-            assert True  # Test passes if tkinter error occurs
+            # Expected tkinter lifecycle issues in test environment
+            return
         else:
             raise
 
@@ -189,7 +192,8 @@ def test_unround_child_window_processing(mock_get_parent, root):
     except Exception as e:
         # Allow tkinter-related errors in test environment
         if "application has been destroyed" in str(e) or "can't invoke" in str(e):
-            assert True  # Test passes if tkinter error occurs
+            # Expected tkinter lifecycle issues in test environment
+            return
         else:
             raise
 
@@ -212,7 +216,8 @@ def test_unround_child_window_exception_handling(mock_get_parent, root):
     except Exception as e:
         # Allow tkinter-related errors in test environment
         if "application has been destroyed" in str(e) or "can't invoke" in str(e):
-            assert True  # Test passes if tkinter error occurs
+            # Expected tkinter lifecycle issues in test environment
+            return
         else:
             raise
 
@@ -230,7 +235,8 @@ def test_unround_main_exception_handling(mock_get_parent, root):
     except Exception as e:
         # Allow tkinter-related errors in test environment
         if "application has been destroyed" in str(e) or "can't invoke" in str(e):
-            assert True  # Test passes if tkinter error occurs
+            # Expected tkinter lifecycle issues in test environment
+            return
         else:
             raise
 
@@ -287,7 +293,8 @@ def test_patched_toplevel_init_exception_handling(mock_original_init):
         _patched_toplevel_init(mock_toplevel)
     except OSError:
         # Expected exception, but should still try to schedule unround
-        pass
+        # The function should handle this gracefully
+        return
     
     # The function should still try to schedule unround even after exception
     # Note: The actual implementation may not call after_idle if the original init fails
@@ -301,6 +308,7 @@ def test_is_unround_applied_attribute_error():
 
     # Create object without the attribute
     class MockToplevel:
+        """Mock toplevel for testing."""
         pass
     
     mock_toplevel = MockToplevel()
@@ -314,6 +322,7 @@ def test_apply_unround_to_toplevel_non_windows():
     from tkface.win.unround import _apply_unround_to_toplevel
     
     class MockToplevel:
+        """Mock toplevel for testing."""
         pass
     
     mock_toplevel = MockToplevel()
@@ -798,7 +807,8 @@ def test_unround_root_winfo_children_exception(root):
     except Exception as e:
         # Allow tkinter-related errors in test environment
         if "application has been destroyed" in str(e) or "can't invoke" in str(e):
-            assert True  # Test passes if tkinter error occurs
+            # Expected tkinter lifecycle issues in test environment
+            return
         else:
             raise
     finally:
@@ -821,7 +831,8 @@ def test_unround_child_without_winfo_id(root):
     except Exception as e:
         # Allow tkinter-related errors in test environment
         if "application has been destroyed" in str(e) or "can't invoke" in str(e):
-            assert True  # Test passes if tkinter error occurs
+            # Expected tkinter lifecycle issues in test environment
+            return
         else:
             raise
 
@@ -846,7 +857,8 @@ def test_unround_child_winfo_id_exception(mock_get_parent, root):
     except Exception as e:
         # Allow tkinter-related errors in test environment
         if "application has been destroyed" in str(e) or "can't invoke" in str(e):
-            assert True  # Test passes if tkinter error occurs
+            # Expected tkinter lifecycle issues in test environment
+            return
         else:
             raise
 
@@ -951,9 +963,12 @@ def test_unround_with_real_toplevel_windows():
     import tkinter as tk
     from tkface.win.unround import unround
     
-    # Create a real Tkinter root window
-    root = tk.Tk()
-    root.withdraw()  # Hide the window
+    try:
+        # Create a real Tkinter root window
+        root = tk.Tk()
+        root.withdraw()  # Hide the window
+    except Exception:
+        pytest.skip("tkinter not available or not properly configured")
     
     try:
         # Create some Toplevel windows as children
@@ -970,19 +985,13 @@ def test_unround_with_real_toplevel_windows():
         assert isinstance(result, bool)
         
     finally:
-        # Clean up
-        try:
-            toplevel1.destroy()
-        except:
-            pass
-        try:
-            toplevel2.destroy()
-        except:
-            pass
-        try:
-            root.destroy()
-        except:
-            pass
+        # Clean up - ignore any errors as windows may already be destroyed
+        for window in [toplevel1, toplevel2, root]:
+            try:
+                window.destroy()
+            except Exception:
+                # Expected in test environments - windows may already be destroyed
+                continue
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -991,9 +1000,12 @@ def test_unround_with_toplevel_windows_exception_handling():
     import tkinter as tk
     from tkface.win.unround import unround
     
-    # Create a real Tkinter root window
-    root = tk.Tk()
-    root.withdraw()  # Hide the window
+    try:
+        # Create a real Tkinter root window
+        root = tk.Tk()
+        root.withdraw()  # Hide the window
+    except Exception:
+        pytest.skip("tkinter not available or not properly configured")
     
     try:
         # Create a Toplevel window
@@ -1010,15 +1022,13 @@ def test_unround_with_toplevel_windows_exception_handling():
         assert isinstance(result, bool)
         
     finally:
-        # Clean up
-        try:
-            toplevel.destroy()
-        except:
-            pass
-        try:
-            root.destroy()
-        except:
-            pass
+        # Clean up - ignore any errors as windows may already be destroyed
+        for window in [toplevel, root]:
+            try:
+                window.destroy()
+            except Exception:
+                # Expected in test environments - windows may already be destroyed
+                continue
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -1027,9 +1037,12 @@ def test_unround_with_toplevel_windows_getparent_exception():
     import tkinter as tk
     from tkface.win.unround import unround
     
-    # Create a real Tkinter root window
-    root = tk.Tk()
-    root.withdraw()  # Hide the window
+    try:
+        # Create a real Tkinter root window
+        root = tk.Tk()
+        root.withdraw()  # Hide the window
+    except Exception:
+        pytest.skip("tkinter not available or not properly configured")
     
     try:
         # Create a Toplevel window
@@ -1043,15 +1056,13 @@ def test_unround_with_toplevel_windows_getparent_exception():
             assert isinstance(result, bool)
         
     finally:
-        # Clean up
-        try:
-            toplevel.destroy()
-        except:
-            pass
-        try:
-            root.destroy()
-        except:
-            pass
+        # Clean up - ignore any errors as windows may already be destroyed
+        for window in [toplevel, root]:
+            try:
+                window.destroy()
+            except Exception:
+                # Expected in test environments - windows may already be destroyed
+                continue
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -1060,9 +1071,12 @@ def test_unround_with_toplevel_windows_disable_round_exception():
     import tkinter as tk
     from tkface.win.unround import unround
     
-    # Create a real Tkinter root window
-    root = tk.Tk()
-    root.withdraw()  # Hide the window
+    try:
+        # Create a real Tkinter root window
+        root = tk.Tk()
+        root.withdraw()  # Hide the window
+    except Exception:
+        pytest.skip("tkinter not available or not properly configured")
     
     try:
         # Create a Toplevel window
@@ -1076,15 +1090,13 @@ def test_unround_with_toplevel_windows_disable_round_exception():
             assert isinstance(result, bool)
         
     finally:
-        # Clean up
-        try:
-            toplevel.destroy()
-        except:
-            pass
-        try:
-            root.destroy()
-        except:
-            pass
+        # Clean up - ignore any errors as windows may already be destroyed
+        for window in [toplevel, root]:
+            try:
+                window.destroy()
+            except Exception:
+                # Expected in test environments - windows may already be destroyed
+                continue
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -1093,9 +1105,12 @@ def test_unround_with_toplevel_windows_attribute_error():
     import tkinter as tk
     from tkface.win.unround import unround
     
-    # Create a real Tkinter root window
-    root = tk.Tk()
-    root.withdraw()  # Hide the window
+    try:
+        # Create a real Tkinter root window
+        root = tk.Tk()
+        root.withdraw()  # Hide the window
+    except Exception:
+        pytest.skip("tkinter not available or not properly configured")
     
     try:
         # Create a Toplevel window
@@ -1111,15 +1126,13 @@ def test_unround_with_toplevel_windows_attribute_error():
         assert isinstance(result, bool)
         
     finally:
-        # Clean up
-        try:
-            toplevel.destroy()
-        except:
-            pass
-        try:
-            root.destroy()
-        except:
-            pass
+        # Clean up - ignore any errors as windows may already be destroyed
+        for window in [toplevel, root]:
+            try:
+                window.destroy()
+            except Exception:
+                # Expected in test environments - windows may already be destroyed
+                continue
 
 
 @patch("sys.platform", "darwin")
