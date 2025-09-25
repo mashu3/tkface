@@ -260,13 +260,15 @@ class TestUtils:
             with patch('tkface.widget.pathbrowser.utils.IS_MACOS', False):
                 with patch('tkface.widget.pathbrowser.utils.IS_LINUX', False):
                     with patch('tkface.widget.pathbrowser.utils.subprocess.run') as mock_run:
-                        result = utils.open_file_with_default_app("C:\\test\\file.txt")
-                        assert result is True
-                        mock_run.assert_called_once_with(
-                            ["cmd", "/c", "start", "", "C:\\test\\file.txt"], 
-                            check=False, 
-                            shell=False
-                        )
+                        with patch('tkface.widget.pathbrowser.utils.shutil.which') as mock_which:
+                            mock_which.return_value = "C:\\Windows\\System32\\cmd.exe"
+                            result = utils.open_file_with_default_app("C:\\test\\file.txt")
+                            assert result is True
+                            mock_run.assert_called_once_with(
+                                ["C:\\Windows\\System32\\cmd.exe", "/c", "start", "", "C:\\test\\file.txt"], 
+                                check=False, 
+                                shell=False
+                            )
 
     def test_open_file_with_default_app_windows_exception(self):
         """Test open_file_with_default_app function on Windows with exception."""
@@ -274,9 +276,11 @@ class TestUtils:
             with patch('tkface.widget.pathbrowser.utils.IS_MACOS', False):
                 with patch('tkface.widget.pathbrowser.utils.IS_LINUX', False):
                     with patch('tkface.widget.pathbrowser.utils.subprocess.run') as mock_run:
-                        mock_run.side_effect = Exception("Access denied")
-                        result = utils.open_file_with_default_app("C:\\test\\file.txt")
-                        assert result is False
+                        with patch('tkface.widget.pathbrowser.utils.shutil.which') as mock_which:
+                            mock_which.return_value = "C:\\Windows\\System32\\cmd.exe"
+                            mock_run.side_effect = Exception("Access denied")
+                            result = utils.open_file_with_default_app("C:\\test\\file.txt")
+                            assert result is False
 
     def test_open_file_with_default_app_macos(self):
         """Test open_file_with_default_app function on macOS."""
@@ -344,6 +348,16 @@ class TestUtils:
                     with patch('tkface.widget.pathbrowser.utils.shutil.which') as mock_which:
                         mock_which.return_value = None
                         result = utils.open_file_with_default_app("/test/file.txt")
+                        assert result is False
+
+    def test_open_file_with_default_app_windows_command_not_found(self):
+        """Test open_file_with_default_app function on Windows when cmd not found."""
+        with patch('tkface.widget.pathbrowser.utils.IS_WINDOWS', True):
+            with patch('tkface.widget.pathbrowser.utils.IS_MACOS', False):
+                with patch('tkface.widget.pathbrowser.utils.IS_LINUX', False):
+                    with patch('tkface.widget.pathbrowser.utils.shutil.which') as mock_which:
+                        mock_which.return_value = None
+                        result = utils.open_file_with_default_app("C:\\test\\file.txt")
                         assert result is False
 
     def test_add_extension_if_needed(self):
