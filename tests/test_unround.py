@@ -2,6 +2,7 @@
 This module contains tests for Windows-specific window unrounding functionality.
 """
 
+import logging
 import sys
 from unittest.mock import patch
 
@@ -22,11 +23,11 @@ def test_unround_function_no_error(root):
         win.unround(root)
     except (AttributeError, TypeError, ValueError, Exception) as e:
         # Allow TclError and other tkinter-related errors in test environment
-        if "application has been destroyed" in str(e) or "can't invoke" in str(e):
+        error_message = str(e)
+        if "application has been destroyed" in error_message or "can't invoke" in error_message:
             # Expected in test environment - these are tkinter lifecycle issues
             return
-        else:
-            pytest.fail(f"win.unround() raised {e} unexpectedly!")
+        pytest.fail(f"win.unround() raised {e} unexpectedly!")
 
 
 def test_unround_disable_window_corner_round():
@@ -160,11 +161,11 @@ def test_unround_with_auto_toplevel_false(root):
         assert isinstance(result, bool)
     except Exception as e:
         # Allow tkinter-related errors in test environment
-        if "application has been destroyed" in str(e) or "can't invoke" in str(e):
+        error_message = str(e)
+        if "application has been destroyed" in error_message or "can't invoke" in error_message:
             # Expected tkinter lifecycle issues in test environment
             return
-        else:
-            raise
+        raise
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -191,11 +192,11 @@ def test_unround_child_window_processing(mock_get_parent, root):
         assert isinstance(result, bool)
     except Exception as e:
         # Allow tkinter-related errors in test environment
-        if "application has been destroyed" in str(e) or "can't invoke" in str(e):
+        error_message = str(e)
+        if "application has been destroyed" in error_message or "can't invoke" in error_message:
             # Expected tkinter lifecycle issues in test environment
             return
-        else:
-            raise
+        raise
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -215,11 +216,11 @@ def test_unround_child_window_exception_handling(mock_get_parent, root):
         assert isinstance(result, bool)
     except Exception as e:
         # Allow tkinter-related errors in test environment
-        if "application has been destroyed" in str(e) or "can't invoke" in str(e):
+        error_message = str(e)
+        if "application has been destroyed" in error_message or "can't invoke" in error_message:
             # Expected tkinter lifecycle issues in test environment
             return
-        else:
-            raise
+        raise
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -234,11 +235,11 @@ def test_unround_main_exception_handling(mock_get_parent, root):
         assert isinstance(result, bool)
     except Exception as e:
         # Allow tkinter-related errors in test environment
-        if "application has been destroyed" in str(e) or "can't invoke" in str(e):
+        error_message = str(e)
+        if "application has been destroyed" in error_message or "can't invoke" in error_message:
             # Expected tkinter lifecycle issues in test environment
             return
-        else:
-            raise
+        raise
 
 
 def test_patched_toplevel_init():
@@ -309,7 +310,9 @@ def test_is_unround_applied_attribute_error():
     # Create object without the attribute
     class MockToplevel:
         """Mock toplevel for testing."""
-        pass
+        def __init__(self):
+            # Intentionally empty to test AttributeError handling
+            pass
     
     mock_toplevel = MockToplevel()
     result = _is_unround_applied(mock_toplevel)
@@ -323,7 +326,9 @@ def test_apply_unround_to_toplevel_non_windows():
     
     class MockToplevel:
         """Mock toplevel for testing."""
-        pass
+        def __init__(self):
+            # Intentionally empty for non-Windows testing
+            pass
     
     mock_toplevel = MockToplevel()
     # Should not raise exceptions
@@ -806,11 +811,11 @@ def test_unround_root_winfo_children_exception(root):
         assert isinstance(result, bool)
     except Exception as e:
         # Allow tkinter-related errors in test environment
-        if "application has been destroyed" in str(e) or "can't invoke" in str(e):
+        error_message = str(e)
+        if "application has been destroyed" in error_message or "can't invoke" in error_message:
             # Expected tkinter lifecycle issues in test environment
             return
-        else:
-            raise
+        raise
     finally:
         # Restore original method
         root.winfo_children = original_winfo_children
@@ -820,7 +825,9 @@ def test_unround_child_without_winfo_id(root):
     """Test unround function handles child windows without winfo_id method."""
     # Create a mock child window without winfo_id
     class MockChild:
-        pass  # No winfo_id method
+        def __init__(self):
+            # Intentionally no winfo_id method to test AttributeError handling
+            pass
     
     root.winfo_children = lambda: [MockChild()]
     
@@ -830,11 +837,11 @@ def test_unround_child_without_winfo_id(root):
         assert isinstance(result, bool)
     except Exception as e:
         # Allow tkinter-related errors in test environment
-        if "application has been destroyed" in str(e) or "can't invoke" in str(e):
+        error_message = str(e)
+        if "application has been destroyed" in error_message or "can't invoke" in error_message:
             # Expected tkinter lifecycle issues in test environment
             return
-        else:
-            raise
+        raise
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -856,11 +863,11 @@ def test_unround_child_winfo_id_exception(mock_get_parent, root):
         assert isinstance(result, bool)
     except Exception as e:
         # Allow tkinter-related errors in test environment
-        if "application has been destroyed" in str(e) or "can't invoke" in str(e):
+        error_message = str(e)
+        if "application has been destroyed" in error_message or "can't invoke" in error_message:
             # Expected tkinter lifecycle issues in test environment
             return
-        else:
-            raise
+        raise
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -989,9 +996,10 @@ def test_unround_with_real_toplevel_windows():
         for window in [toplevel1, toplevel2, root]:
             try:
                 window.destroy()
-            except Exception:
+            except Exception as cleanup_error:
                 # Expected in test environments - windows may already be destroyed
-                continue
+                # Log the cleanup error for debugging but don't fail the test
+                logging.getLogger(__name__).debug(f"Cleanup warning: {cleanup_error}")
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -1026,9 +1034,10 @@ def test_unround_with_toplevel_windows_exception_handling():
         for window in [toplevel, root]:
             try:
                 window.destroy()
-            except Exception:
+            except Exception as cleanup_error:
                 # Expected in test environments - windows may already be destroyed
-                continue
+                # Log the cleanup error for debugging but don't fail the test
+                logging.getLogger(__name__).debug(f"Cleanup warning: {cleanup_error}")
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -1060,9 +1069,10 @@ def test_unround_with_toplevel_windows_getparent_exception():
         for window in [toplevel, root]:
             try:
                 window.destroy()
-            except Exception:
+            except Exception as cleanup_error:
                 # Expected in test environments - windows may already be destroyed
-                continue
+                # Log the cleanup error for debugging but don't fail the test
+                logging.getLogger(__name__).debug(f"Cleanup warning: {cleanup_error}")
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -1094,9 +1104,10 @@ def test_unround_with_toplevel_windows_disable_round_exception():
         for window in [toplevel, root]:
             try:
                 window.destroy()
-            except Exception:
+            except Exception as cleanup_error:
                 # Expected in test environments - windows may already be destroyed
-                continue
+                # Log the cleanup error for debugging but don't fail the test
+                logging.getLogger(__name__).debug(f"Cleanup warning: {cleanup_error}")
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -1130,9 +1141,10 @@ def test_unround_with_toplevel_windows_attribute_error():
         for window in [toplevel, root]:
             try:
                 window.destroy()
-            except Exception:
+            except Exception as cleanup_error:
                 # Expected in test environments - windows may already be destroyed
-                continue
+                # Log the cleanup error for debugging but don't fail the test
+                logging.getLogger(__name__).debug(f"Cleanup warning: {cleanup_error}")
 
 
 @patch("sys.platform", "darwin")
