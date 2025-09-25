@@ -6,6 +6,7 @@
 [![Downloads](https://static.pepy.tech/badge/tkface)](https://pepy.tech/project/tkface)
 [![Tests](https://github.com/mashu3/tkface/actions/workflows/codecov.yml/badge.svg?branch=main)](https://github.com/mashu3/tkface/actions/workflows/codecov.yml)
 [![codecov](https://codecov.io/gh/mashu3/tkface/graph/badge.svg?token=B9R7XJ43YI)](https://codecov.io/gh/mashu3/tkface)
+[![CodeFactor](https://www.codefactor.io/repository/github/mashu3/tkface/badge)](https://www.codefactor.io/repository/github/mashu3/tkface)
 
 **Restore the "face" to your Tkinter!**
 
