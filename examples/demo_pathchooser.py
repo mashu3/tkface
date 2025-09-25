@@ -358,7 +358,7 @@ class FileDialogDemo:
             if self.filetypes_var.get():
                 try:
                     filetypes = eval(self.filetypes_var.get())
-                except:
+                except (SyntaxError, NameError, TypeError, ValueError):
                     # If evaluation fails, use default
                     filetypes = None
             
@@ -569,7 +569,7 @@ class FileDialogDemo:
                     for filetype in filetypes:
                         code_lines.append(f"        {filetype},")
                     code_lines.append("    ],")
-            except:
+            except (SyntaxError, NameError, TypeError, ValueError):
                 # If evaluation fails, add as string
                 code_lines.append(f"    filetypes={self.filetypes_var.get()},")
         
