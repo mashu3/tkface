@@ -472,8 +472,8 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         try:
             self.update_idletasks()
             self.update()
-        except Exception:  # pylint: disable=broad-except
-            pass
+        except Exception as e:  # pylint: disable=broad-except
+            self.logger.debug("Failed to refresh UI after year header click: %s", e)
 
     def _on_year_selection_header_click(self):
         """Handle year selection header click - switch back to year view."""
@@ -481,9 +481,9 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         self.month_selection_mode = True
         try:
             view._create_year_view_content(self)  # pylint: disable=W0212
-        except Exception:  # pylint: disable=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             # Handle any exceptions during view creation
-            pass
+            self.logger.debug("Failed to create year view content: %s", e)
 
     def _on_date_click(self, month_index: int, week: int, day: int):
         """Handle date button click."""
@@ -560,15 +560,15 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         try:
             view._create_year_view_content(self)  # pylint: disable=W0212
             view._update_year_view(self)  # pylint: disable=W0212
-        except Exception:  # pylint: disable=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             # Handle any exceptions during view creation/update
-            pass
+            self.logger.debug("Failed to create/update year view: %s", e)
         # Force UI refresh to ensure new content is rendered
         try:
             self.update_idletasks()
             self.update()
-        except Exception:  # pylint: disable=broad-except
-            pass
+        except Exception as e:  # pylint: disable=broad-except
+            self.logger.debug("Failed to refresh UI after year selection: %s", e)
 
     def set_date(self, year: int, month: int):
         """Set the displayed year and month."""
@@ -661,9 +661,9 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         # Update DPI scaling after language change
         try:
             self.update_dpi_scaling()
-        except (OSError, ValueError, AttributeError):
+        except (OSError, ValueError, AttributeError) as e:
             # Ignore DPI scaling errors during language change
-            pass
+            self.logger.debug("Failed to update DPI scaling during language change: %s", e)
 
     def set_months(self, months: int):
         """Set the number of months to display."""
@@ -715,9 +715,9 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         # Update DPI scaling after recreation
         try:
             self.update_dpi_scaling()
-        except (OSError, ValueError, AttributeError):
+        except (OSError, ValueError, AttributeError) as e:
             # Ignore DPI scaling errors during recreation
-            pass
+            self.logger.debug("Failed to update DPI scaling during recreation: %s", e)
 
     def get_selected_date(self) -> Optional[datetime.date]:
         """Get the currently selected date (if any)."""
