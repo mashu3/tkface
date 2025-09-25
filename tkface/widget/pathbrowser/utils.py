@@ -55,7 +55,8 @@ def open_file_with_default_app(file_path: str) -> bool:
     """
     try:
         if IS_WINDOWS:
-            os.startfile(file_path)  # pylint: disable=no-member
+            # Use subprocess instead of os.startfile to avoid shell process warning
+            subprocess.run(["cmd", "/c", "start", "", file_path], check=False, shell=False)
         elif IS_MACOS:
             open_cmd = shutil.which("open")
             if open_cmd:
