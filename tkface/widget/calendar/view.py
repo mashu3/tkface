@@ -114,19 +114,28 @@ def _hide_normal_calendar_views(calendar_instance):
     ):
         try:
             calendar_instance.months_container.pack_forget()
-        except Exception:  # pylint: disable=broad-except
-            pass
+        except Exception as e:  # pylint: disable=broad-except
+            # Widget may have been destroyed or is not packed
+            calendar_instance.logger.debug(
+                "Failed to hide months_container: %s", e
+            )
     # Hide scrollable views if present
     if hasattr(calendar_instance, "canvas") and calendar_instance.canvas:
         try:
             calendar_instance.canvas.pack_forget()
-        except Exception:  # pylint: disable=broad-except
-            pass
+        except Exception as e:  # pylint: disable=broad-except
+            # Widget may have been destroyed or is not packed
+            calendar_instance.logger.debug(
+                "Failed to hide canvas: %s", e
+            )
     if hasattr(calendar_instance, "scrollbar") and calendar_instance.scrollbar:
         try:
             calendar_instance.scrollbar.pack_forget()
-        except Exception:  # pylint: disable=broad-except
-            pass
+        except Exception as e:  # pylint: disable=broad-except
+            # Widget may have been destroyed or is not packed
+            calendar_instance.logger.debug(
+                "Failed to hide scrollbar: %s", e
+            )
 
 
 def _ensure_year_container(calendar_instance):
@@ -149,8 +158,11 @@ def _ensure_year_container(calendar_instance):
             calendar_instance.year_container.pack(
                 fill="both", expand=True, padx=2, pady=2
             )
-        except Exception:  # pylint: disable=broad-except
-            pass
+        except (tk.TclError, AttributeError) as e:
+            # Widget may have been destroyed or is not packable
+            calendar_instance.logger.debug(
+                "Failed to pack year_container: %s", e
+            )
 
 
 def _clear_year_container_children(calendar_instance):
@@ -162,8 +174,11 @@ def _clear_year_container_children(calendar_instance):
         for child in list(calendar_instance.year_container.winfo_children()):
             try:
                 child.destroy()
-            except Exception:  # pylint: disable=broad-except
-                pass
+            except Exception as e:  # pylint: disable=broad-except
+                # Widget may have been destroyed already
+                calendar_instance.logger.debug(
+                    "Failed to destroy child widget: %s", e
+                )
 
 
 def _destroy_year_container(calendar_instance):  # pylint: disable=W0212
@@ -174,8 +189,11 @@ def _destroy_year_container(calendar_instance):  # pylint: disable=W0212
     ):
         try:
             calendar_instance.year_container.destroy()
-        except Exception:  # pylint: disable=broad-except
-            pass
+        except Exception as e:  # pylint: disable=broad-except
+            # Widget may have been destroyed already
+            calendar_instance.logger.debug(
+                "Failed to destroy year_container: %s", e
+            )
         calendar_instance.year_container = None
     # Restore normal views
     if (
@@ -186,18 +204,27 @@ def _destroy_year_container(calendar_instance):  # pylint: disable=W0212
             calendar_instance.months_container.pack(
                 fill="both", expand=True, padx=2, pady=2
             )
-        except Exception:  # pylint: disable=broad-except
-            pass
+        except Exception as e:  # pylint: disable=broad-except
+            # Widget may have been destroyed or is not packable
+            calendar_instance.logger.debug(
+                "Failed to pack months_container: %s", e
+            )
     if hasattr(calendar_instance, "canvas") and calendar_instance.canvas:
         try:
             calendar_instance.canvas.pack(side="top", fill="both", expand=True)
-        except Exception:  # pylint: disable=broad-except
-            pass
+        except Exception as e:  # pylint: disable=broad-except
+            # Widget may have been destroyed or is not packable
+            calendar_instance.logger.debug(
+                "Failed to pack canvas: %s", e
+            )
     if hasattr(calendar_instance, "scrollbar") and calendar_instance.scrollbar:
         try:
             calendar_instance.scrollbar.pack(side="bottom", fill="x")
-        except Exception:  # pylint: disable=broad-except
-            pass
+        except Exception as e:  # pylint: disable=broad-except
+            # Widget may have been destroyed or is not packable
+            calendar_instance.logger.debug(
+                "Failed to pack scrollbar: %s", e
+            )
 
 
 def _create_navigation_buttons(calendar_instance, center_frame, month_index):
@@ -707,8 +734,11 @@ def _create_year_view_content(calendar_instance):  # pylint: disable=W0212
         ):
             calendar_instance.year_container.lift()
         calendar_instance.update_idletasks()
-    except Exception:  # pylint: disable=broad-except
-        pass
+    except (tk.TclError, AttributeError) as e:
+        # Widget may have been destroyed or is not liftable
+        calendar_instance.logger.debug(
+            "Failed to lift year_container: %s", e
+        )
 
 
 def _create_year_selection_content(calendar_instance):  # pylint: disable=W0212
@@ -763,8 +793,11 @@ def _create_year_selection_content(calendar_instance):  # pylint: disable=W0212
         ):
             calendar_instance.year_container.lift()
         calendar_instance.update_idletasks()
-    except Exception:  # pylint: disable=broad-except
-        pass
+    except (tk.TclError, AttributeError) as e:
+        # Widget may have been destroyed or is not liftable
+        calendar_instance.logger.debug(
+            "Failed to lift year_container: %s", e
+        )
 
 
 # pylint: disable=W0212

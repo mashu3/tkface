@@ -479,7 +479,11 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         """Handle year selection header click - switch back to year view."""
         self.year_selection_mode = False
         self.month_selection_mode = True
-        view._create_year_view_content(self)  # pylint: disable=W0212
+        try:
+            view._create_year_view_content(self)  # pylint: disable=W0212
+        except Exception:  # pylint: disable=broad-except
+            # Handle any exceptions during view creation
+            pass
 
     def _on_date_click(self, month_index: int, week: int, day: int):
         """Handle date button click."""
@@ -553,8 +557,12 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         self.year_selection_mode = False
         self.month_selection_mode = True
         # Switch to month selection view
-        view._create_year_view_content(self)  # pylint: disable=W0212
-        view._update_year_view(self)  # pylint: disable=W0212
+        try:
+            view._create_year_view_content(self)  # pylint: disable=W0212
+            view._update_year_view(self)  # pylint: disable=W0212
+        except Exception:  # pylint: disable=broad-except
+            # Handle any exceptions during view creation/update
+            pass
         # Force UI refresh to ensure new content is rendered
         try:
             self.update_idletasks()
