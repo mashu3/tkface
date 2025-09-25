@@ -1180,7 +1180,7 @@ class TestCalendarView:
         mock_label = Mock()
         mock_label.bind = Mock()
         
-        bind_hover_events(cal, mock_label, lambda c, l: None, lambda c, l: None)
+        bind_hover_events(cal, mock_label, lambda c, label: None, lambda c, label: None)
         assert mock_label.bind.call_count == 2
 
     def test_handle_mouse_enter_not_selected(self, root):
