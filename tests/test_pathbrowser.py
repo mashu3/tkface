@@ -628,9 +628,9 @@ class TestStyle:
         # Verify that no errors occur
         try:
             style.apply_theme_to_widget(widget, theme)
-        except tk.TclError:
+        except tk.TclError as e:
             # It's normal for Frame widgets to have fg option errors
-            pass
+            print(f"Expected TclError in theme application: {e}")
 
     def test_get_default_theme(self):
         """Test getting default theme."""
@@ -1138,8 +1138,9 @@ class TestPathBrowserCoreAdvanced:
             # Verify that no errors occur
             try:
                 browser._load_directory("/protected/directory")
-            except Exception:
-                pass
+            except Exception as e:
+                # Expected exception for protected directory access
+                print(f"Expected exception for protected directory: {e}")
 
     def test_load_directory_file_not_found(self, root, mock_file_info_manager):
         """Test load_directory with file not found error."""

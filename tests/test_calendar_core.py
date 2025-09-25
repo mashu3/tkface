@@ -1146,9 +1146,9 @@ class TestCalendarCore:
         try:
             geometry = cal.get_popup_geometry(mock_parent)
             assert "x" in geometry  # Should still return a geometry string
-        except Exception:
+        except Exception as e:
             # If the method doesn't handle the exception, that's also acceptable
-            pass
+            print(f"Expected exception in get_popup_geometry test: {e}")
 
     def test_calendar_bind_date_selected(self, root):
         """Test bind_date_selected method."""
