@@ -179,8 +179,8 @@ class _DatePickerBase:
             # On any unexpected error, prefer keeping the popup open
             try:
                 calendar_widget.focus_set()
-            except Exception:  # pylint: disable=broad-except
-                pass
+            except Exception as e:  # pylint: disable=broad-except
+                self.logger.debug("Failed to set focus on calendar widget: %s", e)
             return "break"
 
     def _bind_calendar_events(self, widget):
@@ -263,8 +263,8 @@ class _DatePickerBase:
                             return "break"
                     except Exception:  # pylint: disable=broad-except
                         return "break"
-        except Exception:  # pylint: disable=broad-except
-            pass
+        except Exception as e:  # pylint: disable=broad-except
+            self.logger.debug("Unexpected error in focus out handling: %s", e)
 
         if focus_widget is not None:
             if focus_widget == self:

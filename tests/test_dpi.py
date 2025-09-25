@@ -602,8 +602,9 @@ def with_test_context(
                     if root:
                         try:
                             root.destroy()
-                        except:
-                            pass
+                        except Exception as e:
+                            # Log cleanup errors but don't fail the test
+                            print(f"Warning: Failed to destroy root in cleanup: {e}")
         
         return wrapper
     return decorator

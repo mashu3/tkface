@@ -743,13 +743,13 @@ class DPIManager:
             try:
                 ctypes.windll.shcore.SetProcessDpiAwareness(2)
                 return True
-            except (AttributeError, OSError):
-                pass
+            except (AttributeError, OSError) as e:
+                self.logger.debug("Failed to set DPI awareness via shcore: %s", e)
             try:
                 ctypes.windll.user32.SetProcessDPIAware()
                 return True
-            except (AttributeError, OSError):
-                pass
+            except (AttributeError, OSError) as e:
+                self.logger.debug("Failed to set DPI awareness via user32: %s", e)
         except Exception as e:  # pylint: disable=W0718
             self.logger.debug("Failed to enable DPI awareness: %s", e)
         return False
