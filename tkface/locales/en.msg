@@ -85,3 +85,10 @@ Please enter a filename. {Please enter a filename.}
 File already exists. Do you want to overwrite it? {File already exists. Do you want to overwrite it?}
 Confirm Overwrite {Confirm Overwrite}
 Save {Save}
+# TimePicker translations
+timepicker.hour {Hour}
+timepicker.minute {Min}
+timepicker.second {Sec}
+timepicker.am_pm {AM/PM}
+timepicker.ok {OK}
+timepicker.cancel {Cancel}

@@ -4,7 +4,7 @@ import tkinter as tk
 
 from ..lang import lang as lang_module
 
-__all__ = ["messagebox", "simpledialog", "pathchooser", "datepicker"]
+__all__ = ["messagebox", "simpledialog", "pathchooser", "datepicker", "timepicker"]
 
 
 def _get_or_create_root():

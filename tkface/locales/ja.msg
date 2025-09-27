@@ -93,3 +93,10 @@ Please enter a filename. {ファイル名を入力してください。}
 File already exists. Do you want to overwrite it? {ファイルが既に存在します。上書きしますか？}
 Confirm Overwrite {上書き確認}
 Save {保存}
+# TimePicker translations
+timepicker.hour {時}
+timepicker.minute {分}
+timepicker.second {秒}
+timepicker.am_pm {AM/PM}
+timepicker.ok {OK}
+timepicker.cancel {キャンセル}
