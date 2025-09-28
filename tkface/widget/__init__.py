@@ -23,4 +23,4 @@ WEEK_NUMBERS_WIDTH_OFFSET = 20
 
 # Import classes lazily to avoid circular imports
 # These will be imported when needed to avoid circular imports
-__all__ = ["Calendar", "PathBrowser", "TimeSpinner", "get_scaling_factor", "scale_font_size"]
+__all__ = ["Calendar", "PathBrowser", "get_scaling_factor", "scale_font_size"]
