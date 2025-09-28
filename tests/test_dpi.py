@@ -1,7 +1,8 @@
 """
 Tests for tkface.win.dpi module.
 
-This module tests the DPI management functionality for Windows applications.
+This module tests the DPI management functionality for Windows applications,
+including automatic ttk widget configuration and tk widget patching.
 """
 
 import contextlib
@@ -12,6 +13,7 @@ from ctypes import wintypes
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from tkinter import ttk
 
 
 # Common mock fixtures for DPI testing
@@ -3104,4 +3106,161 @@ class TestDPICoverageImprovements:
             from tkface.win.dpi import scale_icon
             result = scale_icon('error', parent)
             assert result == 'scaled_error_large'
+
+
+class TestTTKWidgetDPI:
+    """Test cases for automatic ttk widget DPI configuration."""
+
+    def test_configure_ttk_widgets_for_dpi_non_windows(self):
+        """Test configure_ttk_widgets_for_dpi on non-Windows platform."""
+        with patch('tkface.win.dpi.is_windows', return_value=False):
+            from tkface.win.dpi import configure_ttk_widgets_for_dpi
+            # Should return early without error
+            configure_ttk_widgets_for_dpi(None)
+
+    def test_configure_ttk_widgets_for_dpi_no_root(self):
+        """Test configure_ttk_widgets_for_dpi with None root."""
+        with patch('tkface.win.dpi.is_windows', return_value=True):
+            from tkface.win.dpi import configure_ttk_widgets_for_dpi
+            # Should return early without error
+            configure_ttk_widgets_for_dpi(None)
+
+    def test_configure_ttk_widgets_for_dpi_low_scaling(self):
+        """Test configure_ttk_widgets_for_dpi with scaling factor <= 1.0."""
+        mock_root = MagicMock()
+        mock_root.DPI_scaling = 1.0
+        
+        with patch('tkface.win.dpi.is_windows', return_value=True):
+            from tkface.win.dpi import configure_ttk_widgets_for_dpi
+            # Should return early without configuring styles
+            configure_ttk_widgets_for_dpi(mock_root)
+
+    def test_configure_ttk_widgets_for_dpi_success(self):
+        """Test successful ttk widget configuration."""
+        mock_root = MagicMock()
+        mock_root.DPI_scaling = 2.0
+        
+        mock_style = MagicMock()
+        
+        with patch('tkface.win.dpi.is_windows', return_value=True), \
+             patch('tkinter.ttk.Style', return_value=mock_style):
+            from tkface.win.dpi import configure_ttk_widgets_for_dpi
+            configure_ttk_widgets_for_dpi(mock_root)
+            
+            # Should configure both Checkbutton and Radiobutton styles
+            assert mock_style.configure.call_count == 2
+            calls = mock_style.configure.call_args_list
+            assert calls[0][0][0] == "TCheckbutton"  # First call for Checkbutton
+            assert calls[1][0][0] == "TRadiobutton"  # Second call for Radiobutton
+
+    def test_configure_ttk_widgets_for_dpi_style_error(self):
+        """Test configure_ttk_widgets_for_dpi with style configuration errors."""
+        mock_root = MagicMock()
+        mock_root.DPI_scaling = 2.0
+        
+        mock_style = MagicMock()
+        mock_style.configure.side_effect = Exception("Style error")
+        
+        with patch('tkface.win.dpi.is_windows', return_value=True), \
+             patch('tkinter.ttk.Style', return_value=mock_style):
+            from tkface.win.dpi import configure_ttk_widgets_for_dpi
+            # Should not raise exception, should handle errors gracefully
+            configure_ttk_widgets_for_dpi(mock_root)
+
+
+class TestAutoPatchTKWidgets:
+    """Test cases for automatic tk widget to ttk patching."""
+
+    def test_auto_patch_tk_widgets_non_windows(self):
+        """Test auto-patch on non-Windows platform."""
+        with patch('tkface.win.dpi.is_windows', return_value=False):
+            from tkface.win.dpi import DPIManager
+            manager = DPIManager()
+            # Should return early without patching
+            manager._auto_patch_tk_widgets_to_ttk()
+
+    def test_auto_patch_tk_widgets_already_patched(self):
+        """Test auto-patch when widgets are already patched."""
+        # Mark widgets as already patched
+        tk.Checkbutton._tkface_patched_to_ttk = True
+        tk.Radiobutton._tkface_patched_to_ttk = True
+        
+        with patch('tkface.win.dpi.is_windows', return_value=True):
+            from tkface.win.dpi import DPIManager
+            manager = DPIManager()
+            # Should return early without double-patching
+            manager._auto_patch_tk_widgets_to_ttk()
+
+    def test_auto_patch_tk_widgets_success(self):
+        """Test successful auto-patching of tk widgets."""
+        # Remove patch markers if they exist
+        if hasattr(tk.Checkbutton, '_tkface_patched_to_ttk'):
+            delattr(tk.Checkbutton, '_tkface_patched_to_ttk')
+        if hasattr(tk.Radiobutton, '_tkface_patched_to_ttk'):
+            delattr(tk.Radiobutton, '_tkface_patched_to_ttk')
+        
+        original_checkbutton_init = tk.Checkbutton.__init__
+        original_radiobutton_init = tk.Radiobutton.__init__
+        
+        try:
+            with patch('tkface.win.dpi.is_windows', return_value=True):
+                from tkface.win.dpi import DPIManager
+                manager = DPIManager()
+                manager._auto_patch_tk_widgets_to_ttk()
+                
+                # Check that widgets are marked as patched
+                assert hasattr(tk.Checkbutton, '_tkface_patched_to_ttk')
+                assert hasattr(tk.Radiobutton, '_tkface_patched_to_ttk')
+                
+                # Check that constructors were replaced
+                assert tk.Checkbutton.__init__ != original_checkbutton_init
+                assert tk.Radiobutton.__init__ != original_radiobutton_init
+                
+        finally:
+            # Restore original constructors
+            tk.Checkbutton.__init__ = original_checkbutton_init
+            tk.Radiobutton.__init__ = original_radiobutton_init
+            if hasattr(tk.Checkbutton, '_tkface_patched_to_ttk'):
+                delattr(tk.Checkbutton, '_tkface_patched_to_ttk')
+            if hasattr(tk.Radiobutton, '_tkface_patched_to_ttk'):
+                delattr(tk.Radiobutton, '_tkface_patched_to_ttk')
+
+    def test_auto_patch_tk_widgets_exception_handling(self):
+        """Test auto-patch exception handling."""
+        with patch('tkface.win.dpi.is_windows', return_value=True), \
+             patch.object(tk.Checkbutton, '__init__', side_effect=Exception("Patch error")):
+            from tkface.win.dpi import DPIManager
+            manager = DPIManager()
+            # Should not raise exception, should handle errors gracefully
+            manager._auto_patch_tk_widgets_to_ttk()
+
+
+class TestDPIIntegration:
+    """Test cases for integrated DPI functionality."""
+
+    def test_dpi_function_includes_ttk_configuration(self):
+        """Test that dpi() function includes ttk widget configuration."""
+        mock_root = MagicMock()
+        mock_root.winfo_id.return_value = 12345
+        mock_root.DPI_scaling = 2.0
+        
+        with patch('tkface.win.dpi.is_windows', return_value=True), \
+             patch('tkface.win.dpi.DPIManager._get_hwnd_dpi', return_value=(192, 192, 2.0)), \
+             patch('tkface.win.dpi.DPIManager._enable_dpi_awareness', return_value={"shcore": True}), \
+             patch('tkface.win.dpi.DPIManager._apply_shcore_dpi_scaling'), \
+             patch('tkface.win.dpi.DPIManager._fix_scaling'), \
+             patch('tkface.win.dpi.DPIManager._apply_scaling_methods'), \
+             patch('tkface.win.dpi.DPIManager._configure_ttk_widgets_for_dpi_internal') as mock_ttk_config, \
+             patch('tkface.win.dpi.DPIManager._auto_patch_tk_widgets_to_ttk') as mock_auto_patch:
+            
+            from tkface.win.dpi import dpi
+            result = dpi(mock_root)
+            
+            # Should call both ttk configuration and auto-patch
+            mock_ttk_config.assert_called_once_with(mock_root)
+            mock_auto_patch.assert_called_once()
+            
+            # Should return successful result
+            assert result["enabled"] is True
+            assert result["dpi_awareness_set"] is True
 

@@ -285,6 +285,10 @@ class DPIManager:
         self._patch_menu_constructor(scaling_factor)
         self._patch_menubutton_constructor(scaling_factor)
         self._patch_treeview_constructor(scaling_factor)
+        # Add ttk widget patches for better DPI scaling
+        self._patch_ttk_checkbutton_constructor(scaling_factor)
+        self._patch_ttk_radiobutton_constructor(scaling_factor)
+        self._patch_ttk_style_for_dpi(scaling_factor)
 
     def _patch_label_frame_constructor(self, scaling_factor):
         """Patch the LabelFrame constructor with scaling."""
@@ -516,6 +520,60 @@ class DPIManager:
 
         ttk.Treeview.__init__ = scaled_treeview_init
 
+    def _patch_ttk_checkbutton_constructor(self, scaling_factor):
+        """Patch the ttk.Checkbutton constructor with scaling."""
+        original_ttk_checkbutton = ttk.Checkbutton.__init__
+
+        def scaled_ttk_checkbutton_init(self, parent=None, **kwargs):
+            scaled_kwargs = kwargs.copy()
+            # ttk widgets use styles, but we can still scale some properties
+            if "width" in scaled_kwargs:
+                scaled_kwargs["width"] = int(scaled_kwargs["width"] * scaling_factor)
+            return original_ttk_checkbutton(self, parent, **scaled_kwargs)
+
+        ttk.Checkbutton.__init__ = scaled_ttk_checkbutton_init
+
+    def _patch_ttk_radiobutton_constructor(self, scaling_factor):
+        """Patch the ttk.Radiobutton constructor with scaling."""
+        original_ttk_radiobutton = ttk.Radiobutton.__init__
+
+        def scaled_ttk_radiobutton_init(self, parent=None, **kwargs):
+            scaled_kwargs = kwargs.copy()
+            # ttk widgets use styles, but we can still scale some properties
+            if "width" in scaled_kwargs:
+                scaled_kwargs["width"] = int(scaled_kwargs["width"] * scaling_factor)
+            return original_ttk_radiobutton(self, parent, **scaled_kwargs)
+
+        ttk.Radiobutton.__init__ = scaled_ttk_radiobutton_init
+
+    def _patch_ttk_style_for_dpi(self, scaling_factor):
+        """Patch ttk.Style for better DPI scaling of checkbutton and radiobutton indicators."""
+        try:
+            # Create a default style to configure ttk widgets for DPI scaling
+            style = ttk.Style()
+            
+            # Scale the indicator size for checkbuttons and radiobuttons
+            indicator_size = max(12, int(12 * scaling_factor))  # Minimum 12px, scale up
+            
+            # Configure checkbutton style
+            try:
+                style.configure("TCheckbutton", 
+                              focuscolor="none",
+                              indicatorsize=indicator_size)
+            except Exception as e:  # pylint: disable=W0718
+                self.logger.debug("Failed to configure TCheckbutton style: %s", e)
+            
+            # Configure radiobutton style  
+            try:
+                style.configure("TRadiobutton",
+                              focuscolor="none", 
+                              indicatorsize=indicator_size)
+            except Exception as e:  # pylint: disable=W0718
+                self.logger.debug("Failed to configure TRadiobutton style: %s", e)
+                
+        except Exception as e:  # pylint: disable=W0718
+            self.logger.debug("Failed to patch ttk styles for DPI: %s", e)
+
     def _patch_treeview_methods(self, scaling_factor):
         """Patch TreeView methods with scaling."""
         self._patch_treeview_column_method(scaling_factor)
@@ -700,6 +758,12 @@ class DPIManager:
         # Apply scaling methods
         self._apply_scaling_methods(root)
 
+        # Automatically configure ttk widgets for better DPI scaling
+        self._configure_ttk_widgets_for_dpi_internal(root)
+        
+        # Automatically patch tk.Checkbutton and tk.Radiobutton to use ttk equivalents
+        self._auto_patch_tk_widgets_to_ttk()
+
         # Update tasks and finalize
         root.update_idletasks()
         result["applied_to_windows"].append(result["hwnd"])
@@ -722,6 +786,83 @@ class DPIManager:
 
         # Patch widget methods
         self._patch_widget_methods(root)
+
+    def _configure_ttk_widgets_for_dpi_internal(self, root):
+        """Internal method to configure ttk widgets for DPI scaling."""
+        if not is_windows() or root is None:
+            return
+        
+        try:
+            scaling_factor = getattr(root, 'DPI_scaling', 1.0)
+            if scaling_factor <= 1.0:
+                return
+                
+            style = ttk.Style(root)
+            
+            # Scale the indicator size for checkbuttons and radiobuttons
+            # Base size is typically around 12-13px, scale it up
+            base_indicator_size = 13
+            scaled_indicator_size = max(base_indicator_size, int(base_indicator_size * scaling_factor))
+            
+            # Configure checkbutton style
+            try:
+                style.configure("TCheckbutton", 
+                              focuscolor="none",
+                              indicatorsize=scaled_indicator_size)
+                self.logger.debug("Auto-configured TCheckbutton indicatorsize to %dpx (scaling: %s)", 
+                            scaled_indicator_size, scaling_factor)
+            except Exception as e:  # pylint: disable=W0718
+                self.logger.debug("Failed to auto-configure TCheckbutton style: %s", e)
+            
+            # Configure radiobutton style  
+            try:
+                style.configure("TRadiobutton",
+                              focuscolor="none", 
+                              indicatorsize=scaled_indicator_size)
+                self.logger.debug("Auto-configured TRadiobutton indicatorsize to %dpx (scaling: %s)", 
+                            scaled_indicator_size, scaling_factor)
+            except Exception as e:  # pylint: disable=W0718
+                self.logger.debug("Failed to auto-configure TRadiobutton style: %s", e)
+                
+        except Exception as e:  # pylint: disable=W0718
+            self.logger.debug("Failed to auto-configure ttk widgets for DPI: %s", e)
+
+    def _auto_patch_tk_widgets_to_ttk(self):
+        """Automatically patch tk.Checkbutton and tk.Radiobutton to use ttk equivalents."""
+        if not is_windows():
+            return
+            
+        try:
+            # Check if already patched to avoid double-patching
+            if hasattr(tk.Checkbutton, '_tkface_patched_to_ttk'):
+                return
+                
+            # Store original constructors
+            original_tk_checkbutton = tk.Checkbutton.__init__
+            original_tk_radiobutton = tk.Radiobutton.__init__
+            
+            def patched_checkbutton_init(self, parent=None, **kwargs):
+                """Patched Checkbutton that uses ttk.Checkbutton for better DPI scaling."""
+                # Convert tk.Checkbutton to ttk.Checkbutton
+                ttk.Checkbutton.__init__(self, parent, **kwargs)
+                
+            def patched_radiobutton_init(self, parent=None, **kwargs):
+                """Patched Radiobutton that uses ttk.Radiobutton for better DPI scaling.""" 
+                # Convert tk.Radiobutton to ttk.Radiobutton
+                ttk.Radiobutton.__init__(self, parent, **kwargs)
+                
+            # Apply patches
+            tk.Checkbutton.__init__ = patched_checkbutton_init
+            tk.Radiobutton.__init__ = patched_radiobutton_init
+            
+            # Mark as patched to avoid double-patching
+            tk.Checkbutton._tkface_patched_to_ttk = True
+            tk.Radiobutton._tkface_patched_to_ttk = True
+            
+            self.logger.debug("Auto-patched tk.Checkbutton and tk.Radiobutton to use ttk equivalents")
+            
+        except Exception as e:  # pylint: disable=W0718
+            self.logger.debug("Failed to auto-patch tk widgets to ttk: %s", e)
 
     def _override_geometry_method(self, root):
         """Override the geometry method with scaling."""
@@ -961,6 +1102,58 @@ def get_actual_window_size(root):
 def calculate_dpi_sizes(base_sizes, root=None, max_scale=None):
     """Backward compatibility function for calculate_dpi_sizes()."""
     return _dpi_manager.calculate_dpi_sizes(base_sizes, root=root, max_scale=max_scale)
+
+
+def configure_ttk_widgets_for_dpi(root):
+    """
+    Configure ttk widgets for better DPI scaling, especially checkbuttons and radiobuttons.
+    
+    Note: This function is automatically called by tkface.win.dpi(root).
+    Manual calls are only needed if you want to reconfigure after DPI changes.
+    """
+    return _dpi_manager._configure_ttk_widgets_for_dpi_internal(root)
+
+
+def patch_tk_widgets_to_ttk():
+    """
+    Patch tk.Checkbutton and tk.Radiobutton to use ttk equivalents for better DPI scaling.
+    
+    DEPRECATED: This function is no longer needed!
+    tkface.win.dpi(root) now automatically patches tk.Checkbutton and tk.Radiobutton
+    to use ttk equivalents with proper DPI scaling.
+    
+    Just call tkface.win.dpi(root) and everything is handled automatically.
+    """
+    if not is_windows():
+        return False
+        
+    try:
+        # Store original constructors
+        _original_tk_checkbutton = tk.Checkbutton.__init__
+        _original_tk_radiobutton = tk.Radiobutton.__init__
+        
+        def patched_checkbutton_init(self, parent=None, **kwargs):
+            """Patched Checkbutton that uses ttk.Checkbutton for better DPI scaling."""
+            # Convert tk.Checkbutton to ttk.Checkbutton
+            ttk.Checkbutton.__init__(self, parent, **kwargs)
+            
+        def patched_radiobutton_init(self, parent=None, **kwargs):
+            """Patched Radiobutton that uses ttk.Radiobutton for better DPI scaling.""" 
+            # Convert tk.Radiobutton to ttk.Radiobutton
+            ttk.Radiobutton.__init__(self, parent, **kwargs)
+            
+        # Apply patches
+        tk.Checkbutton.__init__ = patched_checkbutton_init
+        tk.Radiobutton.__init__ = patched_radiobutton_init
+        
+        logger = logging.getLogger(__name__)
+        logger.debug("Successfully patched tk.Checkbutton and tk.Radiobutton to use ttk equivalents")
+        return True
+        
+    except Exception as e:  # pylint: disable=W0718
+        logger = logging.getLogger(__name__)
+        logger.debug("Failed to patch tk widgets to ttk: %s", e)
+        return False
 
 
 def scale_icon(  # pylint: disable=unused-argument

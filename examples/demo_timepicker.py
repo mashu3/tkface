@@ -26,7 +26,7 @@ class TimePickerDemo:
         self.root.title("tkface TimePicker Demo")
         # Hide window initially until setup is complete
         self.root.withdraw()
-        # Enable DPI-aware geometry (automatically adjusts window size)
+        # Enable DPI-aware geometry (automatically adjusts window size and configures ttk widgets)
         tkface.win.dpi(self.root)
         # Force update to ensure DPI scaling is applied before setting geometry
         self.root.update_idletasks()
