@@ -10,7 +10,7 @@ import ctypes
 import sys
 import tkinter as tk
 from ctypes import wintypes
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 from tkinter import ttk
@@ -760,6 +760,162 @@ def test_treeview_style_patch_without_rowheight(manager, scaling_factor=2.0):
     # Should call original with unchanged values
     mock_original_configure.assert_called_once_with(mock_instance, "style1", text="Test")
 
+
+# Additional tests migrated from tests/test_dpi_extra.py
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (51, 51),  # over upper bound -> no scaling
+        ((60, 5), (60, 5)),  # tuple with out-of-range first -> no scaling
+        ((5, 60), (5, 60)),  # tuple with out-of-range second -> no scaling
+        (-51, -51),  # abs(value) > 50 -> no scaling
+    ],
+)
+def test_scale_padding_value_out_of_range_no_scaling(manager, value, expected):
+    assert manager._scale_padding_value(value, 2.0) == expected
+
+
+def test_scale_padding_kwargs_out_of_range_no_scaling(manager):
+    kwargs = {"padx": 100, "pady": (5, 60)}
+    scaled = manager._scale_padding_kwargs(kwargs, 2.0)
+    assert scaled["padx"] == 100
+    assert scaled["pady"] == (5, 60)
+
+
+def test_patch_ttk_checkbutton_radiobutton_width_scaling(manager):
+    with patch("tkinter.ttk.Checkbutton.__init__") as cb_init, \
+         patch("tkinter.ttk.Radiobutton.__init__") as rb_init:
+        cb_init.return_value = None
+        rb_init.return_value = None
+
+        # Patch wrappers
+        manager._patch_ttk_checkbutton_constructor(2.0)
+        manager._patch_ttk_radiobutton_constructor(1.5)
+
+        # New classes should scale width if provided
+        class Dummy:
+            pass
+
+        # Checkbutton width scaling
+        tk.ttk.Checkbutton.__init__(Dummy(), None, width=10)
+        assert cb_init.call_args.kwargs["width"] == 20
+
+        # Radiobutton width scaling
+        tk.ttk.Radiobutton.__init__(Dummy(), None, width=10)
+        assert rb_init.call_args.kwargs["width"] == 15
+
+
+def test_patch_ttk_style_for_dpi_success_and_inner_failures(manager):
+    with patch("tkinter.ttk.Style") as style_cls:
+        style = Mock()
+        style_cls.return_value = style
+
+        def configure_side_effect(name, **kw):  # pylint: disable=unused-argument
+            if name == "TCheckbutton":
+                raise Exception("boom")
+            return None
+
+        style.configure.side_effect = configure_side_effect
+
+        # Should swallow inner exception and continue
+        manager._patch_ttk_style_for_dpi(2.0)
+        style_cls.assert_called_once()
+        assert style.configure.call_count >= 2
+
+
+def test_patch_ttk_style_for_dpi_outer_exception(manager):
+    # Make Style() raise; method should handle and not raise
+    with patch("tkinter.ttk.Style", side_effect=Exception("style boom")):
+        manager._patch_ttk_style_for_dpi(2.0)
+
+
+def test_auto_patch_tk_widgets_to_ttk_success(manager, monkeypatch):
+    # Force Windows path
+    monkeypatch.setattr("tkface.win.dpi.is_windows", lambda: True)
+
+    # Prepare orig constructors to observe calls
+    with patch("tkinter.ttk.Checkbutton.__init__") as cb_init, \
+         patch("tkinter.ttk.Radiobutton.__init__") as rb_init:
+        cb_init.return_value = None
+        rb_init.return_value = None
+
+        # Remove guard to ensure patch applies
+        if hasattr(tk.Checkbutton, "_tkface_patched_to_ttk"):
+            delattr(tk.Checkbutton, "_tkface_patched_to_ttk")
+        if hasattr(tk.Radiobutton, "_tkface_patched_to_ttk"):
+            delattr(tk.Radiobutton, "_tkface_patched_to_ttk")
+
+        manager._auto_patch_tk_widgets_to_ttk()
+
+        class Dummy:
+            pass
+
+        tk.Checkbutton.__init__(Dummy(), None)
+        tk.Radiobutton.__init__(Dummy(), None)
+        assert cb_init.called
+        assert rb_init.called
+
+
+def test_auto_patch_tk_widgets_to_ttk_exception(manager, monkeypatch):
+    monkeypatch.setattr("tkface.win.dpi.is_windows", lambda: True)
+    # Make ttk init raise to exercise exception handler
+    with patch("tkinter.ttk.Checkbutton.__init__", side_effect=Exception("x")):
+        # Remove guard flags
+        if hasattr(tk.Checkbutton, "_tkface_patched_to_ttk"):
+            delattr(tk.Checkbutton, "_tkface_patched_to_ttk")
+        if hasattr(tk.Radiobutton, "_tkface_patched_to_ttk"):
+            delattr(tk.Radiobutton, "_tkface_patched_to_ttk")
+        manager._auto_patch_tk_widgets_to_ttk()
+
+
+def test_get_effective_dpi_with_attributes_and_exception(manager, monkeypatch):
+    monkeypatch.setattr("tkface.win.dpi.is_windows", lambda: True)
+
+    # With attributes path
+    root = Mock()
+    root.DPI_X = 120
+    root.DPI_Y = 144
+    assert manager.get_effective_dpi(root) == (120 + 144) / 2
+
+    # Exception path: winfo_id raises
+    root2 = Mock()
+    if hasattr(root2, "DPI_X"):
+        delattr(root2, "DPI_X")
+    if hasattr(root2, "DPI_Y"):
+        delattr(root2, "DPI_Y")
+    root2.winfo_id.side_effect = Exception("boom")
+    assert manager.get_effective_dpi(root2) == 96
+
+
+def test_logical_and_physical_exception_paths(manager, monkeypatch):
+    monkeypatch.setattr("tkface.win.dpi.is_windows", lambda: True)
+
+    root = Mock()
+    # Ensure DPI_scaling is not present so _get_hwnd_dpi path is used
+    if hasattr(root, "DPI_scaling"):
+        delattr(root, "DPI_scaling")
+    # Provide winfo_id for the call inside _get_hwnd_dpi
+    root.winfo_id = Mock(return_value=12345)
+    # Make _get_hwnd_dpi raise to hit exception fallback
+    with patch.object(manager, "_get_hwnd_dpi", side_effect=Exception("err")):
+        assert manager.logical_to_physical(10, root=root) == 10
+        assert manager.physical_to_logical(10, root=root) == 10
+
+
+def test_deprecated_patch_tk_widgets_to_ttk_public(monkeypatch):
+    # non-Windows returns False
+    monkeypatch.setattr("tkface.win.dpi.is_windows", lambda: False)
+    from tkface.win.dpi import patch_tk_widgets_to_ttk
+    assert patch_tk_widgets_to_ttk() is False
+
+    # Windows path succeeds
+    monkeypatch.setattr("tkface.win.dpi.is_windows", lambda: True)
+    with patch("tkinter.ttk.Checkbutton.__init__") as cb_init, \
+         patch("tkinter.ttk.Radiobutton.__init__") as rb_init:
+        cb_init.return_value = None
+        rb_init.return_value = None
+        assert patch_tk_widgets_to_ttk() is True
 
 # Common patch context managers to reduce duplication
 class WindowsPatchContext:
@@ -2846,7 +3002,7 @@ class TestDPICoverageImprovements:
             patch_method='_patch_canvas_constructor',
             patch_path='tkinter.Canvas.__init__',
             input_kwargs={'padx': 10, 'pady': 20, 'bd': 2},
-            expected_kwargs={'padx': 10, 'pady': 20, 'bd': 4}  # Canvas doesn't scale padx/pady
+            expected_kwargs={'padx': 20, 'pady': 40, 'bd': 4}  # Canvas now scales padx/pady
         )
 
     def test_menu_constructor_patch_with_padding(self, manager):

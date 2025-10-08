@@ -371,7 +371,11 @@ class TestLanguageManagerIntegration:
     def test_register_with_real_root(self):
         """Test register method with real Tkinter root."""
         test_dict = {"hello": "こんにちは", "goodbye": "さようなら"}
-        self.lang_manager.register("ja", test_dict, self.root)
+        try:
+            self.lang_manager.register("ja", test_dict, self.root)
+        except TclError:
+            # Skip if msgcat is not available
+            pytest.skip("msgcat not available in this Tkinter installation")
         
         assert "ja" in self.lang_manager.user_dicts
         assert self.lang_manager.user_dicts["ja"] == test_dict

@@ -181,6 +181,12 @@ class TestCalendarCreation:
     @pytest.mark.slow
     def test_day_names_update_on_language_change(self, root):
         """Test that day names update when language changes."""
+        # Check if msgcat is available
+        try:
+            root.tk.call("package", "require", "msgcat")
+        except tk.TclError:
+            pytest.skip("msgcat not available in this Tkinter installation")
+        
         cal = Calendar(root, year=2024, month=1)
         # Get initial day names in English
         lang.set("en", root)
@@ -797,6 +803,12 @@ class TestCalendarIntegration:
 
     def test_language_switching(self, root):
         """Test calendar updates when language changes."""
+        # Check if msgcat is available
+        try:
+            root.tk.call("package", "require", "msgcat")
+        except tk.TclError:
+            pytest.skip("msgcat not available in this Tkinter installation")
+        
         cal = Calendar(root, year=2024, month=1)
         # Test English
         lang.set("en", root)

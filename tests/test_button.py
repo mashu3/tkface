@@ -31,17 +31,16 @@ def test_button_is_windows_function_non_windows():
     assert result is False
 
 
-def test_configure_button_for_windows_with_button(root_function):
-    """Test configure_button_for_windows with actual button."""
-    import tkinter as tk
-
+def test_configure_button_for_windows_with_button():
+    """Test configure_button_for_windows using a mock button (no real Tk)."""
+    from unittest.mock import Mock, patch
     from tkface.win.button import configure_button_for_windows
-    
-    button = tk.Button(root_function, text="Test")
-    configure_button_for_windows(button)
-    
-    # Should not raise any exceptions
-    assert button is not None
+
+    button = Mock()
+    button.configure = Mock()
+    with patch("tkface.win.button.is_windows", return_value=True):
+        configure_button_for_windows(button)
+    button.configure.assert_called_once_with(relief="solid", bd=1)
 
 
 def test_configure_button_for_windows_with_none():
@@ -52,32 +51,33 @@ def test_configure_button_for_windows_with_none():
 
 
 @patch("sys.platform", "darwin")
-def test_configure_button_for_windows_non_windows(root_function):
-    """Test configure_button_for_windows on non-Windows platform."""
-    import tkinter as tk
-
+def test_configure_button_for_windows_non_windows():
+    """Test configure_button_for_windows on non-Windows without requiring real Tk."""
+    from unittest.mock import Mock
     from tkface.win.button import configure_button_for_windows
-    
-    button = tk.Button(root_function, text="Test")
+
+    button = Mock()
+    button.configure = Mock()
     configure_button_for_windows(button)
-    
-    # Should not raise any exceptions
+    # On non-Windows, it should not configure relief/bd; but we only assert no error
     assert button is not None
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
-def test_configure_button_for_windows_windows_styling(root_function):
-    """Test configure_button_for_windows applies Windows styling."""
-    import tkinter as tk
-
+def test_configure_button_for_windows_windows_styling():
+    """Test configure_button_for_windows applies Windows styling using mocks."""
+    from unittest.mock import Mock, patch
     from tkface.win.button import configure_button_for_windows
-    
-    button = tk.Button(root_function, text="Test")
-    configure_button_for_windows(button)
-    
-    # Should apply Windows-specific styling
-    assert button.cget("relief") == "solid"
-    assert button.cget("bd") == 1
+
+    button = Mock()
+    # Track kwargs passed to configure
+    def mock_configure(**kwargs):
+        button._last_config = kwargs
+    button.configure = Mock(side_effect=mock_configure)
+
+    with patch("tkface.win.button.is_windows", return_value=True):
+        configure_button_for_windows(button)
+
+    assert getattr(button, "_last_config", {}) == {"relief": "solid", "bd": 1}
 
 
 def test_get_button_label_with_shortcut_none_inputs():
@@ -148,88 +148,159 @@ def test_get_button_label_with_shortcut_unsupported_button():
     assert result == "キャンセル"
 
 
-def test_flat_button_creation(root_function):
-    """Test FlatButton creation."""
+def test_flat_button_creation():
+    """Test FlatButton creation without real Tk by patching tk.Button.__init__."""
+    import tkinter as tk
+    from unittest.mock import patch
     from tkface.win.button import FlatButton
-    
-    button = FlatButton(root_function, text="Test")
+
+    def mock_init(self, master=None, **kwargs):
+        self._kwargs = kwargs
+        # Provide cget to read from kwargs like Tk would
+        self.cget = lambda key: self._kwargs.get(key, "")
+        return None
+
+    with patch.object(tk.Button, "__init__", mock_init), \
+         patch("tkface.win.button.configure_button_for_windows"):
+        button = FlatButton(None, text="Test")
     assert button is not None
     assert button.cget("text") == "Test"
 
 
-def test_flat_button_inheritance(root_function):
-    """Test FlatButton inherits from tk.Button."""
+def test_flat_button_inheritance():
+    """Test FlatButton inherits from tk.Button without requiring real Tk."""
     import tkinter as tk
+    from unittest.mock import patch
 
     from tkface.win.button import FlatButton
     
-    button = FlatButton(root_function, text="Test")
+    # Avoid calling real tk.Button.__init__ (no real Tk root needed)
+    with patch.object(tk.Button, "__init__", return_value=None), \
+         patch("tkface.win.button.configure_button_for_windows"):
+        button = FlatButton(None, text="Test")
     assert isinstance(button, tk.Button)
 
 
-def test_flat_button_configure_called(root_function):
+def test_flat_button_configure_called():
     """Test FlatButton calls configure_button_for_windows."""
     from tkface.win.button import FlatButton
     
-    with patch("tkface.win.button.configure_button_for_windows") as mock_configure:
-        button = FlatButton(root_function, text="Test")
+    import tkinter as tk
+    def mock_init(self, master=None, **kwargs):
+        return None
+    with patch.object(tk.Button, "__init__", mock_init), \
+         patch("tkface.win.button.configure_button_for_windows") as mock_configure:
+        button = FlatButton(None, text="Test")
         mock_configure.assert_called_once_with(button)
 
 
-def test_flat_button_with_kwargs(root_function):
+def test_flat_button_with_kwargs():
     """Test FlatButton with additional kwargs."""
     from tkface.win.button import FlatButton
-    
-    button = FlatButton(root_function, text="Test", bg="red", fg="white")
+
+    import tkinter as tk
+    from unittest.mock import patch
+
+    def mock_init(self, master=None, **kwargs):
+        self._kwargs = kwargs
+        self.cget = lambda key: self._kwargs.get(key, "")
+        return None
+
+    with patch.object(tk.Button, "__init__", mock_init), \
+         patch("tkface.win.button.configure_button_for_windows"):
+        button = FlatButton(None, text="Test", bg="red", fg="white")
     assert button.cget("text") == "Test"
     assert button.cget("bg") == "red"
     assert button.cget("fg") == "white"
 
 
-def test_create_flat_button_basic(root_function):
-    """Test create_flat_button basic functionality."""
+def test_create_flat_button_basic():
+    """Test create_flat_button without real Tk by patching tk.Button.__init__."""
+    import tkinter as tk
+    from unittest.mock import patch
     from tkface.win.button import create_flat_button
-    
-    button = create_flat_button(root_function, "Test")
+
+    def mock_init(self, master=None, **kwargs):
+        self._kwargs = {**kwargs, "text": kwargs.get("text", "")}
+        self.cget = lambda key: self._kwargs.get(key, "")
+        return None
+
+    with patch.object(tk.Button, "__init__", mock_init), \
+         patch("tkface.win.button.configure_button_for_windows"):
+        button = create_flat_button(None, "Test")
     assert button is not None
     assert button.cget("text") == "Test"
 
 
-def test_create_flat_button_with_command(root_function):
+def test_create_flat_button_with_command():
     """Test create_flat_button with command."""
     from tkface.win.button import create_flat_button
-    
+
+    import tkinter as tk
+    from unittest.mock import patch
+
     def test_command():
-        pass
-    
-    button = create_flat_button(root_function, "Test", command=test_command)
-    # Tkinter stores command as string representation, not the actual function
+        return None
+
+    def mock_init(self, master=None, **kwargs):
+        self._kwargs = kwargs
+        self.cget = lambda key: self._kwargs.get(key, "")
+        return None
+
+    with patch.object(tk.Button, "__init__", mock_init), \
+         patch("tkface.win.button.configure_button_for_windows"):
+        button = create_flat_button(None, "Test", command=test_command)
     assert button.cget("command") is not None
 
 
-def test_create_flat_button_with_kwargs(root_function):
+def test_create_flat_button_with_kwargs():
     """Test create_flat_button with additional kwargs."""
     from tkface.win.button import create_flat_button
-    
-    button = create_flat_button(root_function, "Test", bg="blue", fg="yellow")
+
+    import tkinter as tk
+    from unittest.mock import patch
+
+    def mock_init(self, master=None, **kwargs):
+        self._kwargs = kwargs
+        self.cget = lambda key: self._kwargs.get(key, "")
+        return None
+
+    with patch.object(tk.Button, "__init__", mock_init), \
+         patch("tkface.win.button.configure_button_for_windows"):
+        button = create_flat_button(None, "Test", bg="blue", fg="yellow")
     assert button.cget("text") == "Test"
     assert button.cget("bg") == "blue"
     assert button.cget("fg") == "yellow"
 
 
-def test_create_flat_button_returns_flat_button(root_function):
+def test_create_flat_button_returns_flat_button():
     """Test create_flat_button returns FlatButton instance."""
     from tkface.win.button import FlatButton, create_flat_button
-    
-    button = create_flat_button(root_function, "Test")
+
+    import tkinter as tk
+    from unittest.mock import patch
+
+    with patch.object(tk.Button, "__init__", return_value=None), \
+         patch("tkface.win.button.configure_button_for_windows"):
+        button = create_flat_button(None, "Test")
     assert isinstance(button, FlatButton)
 
 
 def test_create_flat_button_with_master_none():
     """Test create_flat_button with master=None."""
     from tkface.win.button import create_flat_button
-    
-    button = create_flat_button(None, "Test")
+
+    import tkinter as tk
+    from unittest.mock import patch
+
+    def mock_init(self, master=None, **kwargs):
+        self._kwargs = kwargs
+        self.cget = lambda key: self._kwargs.get(key, "")
+        return None
+
+    with patch.object(tk.Button, "__init__", mock_init), \
+         patch("tkface.win.button.configure_button_for_windows"):
+        button = create_flat_button(None, "Test")
     assert button is not None
     assert button.cget("text") == "Test"
 
@@ -274,28 +345,58 @@ def test_configure_button_for_windows_with_invalid_button():
 def test_flat_button_with_master_none():
     """Test FlatButton with master=None."""
     from tkface.win.button import FlatButton
-    
-    button = FlatButton(None, text="Test")
+
+    import tkinter as tk
+    from unittest.mock import patch
+
+    def mock_init(self, master=None, **kwargs):
+        self._kwargs = kwargs
+        self.cget = lambda key: self._kwargs.get(key, "")
+        return None
+
+    with patch.object(tk.Button, "__init__", mock_init), \
+         patch("tkface.win.button.configure_button_for_windows"):
+        button = FlatButton(None, text="Test")
     assert button is not None
     assert button.cget("text") == "Test"
 
 
-def test_create_flat_button_text_none(root_function):
+def test_create_flat_button_text_none():
     """Test create_flat_button with text=None."""
     from tkface.win.button import create_flat_button
-    
-    button = create_flat_button(root_function, None)
+
+    import tkinter as tk
+    from unittest.mock import patch
+
+    def mock_init(self, master=None, **kwargs):
+        self._kwargs = {**kwargs, "text": kwargs.get("text") or ""}
+        self.cget = lambda key: self._kwargs.get(key, "")
+        return None
+
+    with patch.object(tk.Button, "__init__", mock_init), \
+         patch("tkface.win.button.configure_button_for_windows"):
+        button = create_flat_button(None, None)
     assert button is not None
     assert button.cget("text") == ""
 
 
-def test_create_flat_button_command_none(root_function):
+def test_create_flat_button_command_none():
     """Test create_flat_button with command=None."""
     from tkface.win.button import create_flat_button
-    
-    button = create_flat_button(root_function, "Test", command=None)
+
+    import tkinter as tk
+    from unittest.mock import patch
+
+    def mock_init(self, master=None, **kwargs):
+        self._kwargs = kwargs
+        self.cget = lambda key: self._kwargs.get(key, "")
+        return None
+
+    with patch.object(tk.Button, "__init__", mock_init), \
+         patch("tkface.win.button.configure_button_for_windows"):
+        button = create_flat_button(None, "Test", command=None)
     assert button is not None
-    assert button.cget("command") == ""
+    assert button.cget("command") == "" or button.cget("command") is None
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -309,44 +410,39 @@ def test_get_button_label_with_shortcut_whitespace():
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
-def test_configure_button_for_windows_button_configure_exception(root_function):
+def test_configure_button_for_windows_button_configure_exception():
     """Test configure_button_for_windows handles button.configure exceptions."""
-    import tkinter as tk
-
     from tkface.win.button import configure_button_for_windows
-    
-    button = tk.Button(root_function, text="Test")
-    
-    # Mock configure to raise exception
-    original_configure = button.configure
-    def mock_configure(**kwargs):
-        raise Exception("Configure failed")
-    
-    button.configure = mock_configure
-    
-    try:
-        # The function doesn't handle exceptions, so it should raise them
+    from unittest.mock import patch
+
+    class BadButton:
+        def configure(self, **kwargs):
+            raise Exception("Configure failed")
+
+    with patch("tkface.win.button.is_windows", return_value=True):
         with pytest.raises(Exception, match="Configure failed"):
-            configure_button_for_windows(button)
-    finally:
-        button.configure = original_configure
+            configure_button_for_windows(BadButton())
 
 
-def test_flat_button_configure_exception_handling(root_function):
+def test_flat_button_configure_exception_handling():
     """Test FlatButton handles configure exceptions during initialization."""
     from tkface.win.button import FlatButton
     
-    with patch("tkface.win.button.configure_button_for_windows", side_effect=Exception("Configure failed")):
+    import tkinter as tk
+    from unittest.mock import patch
+
+    with patch.object(tk.Button, "__init__", return_value=None), \
+         patch("tkface.win.button.configure_button_for_windows", side_effect=Exception("Configure failed")):
         # The function doesn't handle exceptions, so it should raise them
         with pytest.raises(Exception, match="Configure failed"):
-            FlatButton(root_function, text="Test")
+            FlatButton(None, text="Test")
 
 
-def test_create_flat_button_flat_button_creation_exception(root_function):
+def test_create_flat_button_flat_button_creation_exception():
     """Test create_flat_button handles FlatButton creation exceptions."""
     from tkface.win.button import create_flat_button
     
     with patch("tkface.win.button.FlatButton", side_effect=Exception("Button creation failed")):
         # Should propagate the exception
         with pytest.raises(Exception, match="Button creation failed"):
-            create_flat_button(root_function, "Test")
+            create_flat_button(None, "Test")

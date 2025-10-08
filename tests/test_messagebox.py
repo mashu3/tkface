@@ -502,7 +502,14 @@ def test_custom_messagebox_bell_with_different_icons(
 
 def test_messagebox_actual_translation(root):
     """Test that messagebox actually translates messages correctly."""
+    import tkinter as tk
     from tkface.dialog.messagebox import CustomMessageBox, MessageBoxConfig
+    
+    # Check if msgcat is available
+    try:
+        root.tk.call("package", "require", "msgcat")
+    except tk.TclError:
+        pytest.skip("msgcat not available in this Tkinter installation")
 
     # Test Japanese translation
     with patch("tkinter.Toplevel.wait_window"), patch(
@@ -539,7 +546,14 @@ def test_messagebox_actual_translation(root):
 
 def test_messagebox_button_translation(root):
     """Test that messagebox buttons are translated correctly."""
+    import tkinter as tk
     from tkface.dialog.messagebox import CustomMessageBox, MessageBoxConfig
+    
+    # Check if msgcat is available
+    try:
+        root.tk.call("package", "require", "msgcat")
+    except tk.TclError:
+        pytest.skip("msgcat not available in this Tkinter installation")
 
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
@@ -574,7 +588,14 @@ def test_messagebox_button_translation(root):
 
 def test_messagebox_title_translation(root):
     """Test that messagebox titles are translated correctly."""
+    import tkinter as tk
     from tkface.dialog.messagebox import CustomMessageBox, MessageBoxConfig
+    
+    # Check if msgcat is available
+    try:
+        root.tk.call("package", "require", "msgcat")
+    except tk.TclError:
+        pytest.skip("msgcat not available in this Tkinter installation")
 
     with patch("tkinter.Toplevel.wait_window"), patch("tkinter.Label"), patch(
         "tkinter.Button"
@@ -707,7 +728,14 @@ def test_classmethod_show_default_config_when_none(root):
 
 def test_simpledialog_actual_translation(root):
     """Test that simpledialog actually translates messages correctly."""
+    import tkinter as tk
     from tkface.dialog.simpledialog import CustomSimpleDialog, SimpleDialogConfig
+    
+    # Check if msgcat is available
+    try:
+        root.tk.call("package", "require", "msgcat")
+    except tk.TclError:
+        pytest.skip("msgcat not available in this Tkinter installation")
 
     with patch("tkinter.Toplevel.wait_window"), patch(
         "tkinter.Label"

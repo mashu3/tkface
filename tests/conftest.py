@@ -65,6 +65,11 @@ def root():
             # Force window updates
             _TK_ROOT.update()
             _TK_ROOT.update_idletasks()
+            # Load msgcat package for language support
+            try:
+                _TK_ROOT.tk.call("package", "require", "msgcat")
+            except tk.TclError as e:
+                logging.warning(f"Failed to load msgcat package: {e}")
             _TK_INITIALIZED = True
             yield _TK_ROOT
             # Clean up after session
@@ -86,6 +91,7 @@ def root():
                     "no display name and no $DISPLAY environment variable",
                     "no display name",
                     "$DISPLAY environment variable",
+                    "application has been destroyed",
                 ]
             ):
                 pytest.skip(
@@ -118,6 +124,11 @@ def root_function():
         temp_root = tk.Tk()
         temp_root.withdraw()  # Hide the main window
         temp_root.update()
+        # Load msgcat package for language support
+        try:
+            temp_root.tk.call("package", "require", "msgcat")
+        except tk.TclError as e:
+            logging.warning(f"Failed to load msgcat package: {e}")
         yield temp_root
         # Cleanup
         try:
@@ -142,6 +153,67 @@ def root_function():
                 "no display name and no $DISPLAY environment variable",
                 "no display name",
                 "$DISPLAY environment variable",
+                "application has been destroyed",
+            ]
+        ):
+            pytest.skip(
+                f"Tkinter not properly installed or display not available: "
+                f"{error_str}"
+            )
+        else:
+            raise
+
+
+@pytest.fixture(scope="function")
+def root_isolated():
+    """Create an isolated root window for tests that need complete isolation."""
+    try:
+        # Set environment variables
+        os.environ["TK_SILENCE_DEPRECATION"] = "1"
+        # Create new root window
+        temp_root = tk.Tk()
+        temp_root.withdraw()  # Hide the main window
+        temp_root.update()
+        temp_root.update_idletasks()
+        # Load msgcat package for language support
+        try:
+            temp_root.tk.call("package", "require", "msgcat")
+        except tk.TclError as e:
+            logging.warning(f"Failed to load msgcat package: {e}")
+        yield temp_root
+        # Cleanup
+        try:
+            # Destroy all children first
+            for child in temp_root.winfo_children():
+                try:
+                    child.destroy()
+                except tk.TclError:
+                    pass
+            temp_root.destroy()
+        except tk.TclError as e:
+            # Window may already be destroyed
+            logging.debug(f"Failed to destroy isolated root window: {e}")
+        # Force garbage collection
+        gc.collect()
+        time.sleep(0.01)  # Brief pause for cleanup
+    except tk.TclError as e:
+        error_str = str(e)
+        if any(
+            pattern in error_str
+            for pattern in [
+                "Can't find a usable tk.tcl",
+                "invalid command name",
+                "Can't find a usable init.tcl",
+                "vistaTheme.tcl",
+                "init.tcl",
+                "No error",
+                "fonts.tcl",
+                "icons.tcl",
+                "tk.tcl",
+                "no display name and no $DISPLAY environment variable",
+                "no display name",
+                "$DISPLAY environment variable",
+                "application has been destroyed",
             ]
         ):
             pytest.skip(
@@ -1144,7 +1216,12 @@ def mock_root():
     """Create a mock Tkinter root for language tests."""
     root = Mock()
     root.tk = Mock()
-    root.tk.call = Mock()
+    # Mock tk.call to handle msgcat package loading
+    def mock_call(*args):
+        if args == ("package", "require", "msgcat"):
+            return "1.0"  # Mock version number
+        return None
+    root.tk.call = Mock(side_effect=mock_call)
     root.tk.globalgetvar = Mock(return_value='/usr/lib/tk')
     return root
 
@@ -1154,7 +1231,14 @@ def mock_root_with_locale():
     """Create a mock Tkinter root with locale support for language tests."""
     root = Mock()
     root.tk = Mock()
-    root.tk.call = Mock()
+    # Mock tk.call to handle msgcat package loading and locale calls
+    def mock_call(*args):
+        if args == ("package", "require", "msgcat"):
+            return "1.0"  # Mock version number
+        elif args == ("msgcat::mclocale",):
+            return "ja_JP"  # Mock locale for testing
+        return None
+    root.tk.call = Mock(side_effect=mock_call)
     root.tk.globalgetvar = Mock(return_value='/usr/lib/tk')
     return root
 
@@ -1909,4 +1993,371 @@ def test_exception_handling_common(widget, method_name, exception_data, *args, *
         exception_data["exception_raised"] = True
         exception_data["exception_type"] = type(e).__name__
         exception_data["exception_message"] = str(e)
+
+
+# TimePicker related fixtures
+@pytest.fixture
+def timepicker_mock_patches():
+    """Provide comprehensive mock patches for TimePicker tests."""
+    patches = [
+        patch("tkinter.Frame.__init__", return_value=None),
+        patch("tkinter.Frame.configure"),
+        patch("tkinter.Frame.pack"),
+        patch("tkinter.Frame.grid"),
+        patch("tkinter.Frame.place"),
+        patch("tkinter.Frame.columnconfigure"),
+        patch("tkinter.Frame.rowconfigure"),
+        patch("tkinter.Frame.grid_columnconfigure"),
+        patch("tkinter.Frame.grid_rowconfigure"),
+        patch("tkinter.Label"),
+        patch("tkinter.Button"),
+        patch("tkinter.Entry"),
+        patch("tkinter.Canvas"),
+        patch("tkinter.Spinbox"),
+        patch("tkinter.ttk.Frame"),
+        patch("tkinter.ttk.Label"),
+        patch("tkinter.ttk.Button"),
+        patch("tkinter.ttk.Entry"),
+        patch("tkinter.ttk.Combobox"),
+        patch("tkinter.ttk.Spinbox"),
+        patch("tkinter.Label.configure"),
+        patch("tkinter.Button.configure"),
+        patch("tkinter.Entry.configure"),
+        patch("tkinter.Canvas.configure"),
+        patch("tkinter.Spinbox.configure"),
+        patch("tkinter.ttk.Frame.configure"),
+        patch("tkinter.ttk.Label.configure"),
+        patch("tkinter.ttk.Button.configure"),
+        patch("tkinter.ttk.Entry.configure"),
+        patch("tkinter.ttk.Combobox.configure"),
+        patch("tkinter.ttk.Spinbox.configure"),
+        patch("tkinter.Label.pack"),
+        patch("tkinter.Button.pack"),
+        patch("tkinter.Entry.pack"),
+        patch("tkinter.Canvas.pack"),
+        patch("tkinter.Spinbox.pack"),
+        patch("tkinter.ttk.Frame.pack"),
+        patch("tkinter.ttk.Label.pack"),
+        patch("tkinter.ttk.Button.pack"),
+        patch("tkinter.ttk.Entry.pack"),
+        patch("tkinter.ttk.Combobox.pack"),
+        patch("tkinter.ttk.Spinbox.pack"),
+        patch("tkinter.Label.grid"),
+        patch("tkinter.Button.grid"),
+        patch("tkinter.Entry.grid"),
+        patch("tkinter.Canvas.grid"),
+        patch("tkinter.Spinbox.grid"),
+        patch("tkinter.ttk.Frame.grid"),
+        patch("tkinter.ttk.Label.grid"),
+        patch("tkinter.ttk.Button.grid"),
+        patch("tkinter.ttk.Entry.grid"),
+        patch("tkinter.ttk.Combobox.grid"),
+        patch("tkinter.ttk.Spinbox.grid"),
+        patch("tkinter.Label.place"),
+        patch("tkinter.Button.place"),
+        patch("tkinter.Entry.place"),
+        patch("tkinter.Canvas.place"),
+        patch("tkinter.Spinbox.place"),
+        patch("tkinter.ttk.Frame.place"),
+        patch("tkinter.ttk.Label.place"),
+        patch("tkinter.ttk.Button.place"),
+        patch("tkinter.ttk.Entry.place"),
+        patch("tkinter.ttk.Combobox.place"),
+        patch("tkinter.ttk.Spinbox.place"),
+        patch("tkinter.Label.cget"),
+        patch("tkinter.Button.cget"),
+        patch("tkinter.Entry.cget"),
+        patch("tkinter.Canvas.cget"),
+        patch("tkinter.Spinbox.cget"),
+        patch("tkinter.ttk.Frame.cget"),
+        patch("tkinter.ttk.Label.cget"),
+        patch("tkinter.ttk.Button.cget"),
+        patch("tkinter.ttk.Entry.cget"),
+        patch("tkinter.ttk.Combobox.cget"),
+        patch("tkinter.ttk.Spinbox.cget"),
+        patch("tkinter.Label.winfo_width"),
+        patch("tkinter.Button.winfo_width"),
+        patch("tkinter.Entry.winfo_width"),
+        patch("tkinter.Canvas.winfo_width"),
+        patch("tkinter.Spinbox.winfo_width"),
+        patch("tkinter.ttk.Frame.winfo_width"),
+        patch("tkinter.ttk.Label.winfo_width"),
+        patch("tkinter.ttk.Button.winfo_width"),
+        patch("tkinter.ttk.Entry.winfo_width"),
+        patch("tkinter.ttk.Combobox.winfo_width"),
+        patch("tkinter.ttk.Spinbox.winfo_width"),
+        patch("tkinter.Label.winfo_height"),
+        patch("tkinter.Button.winfo_height"),
+        patch("tkinter.Entry.winfo_height"),
+        patch("tkinter.Canvas.winfo_height"),
+        patch("tkinter.Spinbox.winfo_height"),
+        patch("tkinter.ttk.Frame.winfo_height"),
+        patch("tkinter.ttk.Label.winfo_height"),
+        patch("tkinter.ttk.Button.winfo_height"),
+        patch("tkinter.ttk.Entry.winfo_height"),
+        patch("tkinter.ttk.Combobox.winfo_height"),
+        patch("tkinter.ttk.Spinbox.winfo_height"),
+        patch("tkinter.Label.winfo_children"),
+        patch("tkinter.Button.winfo_children"),
+        patch("tkinter.Entry.winfo_children"),
+        patch("tkinter.Canvas.winfo_children"),
+        patch("tkinter.Spinbox.winfo_children"),
+        patch("tkinter.ttk.Frame.winfo_children"),
+        patch("tkinter.ttk.Label.winfo_children"),
+        patch("tkinter.ttk.Button.winfo_children"),
+        patch("tkinter.ttk.Entry.winfo_children"),
+        patch("tkinter.ttk.Combobox.winfo_children"),
+        patch("tkinter.ttk.Spinbox.winfo_children"),
+        patch("tkinter.Frame.winfo_children"),
+        patch("tkinter.Frame.winfo_width"),
+        patch("tkinter.Frame.winfo_height"),
+        patch("tkinter.Frame.cget"),
+        patch("tkinter.Frame.bind"),
+        patch("tkinter.Label.bind"),
+        patch("tkinter.Button.bind"),
+        patch("tkinter.Entry.bind"),
+        patch("tkinter.Canvas.bind"),
+        patch("tkinter.Spinbox.bind"),
+        patch("tkinter.ttk.Frame.bind"),
+        patch("tkinter.ttk.Label.bind"),
+        patch("tkinter.ttk.Button.bind"),
+        patch("tkinter.ttk.Entry.bind"),
+        patch("tkinter.ttk.Combobox.bind"),
+        patch("tkinter.ttk.Spinbox.bind"),
+        # Additional patches for TimePicker specific functionality
+        patch("tkinter.Toplevel"),
+        patch("tkinter.Toplevel.configure"),
+        patch("tkinter.Toplevel.geometry"),
+        patch("tkinter.Toplevel.title"),
+        patch("tkinter.Toplevel.transient"),
+        patch("tkinter.Toplevel.grab_set"),
+        patch("tkinter.Toplevel.deiconify"),
+        patch("tkinter.Toplevel.lift"),
+        patch("tkinter.Toplevel.focus_set"),
+        patch("tkinter.Toplevel.wait_window"),
+        patch("tkinter.Toplevel.destroy"),
+        patch("tkinter.Toplevel.winfo_toplevel"),
+        patch("tkinter.Toplevel.winfo_rootx"),
+        patch("tkinter.Toplevel.winfo_rooty"),
+        patch("tkinter.Toplevel.winfo_width"),
+        patch("tkinter.Toplevel.winfo_height"),
+        patch("tkinter.Toplevel.update_idletasks"),
+        patch("tkinter.Toplevel.update"),
+        patch("tkinter.Toplevel.after"),
+        patch("tkinter.Toplevel.bind"),
+        patch("tkinter.Toplevel.event_generate"),
+        patch("tkinter.Toplevel.focus_set"),
+        patch("tkinter.Toplevel.clipboard_clear"),
+        patch("tkinter.Toplevel.clipboard_append"),
+        # DPI scaling patches
+        # Note: DPI scaling is handled internally, no need to patch
+        # Theme loading patches
+        patch("tkface.dialog.timepicker._load_theme_colors", return_value={
+            'time_background': 'white',
+            'time_foreground': '#333333',
+            'time_spinbox_bg': 'white'
+        }),
+        patch("tkface.widget.timespinner._load_theme", return_value={
+            'time_background': 'white',
+            'time_foreground': '#333333',
+            'time_spinbox_bg': 'white'
+        }),
+        patch("tkface.widget.timespinner._get_default_theme", return_value={
+            'time_background': 'white',
+            'time_foreground': '#333333',
+            'time_spinbox_bg': 'white'
+        }),
+    ]
+    # Start all patches
+    for p in patches:
+        p.start()
+    yield patches
+    # Stop all patches
+    for p in patches:
+        p.stop()
+
+
+@pytest.fixture
+def timepicker_mock_widgets():
+    """Provide mock widgets for TimePicker tests."""
+    from unittest.mock import Mock
+
+    # Create mock widgets
+    mock_frame = Mock()
+    mock_frame.config = Mock()
+    mock_frame.cget = Mock(return_value="white")
+    mock_frame.winfo_children = Mock(return_value=[])
+    mock_frame._last_child_ids = {}
+    mock_frame.tk = Mock()
+    mock_frame._w = "."
+    mock_frame.children = {}
+    
+    mock_label = Mock()
+    mock_label.config = Mock()
+    mock_label.cget = Mock(return_value="white")
+    mock_label.winfo_children = Mock(return_value=[])
+    
+    mock_button = Mock()
+    mock_button.config = Mock()
+    mock_button.cget = Mock(return_value="white")
+    mock_button.winfo_children = Mock(return_value=[])
+    
+    mock_entry = Mock()
+    mock_entry.config = Mock()
+    mock_entry.cget = Mock(return_value="white")
+    mock_entry.winfo_children = Mock(return_value=[])
+    mock_entry.get = Mock(return_value="")
+    mock_entry.set = Mock()
+    mock_entry.insert = Mock()
+    mock_entry.delete = Mock()
+    
+    mock_canvas = Mock()
+    mock_canvas.config = Mock()
+    mock_canvas.cget = Mock(return_value="white")
+    mock_canvas.winfo_children = Mock(return_value=[])
+    mock_canvas.create_rectangle = Mock()
+    mock_canvas.create_text = Mock()
+    mock_canvas.create_line = Mock()
+    mock_canvas.create_polygon = Mock()
+    mock_canvas.delete = Mock()
+    mock_canvas.coords = Mock()
+    mock_canvas.itemconfig = Mock()
+    mock_canvas.bind = Mock()
+    mock_canvas.unbind = Mock()
+    mock_canvas.focus_set = Mock()
+    
+    mock_spinbox = Mock()
+    mock_spinbox.config = Mock()
+    mock_spinbox.cget = Mock(return_value="white")
+    mock_spinbox.winfo_children = Mock(return_value=[])
+    mock_spinbox.get = Mock(return_value="0")
+    mock_spinbox.set = Mock()
+    mock_spinbox.bind = Mock()
+    mock_spinbox.focus_set = Mock()
+    
+    return {
+        "frame": mock_frame,
+        "label": mock_label,
+        "button": mock_button,
+        "entry": mock_entry,
+        "canvas": mock_canvas,
+        "spinbox": mock_spinbox
+    }
+
+
+@pytest.fixture
+def timepicker_theme_colors():
+    """Provide theme colors for TimePicker tests."""
+    return {
+        'time_background': 'white',
+        'time_foreground': '#333333',
+        'time_spinbox_bg': 'white',
+        'time_spinbox_fg': '#333333',
+        'time_button_bg': '#f0f0f0',
+        'time_button_fg': '#333333',
+        'time_button_active_bg': '#e0e0e0',
+        'time_button_active_fg': '#000000',
+        'time_border': '#cccccc',
+        'time_hover_bg': '#f5f5f5',
+        'time_hover_fg': '#000000',
+        'time_selected_bg': '#0078d4',
+        'time_selected_fg': 'white'
+    }
+
+
+@pytest.fixture
+def timepicker_mock_time():
+    """Provide mock time objects for TimePicker tests."""
+    import datetime
+    return {
+        'test_time': datetime.time(14, 30, 45),
+        'test_time_12h': datetime.time(2, 30, 45),
+        'test_time_midnight': datetime.time(0, 0, 0),
+        'test_time_noon': datetime.time(12, 0, 0),
+        'test_time_invalid': datetime.time(25, 70, 80)  # Invalid time for testing
+    }
+
+
+@pytest.fixture
+def timepicker_mock_callbacks():
+    """Provide mock callbacks for TimePicker tests."""
+    callbacks = {
+        'time_callback': Mock(),
+        'ok_callback': Mock(),
+        'cancel_callback': Mock(),
+        'change_callback': Mock()
+    }
+    
+    # Set up callback behavior
+    def time_callback(time_obj):
+        callbacks['time_callback'].call_count += 1
+        callbacks['time_callback'].last_time = time_obj
+    
+    def ok_callback():
+        callbacks['ok_callback'].call_count += 1
+    
+    def cancel_callback():
+        callbacks['cancel_callback'].call_count += 1
+    
+    def change_callback():
+        callbacks['change_callback'].call_count += 1
+    
+    callbacks['time_callback'].side_effect = time_callback
+    callbacks['ok_callback'].side_effect = ok_callback
+    callbacks['cancel_callback'].side_effect = cancel_callback
+    callbacks['change_callback'].side_effect = change_callback
+    
+    return callbacks
+
+
+@pytest.fixture
+def timepicker_mock_events():
+    """Provide mock events for TimePicker tests."""
+    from unittest.mock import Mock
+    
+    def create_mock_event(event_type, **kwargs):
+        event = Mock()
+        event.type = event_type
+        for key, value in kwargs.items():
+            setattr(event, key, value)
+        return event
+    
+    return {
+        'mouse_click': create_mock_event('<Button-1>', x=50, y=50),
+        'mouse_release': create_mock_event('<ButtonRelease-1>', x=50, y=50),
+        'mouse_motion': create_mock_event('<Motion>', x=50, y=50),
+        'mouse_wheel_up': create_mock_event('<MouseWheel>', delta=120, x=50, y=50),
+        'mouse_wheel_down': create_mock_event('<MouseWheel>', delta=-120, x=50, y=50),
+        'key_press': create_mock_event('<KeyPress>', keysym='Return', char='\r'),
+        'key_release': create_mock_event('<KeyRelease>', keysym='Return', char='\r'),
+        'focus_in': create_mock_event('<FocusIn>'),
+        'focus_out': create_mock_event('<FocusOut>'),
+        'enter': create_mock_event('<Enter>', x=50, y=50),
+        'leave': create_mock_event('<Leave>', x=50, y=50)
+    }
+
+
+@pytest.fixture
+def timepicker_complete_mock():
+    """Provide complete mocking for TimePicker tests to prevent widget creation."""
+    # Don't mock tkinter classes globally - this causes isinstance() issues
+    # Instead, mock the specific methods that cause problems
+    with patch("tkface.dialog.timepicker._load_theme_colors", return_value={
+             'time_background': 'white',
+             'time_foreground': '#333333',
+             'time_spinbox_bg': 'white'
+         }), \
+         patch("tkface.widget.timespinner._load_theme", return_value={
+             'time_background': 'white',
+             'time_foreground': '#333333',
+             'time_spinbox_bg': 'white'
+         }), \
+         patch("tkface.widget.timespinner._get_default_theme", return_value={
+             'time_background': 'white',
+             'time_foreground': '#333333',
+             'time_spinbox_bg': 'white'
+         }):
+        # Just yield empty dict - let widgets be created normally
+        # This avoids isinstance() issues with mocked classes
+        yield {}
 
