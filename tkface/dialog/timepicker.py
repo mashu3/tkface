@@ -5,16 +5,107 @@ This module provides TimeFrame and TimeEntry widgets that display
 popup time selectors for time selection.
 """
 
+import configparser
 import datetime
 import logging
 import sys
 import tkinter as tk
 from dataclasses import dataclass
+from pathlib import Path
 from tkinter import ttk
-from typing import Optional
+from typing import Dict, Optional
 
 from ..widget import get_scaling_factor
 from ..widget.timespinner import TimeSpinner
+
+
+def _load_theme_colors(theme_name: str = "light") -> Dict[str, str]:
+    """
+    Load theme colors from .ini file.
+    
+    Args:
+        theme_name: Name of the theme ('light' or 'dark')
+        
+    Returns:
+        Dict with color values
+    """
+    try:
+        current_dir = Path(__file__).parent.parent / "themes"
+        theme_file = current_dir / f"{theme_name}.ini"
+        
+        if not theme_file.exists():
+            # Return default light theme if file doesn't exist
+            return {
+                'time_background': 'white',
+                'time_foreground': '#333333',
+                'time_spinbox_bg': '#f0f0f0',
+                'time_spinbox_button_bg': 'white',
+                'time_spinbox_hover_bg': '#e0e0e0',
+                'time_spinbox_active_bg': '#d0d0d0',
+                'time_spinbox_outline': '#cccccc',
+                'time_separator_color': '#333333',
+                'time_label_color': '#333333',
+                'time_toggle_bg': '#f0f0f0',
+                'time_toggle_slider_bg': 'white',
+                'time_toggle_outline': '#cccccc',
+                'time_toggle_active_fg': '#333333',
+                'time_toggle_inactive_fg': '#999999',
+                'time_button_bg': 'white',
+                'time_button_fg': '#000000',
+                'time_button_active_bg': '#f5f5f5',
+                'time_button_active_fg': '#000000'
+            }
+            
+        config = configparser.ConfigParser()
+        config.read(theme_file)
+        
+        if theme_name not in config:
+            # Return default light theme if section doesn't exist
+            return {
+                'time_background': 'white',
+                'time_foreground': '#333333',
+                'time_spinbox_bg': '#f0f0f0',
+                'time_spinbox_button_bg': 'white',
+                'time_spinbox_hover_bg': '#e0e0e0',
+                'time_spinbox_active_bg': '#d0d0d0',
+                'time_spinbox_outline': '#cccccc',
+                'time_separator_color': '#333333',
+                'time_label_color': '#333333',
+                'time_toggle_bg': '#f0f0f0',
+                'time_toggle_slider_bg': 'white',
+                'time_toggle_outline': '#cccccc',
+                'time_toggle_active_fg': '#333333',
+                'time_toggle_inactive_fg': '#999999',
+                'time_button_bg': 'white',
+                'time_button_fg': '#000000',
+                'time_button_active_bg': '#f5f5f5',
+                'time_button_active_fg': '#000000'
+            }
+            
+        theme_section = config[theme_name]
+        return dict(theme_section)
+    except Exception:
+        # Return default light theme on any error
+        return {
+            'time_background': 'white',
+            'time_foreground': '#333333',
+            'time_spinbox_bg': '#f0f0f0',
+            'time_spinbox_button_bg': 'white',
+            'time_spinbox_hover_bg': '#e0e0e0',
+            'time_spinbox_active_bg': '#d0d0d0',
+            'time_spinbox_outline': '#cccccc',
+            'time_separator_color': '#333333',
+            'time_label_color': '#333333',
+            'time_toggle_bg': '#f0f0f0',
+            'time_toggle_slider_bg': 'white',
+            'time_toggle_outline': '#cccccc',
+            'time_toggle_active_fg': '#333333',
+            'time_toggle_inactive_fg': '#999999',
+            'time_button_bg': 'white',
+            'time_button_fg': '#000000',
+            'time_button_active_bg': '#f5f5f5',
+            'time_button_active_fg': '#000000'
+        }
 
 
 @dataclass
@@ -70,6 +161,7 @@ class _TimePickerBase:
         self.time_format = config.time_format
         self.hour_format = config.hour_format
         self.show_seconds = config.show_seconds
+        self.theme = config.theme if hasattr(config, 'theme') else theme
         self.selected_time = None
         self.popup = None
         self.time_callback = config.time_callback
@@ -313,52 +405,84 @@ class _TimePickerBase:
             self.logger.debug("show_time_picker called but popup already exists; ignoring")
             return
         self.logger.debug("Creating time picker popup")
-        self.popup = tk.Toplevel(self)
-        self.popup.withdraw()
-        self.popup.overrideredirect(True)
-        self.popup.resizable(False, False)
+        try:
+            # Prefer using self as parent if it's a real widget; otherwise fallback to master
+            parent_for_popup = self
+            try:
+                _ = self.winfo_toplevel  # attribute presence check; may raise in fallback init
+            except Exception:  # pylint: disable=broad-except
+                parent_for_popup = self.master
 
-        # Set theme colors
-        if self.hour_format == "12":
-            bg_color = "#f0f0f0"
-        else:
-            bg_color = "#ffffff"
-        self.popup.configure(bg=bg_color)
+            self.popup = tk.Toplevel(parent_for_popup)
+            self.popup.withdraw()
+            self.popup.overrideredirect(True)
+            self.popup.resizable(False, False)
+        except tk.TclError as e:
+            # In headless/tests or when the application has been destroyed, avoid raising
+            self.logger.debug("Failed to create Toplevel popup: %s", e)
+            return
 
-        # Get the toplevel window from parent
-        toplevel = self.master.winfo_toplevel() if hasattr(self, "master") else None
-        if toplevel:
-            self.popup.transient(toplevel)
-        self.popup.after(100, self._setup_focus)
+        try:
+            # Set theme colors from theme file
+            theme_colors = _load_theme_colors(self.theme)
+            bg_color = theme_colors.get('time_background', 'white')
+            self.popup.configure(bg=bg_color)
 
-        # Create time picker widget
-        self.time_picker = TimeSpinner(
-            self.popup,
-            hour_format=self.hour_format,
-            show_seconds=self.show_seconds,
-            time_callback=self._on_time_selected,
-            theme=self.theme if hasattr(self, "theme") else "light",
-            initial_time=self.selected_time,
-        )
-        self.logger.debug(
-            "TimeSpinner created with hour_format=%s show_seconds=%s initial=%r",
-            self.hour_format,
-            self.show_seconds,
-            self.selected_time,
-        )
+            # Force update to ensure background color is applied
+            self.popup.update_idletasks()
 
-        self._bind_time_picker_events(self.time_picker)
-        self.time_picker.pack(expand=True, fill="both", padx=2, pady=2)
+            # Get the toplevel window from parent
+            toplevel = self.master.winfo_toplevel() if hasattr(self, "master") else None
+            if toplevel:
+                self.popup.transient(toplevel)
+            self.popup.after(100, self._setup_focus)
 
-        # Position the popup
-        self.popup.update_idletasks()
-        self._position_popup()
+            # Create time picker widget
+            self.time_picker = TimeSpinner(
+                self.popup,
+                hour_format=self.hour_format,
+                show_seconds=self.show_seconds,
+                time_callback=self._on_time_selected,
+                theme=self.theme if hasattr(self, "theme") else "light",
+                initial_time=self.selected_time,
+            )
 
-        self.popup.deiconify()
-        self.popup.lift()
-        self.popup.bind("<Escape>", lambda e: self.hide_time_picker())
-        self._setup_click_outside_handling()
-        self.time_picker.focus_set()
+            # Ensure TimeSpinner background matches popup background
+            self.time_picker.configure(bg=bg_color)
+            self.time_picker.canvas.configure(bg=bg_color)
+            self.time_picker.button_frame.configure(bg=bg_color)
+
+            self.logger.debug(
+                "TimeSpinner created with hour_format=%s show_seconds=%s theme=%s initial=%r",
+                self.hour_format,
+                self.show_seconds,
+                self.theme if hasattr(self, "theme") else "light",
+                self.selected_time,
+            )
+
+            self._bind_time_picker_events(self.time_picker)
+            self.time_picker.pack(expand=True, fill="both", padx=2, pady=2)
+
+            # Position the popup
+            self.popup.update_idletasks()
+            self._position_popup()
+
+            self.popup.deiconify()
+            self.popup.lift()
+            self.popup.bind("<Escape>", lambda e: self.hide_time_picker())
+            self._setup_click_outside_handling()
+            self.time_picker.focus_set()
+        except tk.TclError as e:
+            # If any part of popup setup fails (e.g., app destroyed), cleanup and exit gracefully
+            self.logger.debug("Popup setup failed: %s", e)
+            try:
+                if self.popup:
+                    self.popup.destroy()
+            except Exception:  # pylint: disable=broad-except
+                pass
+            self.popup = None
+            self.time_picker = None
+            return
 
     def _position_popup(self):
         """Position the popup relative to the parent widget."""
@@ -367,7 +491,10 @@ class _TimePickerBase:
         popup_height = self.popup.winfo_reqheight()
 
         # Get parent widget position
-        parent_y = self.master.winfo_rooty()
+        try:
+            parent_y = self.master.winfo_rooty()
+        except tk.TclError:
+            parent_y = 0
 
         # Position below the input area (left edge aligned)
         if hasattr(self, "button") and self.entry is not None:

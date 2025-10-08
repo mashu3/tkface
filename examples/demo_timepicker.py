@@ -39,6 +39,7 @@ class TimePickerDemo:
         self.timepicker_type_var = tk.StringVar(value="TimeFrame")
         self.hour_format_var = tk.StringVar(value="24")
         self.show_seconds_var = tk.BooleanVar(value=True)
+        self.theme_var = tk.StringVar(value="light")
         self.language_var = tk.StringVar(value="en")
         self.button_text_var = tk.StringVar(value="🕐")
         self.width_var = tk.StringVar(value="15")
@@ -138,6 +139,31 @@ class TimePickerDemo:
             command=self.update_timepicker,
         )
         self.show_seconds_check.pack(side="left", padx=(0, 20))
+
+        # Configuration controls - Row 1.7 (Theme selection)
+        config_row1_7 = tk.Frame(config_frame)
+        config_row1_7.pack(fill="x", pady=(0, 10))
+
+        # Theme selection
+        tk.Label(config_row1_7, text="Theme:").pack(side="left")
+        theme_frame = tk.Frame(config_row1_7)
+        theme_frame.pack(side="left", padx=(5, 20))
+
+        tk.Radiobutton(
+            theme_frame,
+            text="Light",
+            variable=self.theme_var,
+            value="light",
+            command=self.change_theme,
+        ).pack(side="left", padx=(0, 10))
+
+        tk.Radiobutton(
+            theme_frame,
+            text="Dark",
+            variable=self.theme_var,
+            value="dark",
+            command=self.change_theme,
+        ).pack(side="left")
 
         # Configuration controls - Row 2
         config_row2 = tk.Frame(config_frame)
@@ -262,6 +288,7 @@ class TimePickerDemo:
         # Get current format
         hour_format = self.hour_format_var.get()
         show_seconds = self.show_seconds_var.get()
+        theme = self.theme_var.get()
 
         # Build time format string
         if hour_format == "24":
@@ -279,10 +306,11 @@ class TimePickerDemo:
         width = int(self.width_var.get()) if self.width_var.get().isdigit() else 15
         language = self.language_var.get()
         self.logger.debug(
-            "Creating timepicker type=%s hour_format=%s show_seconds=%s lang=%s width=%s",
+            "Creating timepicker type=%s hour_format=%s show_seconds=%s theme=%s lang=%s width=%s",
             self.timepicker_type_var.get(),
             hour_format,
             show_seconds,
+            theme,
             language,
             width,
         )
@@ -292,6 +320,7 @@ class TimePickerDemo:
                 time_format=time_format,
                 hour_format=hour_format,
                 show_seconds=show_seconds,
+                theme=theme,
                 language=language,
                 time_callback=self.on_time_selected,
                 button_text=self.button_text_var.get(),
@@ -303,6 +332,7 @@ class TimePickerDemo:
                 time_format=time_format,
                 hour_format=hour_format,
                 show_seconds=show_seconds,
+                theme=theme,
                 language=language,
                 time_callback=self.on_time_selected,
                 width=width,
@@ -323,6 +353,7 @@ class TimePickerDemo:
             time_format="%H:%M:%S",
             hour_format="24",
             show_seconds=True,
+            theme=self.theme_var.get(),
             language=self.language_var.get(),
             time_callback=self.on_initial_time_selected,
             button_text="🕐",
@@ -453,6 +484,19 @@ class TimePickerDemo:
             self.create_initial_timepicker(parent)
         self.generate_code()
 
+    def change_theme(self):
+        """Change the theme."""
+        # Recreate TimePicker to reflect theme changes
+        if self.timepicker:
+            parent = self.timepicker.master
+            self.create_timepicker(parent)
+        # Recreate initial time picker to reflect theme changes
+        if hasattr(self, "initial_timepicker") and self.initial_timepicker:
+            parent = self.initial_timepicker.master
+            self.create_initial_timepicker(parent)
+        self.display_result("Theme Changed", self.theme_var.get())
+        self.generate_code()
+
     def generate_code(self):
         """Generate Python code for the current TimePicker configuration."""
         # Build the code string
@@ -506,6 +550,10 @@ class TimePickerDemo:
         code_lines.append(f"    time_format='{time_format}',")
         code_lines.append(f"    hour_format='{hour_format}',")
         code_lines.append(f"    show_seconds={show_seconds},")
+
+        # Add theme if not default
+        if self.theme_var.get() != "light":
+            code_lines.append(f"    theme='{self.theme_var.get()}',")
 
         # Add time_callback
         code_lines.append(
