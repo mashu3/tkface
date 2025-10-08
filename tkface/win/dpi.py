@@ -471,6 +471,7 @@ class DPIManager:
     def _patch_canvas_constructor(self, scaling_factor):
         """Patch the Canvas constructor with scaling."""
         original_canvas = tk.Canvas.__init__
+        manager = self  # Capture the manager instance
 
         def scaled_canvas_init(self, parent=None, **kwargs):
             scaled_kwargs = kwargs.copy()
@@ -480,6 +481,15 @@ class DPIManager:
                 scaled_kwargs["height"] = int(scaled_kwargs["height"] * scaling_factor)
             if "bd" in scaled_kwargs:
                 scaled_kwargs["bd"] = int(scaled_kwargs["bd"] * scaling_factor)
+            # Scale padding values for Canvas
+            if "padx" in scaled_kwargs:
+                scaled_kwargs["padx"] = manager._scale_padding_value(
+                    scaled_kwargs["padx"], scaling_factor
+                )
+            if "pady" in scaled_kwargs:
+                scaled_kwargs["pady"] = manager._scale_padding_value(
+                    scaled_kwargs["pady"], scaling_factor
+                )
             return original_canvas(self, parent, **scaled_kwargs)
 
         tk.Canvas.__init__ = scaled_canvas_init
