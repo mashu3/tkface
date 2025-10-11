@@ -182,6 +182,10 @@ def test_unround_child_window_processing(mock_get_parent, root):
         def winfo_id(self):
             self.winfo_id_called = True
             return 54321
+        
+        def destroy(self):
+            # Mock destroy method for cleanup
+            pass
     
     # Mock root.winfo_children to return our mock child
     root.winfo_children = lambda: [MockChild()]
@@ -207,6 +211,10 @@ def test_unround_child_window_exception_handling(mock_get_parent, root):
     class MockChild:
         def winfo_id(self):
             return 54321
+        
+        def destroy(self):
+            # Mock destroy method for cleanup
+            pass
     
     root.winfo_children = lambda: [MockChild()]
     
@@ -828,6 +836,10 @@ def test_unround_child_without_winfo_id(root):
         def __init__(self):
             # Intentionally no winfo_id method to test AttributeError handling
             pass
+        
+        def destroy(self):
+            # Mock destroy method for cleanup
+            pass
     
     root.winfo_children = lambda: [MockChild()]
     
@@ -854,6 +866,10 @@ def test_unround_child_winfo_id_exception(mock_get_parent, root):
     class MockChild:
         def winfo_id(self):
             raise OSError("child winfo_id failed")
+        
+        def destroy(self):
+            # Mock destroy method for cleanup
+            pass
     
     root.winfo_children = lambda: [MockChild()]
     

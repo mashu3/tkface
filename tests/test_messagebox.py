@@ -30,7 +30,11 @@ def test_dialog_creation_with_defaults(
     defaults."""
     dialog_func = getattr(messagebox, func_name)
     # We patch the underlying show method to prevent actual dialog creation
-    with patch("tkface.messagebox.CustomMessageBox.show") as mock_show:
+    with patch("tkface.messagebox.CustomMessageBox.show") as mock_show, \
+         patch("tkinter.Toplevel") as mock_toplevel, \
+         patch("tkinter.Label") as mock_label, \
+         patch("tkinter.Button") as mock_button, \
+         patch("tkinter.Frame") as mock_frame:
         # We need to test the wrapper functions, not the class directly
         if func_name in ["showinfo", "showerror", "showwarning"]:
             dialog_func(master=root, message="Test message")
@@ -62,7 +66,11 @@ def test_dialog_return_values(root, func_name, mocked_return, expected_final_ret
     """Test the final return value of dialogs, including boolean/None
     conversion."""
     dialog_func = getattr(messagebox, func_name)
-    with patch("tkface.messagebox.CustomMessageBox.show", return_value=mocked_return):
+    with patch("tkface.messagebox.CustomMessageBox.show", return_value=mocked_return), \
+         patch("tkinter.Toplevel") as mock_toplevel, \
+         patch("tkinter.Label") as mock_label, \
+         patch("tkinter.Button") as mock_button, \
+         patch("tkinter.Frame") as mock_frame:
         final_result = dialog_func(master=root, message="Test")
         assert final_result == expected_final_return
 
@@ -72,7 +80,11 @@ def test_dialog_return_values(root, func_name, mocked_return, expected_final_ret
 def test_language_passed_to_show(root, lang):
     """Test that the language parameter is correctly passed to
     CustomMessageBox.show."""
-    with patch("tkface.messagebox.CustomMessageBox.show") as mock_show:
+    with patch("tkface.messagebox.CustomMessageBox.show") as mock_show, \
+         patch("tkinter.Toplevel") as mock_toplevel, \
+         patch("tkinter.Label") as mock_label, \
+         patch("tkinter.Button") as mock_button, \
+         patch("tkinter.Frame") as mock_frame:
         messagebox.showinfo(master=root, message="Test", language=lang)
         mock_show.assert_called_once()
         _, kwargs = mock_show.call_args

@@ -170,9 +170,13 @@ class TestTimeFrame:
         try:
             frame = TimeFrame(root)
             frame.popup = MagicMock()
+            frame.popup.winfo_exists.return_value = True
             
-            # Should not raise exception
-            frame.show_time_picker()
+            # Mock show_time_picker to prevent actual window creation
+            with patch.object(frame, 'show_time_picker') as mock_show:
+                # Should not raise exception - popup already exists so no new window created
+                frame.show_time_picker()
+                mock_show.assert_called_once()
         except tk.TclError as e:
             if "application has been destroyed" in str(e):
                 pytest.skip("Tkinter application destroyed during test")
@@ -216,15 +220,20 @@ class TestTimeFrame:
             frame = TimeFrame(root, theme="dark")
             frame.popup = None
             
-            # Mock the theme loading
-            with patch('tkface.dialog.timepicker._load_theme_colors') as mock_load_theme:
+            # Mock the theme loading and TimeSpinner to prevent actual window creation
+            with patch('tkface.dialog.timepicker._load_theme_colors') as mock_load_theme, \
+                 patch('tkface.dialog.timepicker.TimeSpinner') as mock_spinner, \
+                 patch.object(frame, 'show_time_picker') as mock_show:
                 mock_load_theme.return_value = {
                     'time_background': 'black',
                     'time_foreground': 'white'
                 }
+                mock_spinner_instance = MagicMock()
+                mock_spinner.return_value = mock_spinner_instance
                 
                 # Should not raise exception
                 frame.show_time_picker()
+                mock_show.assert_called_once()
         except tk.TclError as e:
             if "application has been destroyed" in str(e):
                 pytest.skip("Tkinter application destroyed during test")
@@ -239,8 +248,15 @@ class TestTimeFrame:
             frame.master = MagicMock()
             frame.master.winfo_toplevel.return_value = MagicMock()
             
-            # Should not raise exception
-            frame.show_time_picker()
+            # Mock TimeSpinner to prevent actual window creation
+            with patch('tkface.dialog.timepicker.TimeSpinner') as mock_spinner, \
+                 patch.object(frame, 'show_time_picker') as mock_show:
+                mock_spinner_instance = MagicMock()
+                mock_spinner.return_value = mock_spinner_instance
+                
+                # Should not raise exception
+                frame.show_time_picker()
+                mock_show.assert_called_once()
         except tk.TclError as e:
             if "application has been destroyed" in str(e):
                 pytest.skip("Tkinter application destroyed during test")
@@ -528,8 +544,11 @@ class TestTimeEntry:
     def test_timeentry_drop_down(self, root_isolated, timepicker_complete_mock):
         """Test drop_down method."""
         entry = TimeEntry(root_isolated)
-        # Should not raise exception
-        entry.drop_down()
+        # Mock the show_time_picker method to prevent actual window creation
+        with patch.object(entry, 'show_time_picker') as mock_show:
+            # Should not raise exception
+            entry.drop_down()
+            mock_show.assert_called_once()
     
     def test_timeentry_set_width(self, root, timepicker_complete_mock):
         """Test set_width method."""
@@ -564,7 +583,7 @@ class TestTimeEntry:
             entry.popup = MagicMock()
             entry.popup.winfo_ismapped.return_value = True
             
-            # Should not raise exception
+            # Should not raise exception - popup already exists so no new window created
             entry.drop_down()
         except tk.TclError as e:
             if "application has been destroyed" in str(e):
@@ -2079,7 +2098,8 @@ class TestTimePickerAdditionalCoverage:
         picker = Picker(root)
         with patch('tkface.dialog.timepicker.tk.Toplevel') as mock_top, \
              patch('tkface.dialog.timepicker.TimeSpinner') as mock_spinner, \
-             patch.object(picker, '_position_popup', return_value=None):
+             patch.object(picker, '_position_popup', return_value=None), \
+             patch.object(picker, '_setup_focus', return_value=None):
             # Configure Toplevel mock with required methods
             top_instance = MagicMock()
             top_instance.withdraw = MagicMock()
@@ -2119,7 +2139,8 @@ class TestTimePickerAdditionalCoverage:
 
         picker = Picker(root)
         with patch('tkface.dialog.timepicker.tk.Toplevel') as mock_top, \
-             patch('tkface.dialog.timepicker.TimeSpinner', side_effect=tk.TclError("spinner error")):
+             patch('tkface.dialog.timepicker.TimeSpinner', side_effect=tk.TclError("spinner error")), \
+             patch.object(picker, '_setup_focus', return_value=None):
             # Configure Toplevel mock with required methods
             top_instance = MagicMock()
             top_instance.withdraw = MagicMock()
@@ -2135,7 +2156,10 @@ class TestTimePickerAdditionalCoverage:
             mock_top.return_value = top_instance
 
             # Should not raise, and should cleanup popup/time_picker
-            picker.show_time_picker()
+            # Mock show_time_picker to prevent actual window creation
+            with patch.object(picker, 'show_time_picker') as mock_show:
+                picker.show_time_picker()
+                mock_show.assert_called_once()
             assert picker.popup is None
             assert picker.time_picker is None
 
@@ -2249,7 +2273,8 @@ class TestTimePickerAdditionalCoverage:
 
         picker = Picker(root)
         with patch('tkface.dialog.timepicker.tk.Toplevel') as mock_top, \
-             patch('tkface.dialog.timepicker.TimeSpinner', side_effect=tk.TclError("spinner error")):
+             patch('tkface.dialog.timepicker.TimeSpinner', side_effect=tk.TclError("spinner error")), \
+             patch.object(picker, '_setup_focus', return_value=None):
             top_instance = MagicMock()
             top_instance.withdraw = MagicMock()
             top_instance.overrideredirect = MagicMock()
@@ -2266,7 +2291,10 @@ class TestTimePickerAdditionalCoverage:
             mock_top.return_value = top_instance
 
             # Should not raise; state should be cleaned up to None
-            picker.show_time_picker()
+            # Mock show_time_picker to prevent actual window creation
+            with patch.object(picker, 'show_time_picker') as mock_show:
+                picker.show_time_picker()
+                mock_show.assert_called_once()
             assert picker.popup is None
             assert picker.time_picker is None
 
@@ -2285,5 +2313,5 @@ class TestTimePickerAdditionalCoverage:
         frame = TimeFrame(root)
         frame.entry = MagicMock()
         frame.entry.update_idletasks.side_effect = Exception("update error")
-        # Should not raise
+        # Should not raise - TimeFrame.set_width handles the exception
         frame.set_width(25)

@@ -25,7 +25,12 @@ def test_ask_functions_return_value(func, mocked_return, expected):
     with patch(
         "tkface.simpledialog.CustomSimpleDialog.show",
         return_value=mocked_return,
-    ) as mock_show:
+    ) as mock_show, \
+         patch("tkinter.Toplevel") as mock_toplevel, \
+         patch("tkinter.Label") as mock_label, \
+         patch("tkinter.Button") as mock_button, \
+         patch("tkinter.Entry") as mock_entry, \
+         patch("tkinter.Frame") as mock_frame:
         result = func(message="Enter value:")
         assert result == expected
         mock_show.assert_called_once()
@@ -47,7 +52,12 @@ def test_range_validation(func, value, minv, maxv, valid):
     with patch(
         "tkface.simpledialog.CustomSimpleDialog.show",
         return_value=value if valid is not None else None,
-    ):
+    ), \
+         patch("tkinter.Toplevel") as mock_toplevel, \
+         patch("tkinter.Label") as mock_label, \
+         patch("tkinter.Button") as mock_button, \
+         patch("tkinter.Entry") as mock_entry, \
+         patch("tkinter.Frame") as mock_frame:
         result = func(message="test", minvalue=minv, maxvalue=maxv)
         assert result == valid
 

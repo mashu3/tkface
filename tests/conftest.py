@@ -46,64 +46,78 @@ def _cleanup_tkinter():
     time.sleep(0.1)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def root():
-    """Create a root window for the tests with session scope
-    for better parallel execution."""
-    global _TK_ROOT, _TK_INITIALIZED  # pylint: disable=global-statement
-    with _TK_LOCK:
+    """Create a root window for each test function to avoid conflicts."""
+    try:
+        # Set environment variables
+        os.environ["TK_SILENCE_DEPRECATION"] = "1"
+        os.environ["PYTHONUNBUFFERED"] = "1"
+        
+        # Create new root window for each test
+        temp_root = tk.Tk()
+        temp_root.withdraw()  # Hide the main window
+        # Force window updates
+        temp_root.update()
+        temp_root.update_idletasks()
+        
+        # Load msgcat package for language support
         try:
-            # Set environment variables
-            os.environ["TK_SILENCE_DEPRECATION"] = "1"
-            os.environ["PYTHONUNBUFFERED"] = "1"
-            # Clean up existing instance
-            if _TK_INITIALIZED:
-                _cleanup_tkinter()
-            # Create new root window
-            _TK_ROOT = tk.Tk()
-            _TK_ROOT.withdraw()  # Hide the main window
-            # Force window updates
-            _TK_ROOT.update()
-            _TK_ROOT.update_idletasks()
-            # Load msgcat package for language support
-            try:
-                _TK_ROOT.tk.call("package", "require", "msgcat")
-            except tk.TclError as e:
-                logging.warning(f"Failed to load msgcat package: {e}")
-            _TK_INITIALIZED = True
-            yield _TK_ROOT
-            # Clean up after session
-            _cleanup_tkinter()
+            temp_root.tk.call("package", "require", "msgcat")
         except tk.TclError as e:
-            error_str = str(e)
-            if any(
-                pattern in error_str
-                for pattern in [
-                    "Can't find a usable tk.tcl",
-                    "invalid command name",
-                    "Can't find a usable init.tcl",
-                    "vistaTheme.tcl",
-                    "init.tcl",
-                    "No error",
-                    "fonts.tcl",
-                    "icons.tcl",
-                    "tk.tcl",
-                    "no display name and no $DISPLAY environment variable",
-                    "no display name",
-                    "$DISPLAY environment variable",
-                    "application has been destroyed",
-                ]
-            ):
-                pytest.skip(
-                    f"Tkinter not properly installed or display not available: "
-                    f"{error_str}"
-                )
-            else:
-                raise
-        except Exception:  # pylint: disable=W0718
-            # Try cleanup for unexpected errors
-            _cleanup_tkinter()
+            logging.warning(f"Failed to load msgcat package: {e}")
+        
+        yield temp_root
+        
+        # Clean up after each test
+        try:
+            # Destroy all child windows first
+            for child in temp_root.winfo_children():
+                try:
+                    child.destroy()
+                except tk.TclError:
+                    pass
+            temp_root.destroy()
+        except tk.TclError as e:
+            # Window may already be destroyed
+            logging.debug(f"Failed to destroy root window: {e}")
+        # Force garbage collection
+        gc.collect()
+        time.sleep(0.01)  # Brief pause for cleanup
+        
+    except tk.TclError as e:
+        error_str = str(e)
+        if any(
+            pattern in error_str
+            for pattern in [
+                "Can't find a usable tk.tcl",
+                "Can't find a usable init.tcl",
+                "vistaTheme.tcl",
+                "init.tcl",
+                "No error",
+                "fonts.tcl",
+                "icons.tcl",
+                "tk.tcl",
+                "no display name and no $DISPLAY environment variable",
+                "no display name",
+                "$DISPLAY environment variable",
+                "application has been destroyed",
+                "invalid command name \"tcl_findLibrary\"",
+            ]
+        ):
+            pytest.skip(
+                f"Tkinter not properly installed or display not available: "
+                f"{error_str}"
+            )
+        else:
             raise
+    except Exception:  # pylint: disable=W0718
+        # Try cleanup for unexpected errors
+        try:
+            temp_root.destroy()
+        except:
+            pass
+        raise
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -142,7 +156,6 @@ def root_function():
             pattern in error_str
             for pattern in [
                 "Can't find a usable tk.tcl",
-                "invalid command name",
                 "Can't find a usable init.tcl",
                 "vistaTheme.tcl",
                 "init.tcl",
@@ -154,6 +167,7 @@ def root_function():
                 "no display name",
                 "$DISPLAY environment variable",
                 "application has been destroyed",
+                "invalid command name \"tcl_findLibrary\"",
             ]
         ):
             pytest.skip(
@@ -202,7 +216,6 @@ def root_isolated():
             pattern in error_str
             for pattern in [
                 "Can't find a usable tk.tcl",
-                "invalid command name",
                 "Can't find a usable init.tcl",
                 "vistaTheme.tcl",
                 "init.tcl",
@@ -214,6 +227,7 @@ def root_isolated():
                 "no display name",
                 "$DISPLAY environment variable",
                 "application has been destroyed",
+                "invalid command name \"tcl_findLibrary\"",
             ]
         ):
             pytest.skip(

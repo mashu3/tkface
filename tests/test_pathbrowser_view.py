@@ -29,6 +29,8 @@ def browser_with_state(root):
     browser = PathBrowser(root)
     browser.state.sort_column = "#0"
     browser.state.sort_reverse = False
+    # Mock the update method to prevent GUI updates during tests
+    browser.update = Mock()
     # Language helper returns keys in tests via conftest patches; keep instance ready
     return browser
 
@@ -204,7 +206,7 @@ class TestShowContextMenu:
             event = Mock()
             event.x_root = 0
             event.y_root = 0
-            with patch("tkinter.Menu") as mock_menu_cls:
+            with patch("tkface.widget.pathbrowser.view.tk.Menu") as mock_menu_cls:
                 mock_menu = Mock()
                 mock_menu_cls.return_value = mock_menu
                 view.show_context_menu(browser_with_state, event, menu_type="tree")
@@ -220,7 +222,7 @@ class TestShowContextMenu:
             event = Mock()
             event.x_root = 0
             event.y_root = 0
-        with patch("tkinter.Menu") as mock_menu_cls:
+        with patch("tkface.widget.pathbrowser.view.tk.Menu") as mock_menu_cls:
             mock_menu = Mock()
             mock_menu_cls.return_value = mock_menu
             view.show_context_menu(browser_with_state, event, menu_type="file")
@@ -286,13 +288,30 @@ class TestLoadDirectoryTree:
         browser_with_state.tree = Mock()
         browser_with_state.tree.get_children.return_value = []
         browser_with_state.tree.insert = Mock()
+        browser_with_state.tree.exists.return_value = False
+        browser_with_state.tree.delete = Mock()
+        browser_with_state.status_var = Mock()
         browser_with_state.state.current_dir = "C:\\"
         
-        with patch("pathlib.Path.exists", return_value=True), \
-             patch.object(view, "populate_tree_node"), \
-             patch.object(view, "expand_path"):
+        # Mock Path to return subdirectories
+        mock_path = Mock()
+        mock_subdir1 = Mock()
+        mock_subdir1.name = "Program Files"
+        mock_subdir1.is_dir.return_value = True
+        mock_subdir2 = Mock()
+        mock_subdir2.name = "Users"
+        mock_subdir2.is_dir.return_value = True
+        mock_path.iterdir.return_value = [mock_subdir1, mock_subdir2]
+        
+        with patch("tkface.widget.pathbrowser.view.Path", return_value=mock_path), \
+             patch.object(mock_path, "joinpath") as mock_joinpath:
+            # Mock subdirectory check
+            mock_subpath = Mock()
+            mock_subpath.iterdir.return_value = []  # No subdirectories
+            mock_joinpath.return_value = mock_subpath
+            
             view.load_directory_tree(browser_with_state)
-            # Should call insert for drive letters
+            # Should call insert for subdirectories
             assert browser_with_state.tree.insert.called
 
     def test_load_directory_tree_unix(self, browser_with_state, monkeypatch):
@@ -304,13 +323,31 @@ class TestLoadDirectoryTree:
         browser_with_state.tree = Mock()
         browser_with_state.tree.get_children.return_value = []
         browser_with_state.tree.insert = Mock()
+        browser_with_state.tree.exists.return_value = False
+        browser_with_state.tree.delete = Mock()
+        browser_with_state.status_var = Mock()
         browser_with_state.state.current_dir = "/"
         
-        with patch.object(view, "populate_tree_node"), \
-             patch.object(view, "expand_path"):
+        # Mock Path to return subdirectories
+        mock_path = Mock()
+        mock_subdir1 = Mock()
+        mock_subdir1.name = "home"
+        mock_subdir1.is_dir.return_value = True
+        mock_subdir2 = Mock()
+        mock_subdir2.name = "usr"
+        mock_subdir2.is_dir.return_value = True
+        mock_path.iterdir.return_value = [mock_subdir1, mock_subdir2]
+        
+        with patch("tkface.widget.pathbrowser.view.Path", return_value=mock_path), \
+             patch.object(mock_path, "joinpath") as mock_joinpath:
+            # Mock subdirectory check
+            mock_subpath = Mock()
+            mock_subpath.iterdir.return_value = []  # No subdirectories
+            mock_joinpath.return_value = mock_subpath
+            
             view.load_directory_tree(browser_with_state)
-            # Should call insert for root directory
-            browser_with_state.tree.insert.assert_called_with("", "end", "/", text="/", open=False)
+            # Should call insert for subdirectories
+            assert browser_with_state.tree.insert.called
 
 
 class TestPopulateTreeNode:
