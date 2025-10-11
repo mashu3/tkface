@@ -84,11 +84,11 @@ def _create_main_paned_window(pathbrowser_instance):
     pathbrowser_instance.paned = ttk.PanedWindow(
         pathbrowser_instance, orient=tk.HORIZONTAL
     )
-    pathbrowser_instance.paned.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+    pathbrowser_instance.paned.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
 
     # Left pane - Directory tree
     pathbrowser_instance.tree_frame = ttk.Frame(pathbrowser_instance.paned)
-    pathbrowser_instance.paned.add(pathbrowser_instance.tree_frame, weight=1)
+    pathbrowser_instance.paned.add(pathbrowser_instance.tree_frame, weight=2)
 
     # Directory tree with icons and better styling
     pathbrowser_instance.tree = ttk.Treeview(
@@ -97,13 +97,55 @@ def _create_main_paned_window(pathbrowser_instance):
         selectmode="browse",
         height=10,  # Reduced height for smaller dialog
     )
-    pathbrowser_instance.tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+    pathbrowser_instance.tree.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+    
+    # Set initial sash position to give 200px to the tree view (DPI-scaled)
+    # This will be applied after the paned window is fully created
+    def set_dpi_scaled_sash():
+        try:
+            # Get DPI scaling factor
+            from tkface.win.dpi import get_scaling_factor
+            scaling_factor = get_scaling_factor(pathbrowser_instance)
+            dpi_scaled_width = int(200 * scaling_factor)
+            pathbrowser_instance.paned.sashpos(0, dpi_scaled_width)
+        except Exception:
+            # Fallback to unscaled 200px if DPI detection fails
+            pathbrowser_instance.paned.sashpos(0, 200)
+    
+    pathbrowser_instance.after(100, set_dpi_scaled_sash)
 
     # Configure tree style for better appearance
     style = ttk.Style()
     # Set row height based on OS - Windows uses original spacing, others use compact
     row_height = 25 if utils.IS_WINDOWS else 20
     style.configure("Treeview", rowheight=row_height)
+    
+    # Bind to tree selection to adjust indent based on current level
+    def adjust_tree_indent(event=None):
+        """Adjust tree indent based on current directory level."""
+        try:
+            current_dir = pathbrowser_instance.state.current_dir
+            # Count directory depth from root
+            path_parts = Path(current_dir).parts
+            depth = len(path_parts) - 1  # Subtract 1 for root
+            
+            # Calculate indent: base indent minus depth-based offset
+            # This reduces left padding for deeper directories
+            base_indent = 20
+            depth_offset = min(depth * 2, 15)  # Max 15px reduction
+            adjusted_indent = max(base_indent - depth_offset, 5)  # Min 5px
+            
+            # Apply the adjusted indent
+            style.configure("Treeview", indent=adjusted_indent)
+            
+        except Exception as e:
+            logger.debug("Failed to adjust tree indent: %s", e)
+    
+    # Bind to directory changes to adjust indent
+    pathbrowser_instance.tree.bind("<<TreeviewSelect>>", adjust_tree_indent)
+    
+    # Initial adjustment
+    pathbrowser_instance.after(100, adjust_tree_indent)
 
 
 def _create_file_list(pathbrowser_instance):
@@ -149,23 +191,23 @@ def _create_file_list(pathbrowser_instance):
     )
 
     pathbrowser_instance.file_tree.column("#0", width=200, minwidth=150)
-    pathbrowser_instance.file_tree.column("size", width=80, minwidth=60)
+    pathbrowser_instance.file_tree.column("size", width=70, minwidth=50)
     pathbrowser_instance.file_tree.column("modified", width=120, minwidth=100)
-    pathbrowser_instance.file_tree.column("type", width=100, minwidth=80)
+    pathbrowser_instance.file_tree.column("type", width=60, minwidth=50)
 
     # Apply OS-specific row height to file tree as well
     style = ttk.Style()
-    row_height = 25 if utils.IS_WINDOWS else 20
+    row_height = 20
     style.configure("Treeview", rowheight=row_height)
 
-    pathbrowser_instance.file_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+    pathbrowser_instance.file_tree.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
 
 
 def _create_status_and_buttons(pathbrowser_instance):
     """Create status bar and bottom buttons in a horizontal layout."""
     # Bottom frame containing status bar and buttons
     pathbrowser_instance.bottom_frame = ttk.Frame(pathbrowser_instance)
-    pathbrowser_instance.bottom_frame.pack(fill=tk.X, padx=5, pady=5, side=tk.BOTTOM)
+    pathbrowser_instance.bottom_frame.pack(fill=tk.X, padx=2, pady=2, side=tk.BOTTOM)
 
     # Status bar (left side)
     pathbrowser_instance.status_var = tk.StringVar()
@@ -267,11 +309,13 @@ def _create_toolbar(pathbrowser_instance):
 
 def create_pathbrowser_widgets(pathbrowser_instance):
     """Create the widget layout for PathBrowser."""
+    # Pack bottom areas first so they remain visible even when window is small
     _create_path_navigation(pathbrowser_instance)
-    _create_main_paned_window(pathbrowser_instance)
-    _create_file_list(pathbrowser_instance)
     _create_status_and_buttons(pathbrowser_instance)
     _create_toolbar(pathbrowser_instance)
+    # Main content takes the remaining space
+    _create_main_paned_window(pathbrowser_instance)
+    _create_file_list(pathbrowser_instance)
 
     # Initialize view mode
     pathbrowser_instance.view_mode = "details"
@@ -397,25 +441,48 @@ def setup_pathbrowser_bindings(pathbrowser_instance):
 def load_directory_tree(pathbrowser_instance):
     """Load the directory tree."""
     pathbrowser_instance.tree.delete(*pathbrowser_instance.tree.get_children())
+    # Flatten view to start at the current directory level to avoid left-side slack
+    try:
+        base_path = Path(pathbrowser_instance.state.current_dir)
 
-    # Add root directories with better icons and labels
-    if utils.IS_WINDOWS:  # Windows
-        for drive in string.ascii_uppercase:
-            drive_path = f"{drive}:\\"
-            if Path(drive_path).exists():
-                # Get drive label if possible
+        # List only immediate subdirectories of the current directory as top-level
+        dirs = []
+        for item in base_path.iterdir():
+            if item.is_dir():
+                dirs.append((item.name, str(item)))
+
+        # Sort and add directories
+        dirs.sort(key=lambda x: x[0].lower())
+
+        for child_name, child_path in dirs:
+            if not pathbrowser_instance.tree.exists(child_path):
+                # Insert as top-level item (no ancestors, no extra left indent)
                 pathbrowser_instance.tree.insert(
-                    "", "end", drive_path, text=drive_path, open=False
+                    "", "end", child_path, text=child_name, open=False
                 )
-                # Pre-populate root level directories for better UX
-                populate_tree_node(pathbrowser_instance, drive_path)
-    else:  # Unix-like
-        pathbrowser_instance.tree.insert("", "end", "/", text="/", open=False)
-        # Pre-populate root level directories for better UX
-        populate_tree_node(pathbrowser_instance, "/")
 
-    # Expand current directory path
-    expand_path(pathbrowser_instance, pathbrowser_instance.state.current_dir)
+                # Add placeholder if the directory has subdirectories (for lazy loading)
+                with suppress(OSError, PermissionError):
+                    has_subdirs = False
+                    for subitem in base_path.joinpath(child_name).iterdir():
+                        if subitem.is_dir():
+                            has_subdirs = True
+                            break
+                    if has_subdirs:
+                        placeholder_id = f"{child_path}_placeholder"
+                        if not pathbrowser_instance.tree.exists(placeholder_id):
+                            pathbrowser_instance.tree.insert(
+                                child_path,
+                                "end",
+                                placeholder_id,
+                                text=lang.get("Loading...", pathbrowser_instance),
+                                open=False,
+                            )
+    except (OSError, PermissionError) as e:
+        logger.warning("Failed to load directory tree for %s: %s", base_path, e)
+        pathbrowser_instance.status_var.set(
+            f"{lang.get('Cannot access:', pathbrowser_instance)} {base_path.name}"
+        )
 
 
 def populate_tree_node(pathbrowser_instance, parent):

@@ -48,14 +48,6 @@ def _create_dialog_window(parent: Optional[tk.Tk]) -> tk.Toplevel:
     return dialog
 
 
-def _setup_dialog_properties(dialog: tk.Toplevel, title: str, scaled_sizes: dict):
-    """Setup dialog window properties."""
-    dialog.title(title)
-    dialog.resizable(True, True)
-    dialog.minsize(scaled_sizes["min_width"], scaled_sizes["min_height"])
-    dialog.geometry(f"{scaled_sizes['default_width']}x{scaled_sizes['default_height']}")
-
-
 def _position_dialog(
     dialog: tk.Toplevel,
     parent: Optional[tk.Tk],
@@ -138,19 +130,6 @@ def askpath(
     # Create dialog window
     dialog = _create_dialog_window(parent)
 
-    # Cache DPI scaling calculations for performance (similar to messagebox.py)
-    scaled_sizes = win.calculate_dpi_sizes(
-        {
-            "min_width": 900,
-            "min_height": 450,
-            "default_width": 1000,
-            "default_height": 450,
-            "padding": 10,
-        },
-        dialog,
-        max_scale=1.5,
-    )
-
     # Set dialog properties
     if title is None:
         if select == "file":
@@ -162,7 +141,26 @@ def askpath(
         if multiple:
             title += "s"
 
-    _setup_dialog_properties(dialog, title, scaled_sizes)
+    # Set basic dialog properties
+    dialog.title(title)
+    dialog.resizable(True, True)
+    
+    # Get DPI scaling factor and apply it manually to avoid double-scaling
+    try:
+        scaling_factor = win.get_scaling_factor(dialog)
+    except Exception as e:
+        scaling_factor = 1.0
+    
+    # Calculate scaled sizes
+    scaled_width = int(700 * scaling_factor)
+    scaled_height = int(500 * scaling_factor)
+    
+    # Apply manual scaling to avoid double-scaling issues
+    dialog.minsize(scaled_width, int(scaled_height * 0.5))
+    dialog.geometry(f"{scaled_width}x{scaled_height}")
+    
+    # Force update to ensure geometry is applied
+    dialog.update_idletasks()
 
     # Make dialog modal
     if parent:
@@ -185,12 +183,16 @@ def askpath(
     browser.pack(
         fill=tk.BOTH,
         expand=True,
-        padx=scaled_sizes["padding"],
-        pady=scaled_sizes["padding"],
+        padx=10,
+        pady=10,
     )
 
     # Position the dialog (after content is created)
+    # Note: _position_dialog may override our geometry, so we'll set it again after positioning
     _position_dialog(dialog, parent, x, y, x_offset, y_offset)
+    
+    # Re-apply our desired size after positioning (in case _position_dialog overrode it)
+    dialog.geometry(f"{scaled_width}x{scaled_height}")
 
     # Result storage
     result = []

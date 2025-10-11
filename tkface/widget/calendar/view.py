@@ -451,6 +451,7 @@ def _create_calendar_grid(calendar_instance, month_frame, month_index):
             bd=0,
             bg=calendar_instance.theme_colors["day_header_bg"],
             fg=calendar_instance.theme_colors["day_header_fg"],
+            width=3,  # Fixed width for consistent column sizing
         )
         empty_header.grid(row=0, column=0, sticky="nsew", padx=1, pady=1)
     for day, day_name in enumerate(day_names):
@@ -464,6 +465,7 @@ def _create_calendar_grid(calendar_instance, month_frame, month_index):
             bd=0,
             bg=calendar_instance.theme_colors["day_header_bg"],
             fg=calendar_instance.theme_colors["day_header_fg"],
+            width=3,  # Fixed width for consistent column sizing
         )
         col = day + 1 if calendar_instance.show_week_numbers else day
         day_header.grid(row=0, column=col, sticky="nsew", padx=1, pady=1)
@@ -480,6 +482,7 @@ def _create_calendar_grid(calendar_instance, month_frame, month_index):
                 bd=0,
                 bg=calendar_instance.theme_colors["week_number_bg"],
                 fg=calendar_instance.theme_colors["week_number_fg"],
+                width=3,  # Fixed width for consistent column sizing
             )
             week_label.grid(row=week + 1, column=0, sticky="nsew", padx=1, pady=1)
             calendar_instance.week_labels.append(week_label)
@@ -496,6 +499,7 @@ def _create_calendar_grid(calendar_instance, month_frame, month_index):
                 bg=calendar_instance.theme_colors["day_bg"],
                 fg=calendar_instance.theme_colors["day_fg"],
                 cursor="hand2",
+                width=3,  # Fixed width for consistent column sizing
             )
             col = day + 1 if calendar_instance.show_week_numbers else day
             day_label.grid(row=week + 1, column=col, sticky="nsew", padx=1, pady=1)

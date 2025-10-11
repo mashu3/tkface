@@ -273,6 +273,7 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
         try:
             if isinstance(base_font, tuple):
                 family, size, *style = base_font
+                # Use scale_font_size which now handles positive sizes correctly
                 scaled_size = scale_font_size(size, self, self.dpi_scaling_factor)
                 return (family, scaled_size, *style)
             return base_font

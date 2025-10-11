@@ -706,6 +706,7 @@ class _DatePickerBase:
                 return
 
             width, height, x, y = map(int, match.groups())
+            # Use unified scaling rule: DPI_scaling only
             scaled_width = int(width * self.dpi_scaling_factor)
             scaled_height = int(height * self.dpi_scaling_factor)
             # Don't scale position coordinates (x, y) - keep them as is
