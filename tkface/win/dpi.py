@@ -1053,7 +1053,7 @@ class DPIManager:
             def _adjust_scaling():
                 tk_scaling = windows_scale * (DPIConfig.DEFAULT_DPI / DPIConfig.TK_SCALING_BASE)
                 root.tk.call(DPIConfig.TK_COMMAND, DPIConfig.SCALING_COMMAND, tk_scaling)
-                self.logger.info(
+                self.logger.debug(
                     DPIConfig.LOG_ADJUSTED_TK_SCALING,
                     tk_scaling,
                     windows_scale,
