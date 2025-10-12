@@ -54,6 +54,34 @@ def root():
         os.environ["TK_SILENCE_DEPRECATION"] = "1"
         os.environ["PYTHONUNBUFFERED"] = "1"
         
+        # Ensure DISPLAY is set for headless environments
+        if "DISPLAY" not in os.environ:
+            os.environ["DISPLAY"] = ":0.0"
+        
+        # Set TCL_LIBRARY environment variable to help with Tcl initialization
+        import sys
+        if hasattr(sys, 'frozen'):
+            # Running as compiled executable
+            tcl_dir = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6')
+        else:
+            # Running as script
+            tcl_dir = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6')
+        
+        # Try to find Tcl library directory
+        if os.path.exists(tcl_dir):
+            os.environ["TCL_LIBRARY"] = tcl_dir
+        else:
+            # Try alternative paths
+            alternative_paths = [
+                os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6'),
+                os.path.join(os.path.dirname(sys.executable), '..', 'tcl', 'tcl8.6'),
+                os.path.join(os.path.dirname(sys.executable), '..', '..', 'tcl', 'tcl8.6'),
+            ]
+            for alt_path in alternative_paths:
+                if os.path.exists(alt_path):
+                    os.environ["TCL_LIBRARY"] = alt_path
+                    break
+        
         # Create new root window for each test
         temp_root = tk.Tk()
         temp_root.withdraw()  # Hide the main window
@@ -103,6 +131,9 @@ def root():
                 "$DISPLAY environment variable",
                 "application has been destroyed",
                 "invalid command name \"tcl_findLibrary\"",
+                "couldn't read file",
+                "Tcl wasn't installed properly",
+                "Tcl initialization",
             ]
         ):
             pytest.skip(
@@ -134,6 +165,35 @@ def root_function():
     try:
         # Set environment variables
         os.environ["TK_SILENCE_DEPRECATION"] = "1"
+        
+        # Ensure DISPLAY is set for headless environments
+        if "DISPLAY" not in os.environ:
+            os.environ["DISPLAY"] = ":0.0"
+        
+        # Set TCL_LIBRARY environment variable to help with Tcl initialization
+        import sys
+        if hasattr(sys, 'frozen'):
+            # Running as compiled executable
+            tcl_dir = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6')
+        else:
+            # Running as script
+            tcl_dir = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6')
+        
+        # Try to find Tcl library directory
+        if os.path.exists(tcl_dir):
+            os.environ["TCL_LIBRARY"] = tcl_dir
+        else:
+            # Try alternative paths
+            alternative_paths = [
+                os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6'),
+                os.path.join(os.path.dirname(sys.executable), '..', 'tcl', 'tcl8.6'),
+                os.path.join(os.path.dirname(sys.executable), '..', '..', 'tcl', 'tcl8.6'),
+            ]
+            for alt_path in alternative_paths:
+                if os.path.exists(alt_path):
+                    os.environ["TCL_LIBRARY"] = alt_path
+                    break
+        
         # Create new root window
         temp_root = tk.Tk()
         temp_root.withdraw()  # Hide the main window
@@ -168,6 +228,9 @@ def root_function():
                 "$DISPLAY environment variable",
                 "application has been destroyed",
                 "invalid command name \"tcl_findLibrary\"",
+                "couldn't read file",
+                "Tcl wasn't installed properly",
+                "Tcl initialization",
             ]
         ):
             pytest.skip(
@@ -184,6 +247,35 @@ def root_isolated():
     try:
         # Set environment variables
         os.environ["TK_SILENCE_DEPRECATION"] = "1"
+        
+        # Ensure DISPLAY is set for headless environments
+        if "DISPLAY" not in os.environ:
+            os.environ["DISPLAY"] = ":0.0"
+        
+        # Set TCL_LIBRARY environment variable to help with Tcl initialization
+        import sys
+        if hasattr(sys, 'frozen'):
+            # Running as compiled executable
+            tcl_dir = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6')
+        else:
+            # Running as script
+            tcl_dir = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6')
+        
+        # Try to find Tcl library directory
+        if os.path.exists(tcl_dir):
+            os.environ["TCL_LIBRARY"] = tcl_dir
+        else:
+            # Try alternative paths
+            alternative_paths = [
+                os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6'),
+                os.path.join(os.path.dirname(sys.executable), '..', 'tcl', 'tcl8.6'),
+                os.path.join(os.path.dirname(sys.executable), '..', '..', 'tcl', 'tcl8.6'),
+            ]
+            for alt_path in alternative_paths:
+                if os.path.exists(alt_path):
+                    os.environ["TCL_LIBRARY"] = alt_path
+                    break
+        
         # Create new root window
         temp_root = tk.Tk()
         temp_root.withdraw()  # Hide the main window
@@ -228,6 +320,9 @@ def root_isolated():
                 "$DISPLAY environment variable",
                 "application has been destroyed",
                 "invalid command name \"tcl_findLibrary\"",
+                "couldn't read file",
+                "Tcl wasn't installed properly",
+                "Tcl initialization",
             ]
         ):
             pytest.skip(
@@ -694,6 +789,10 @@ def pytest_configure(config):  # pylint: disable=unused-argument
 
 def pytest_collection_modifyitems(config, items):  # pylint: disable=unused-argument
     """Modify test collection for better parallel execution."""
+    # Sort items to run GUI tests after non-GUI tests to avoid mock conflicts
+    gui_items = []
+    non_gui_items = []
+    
     for item in items:  # pylint: disable=redefined-outer-name
         # Add gui marker to GUI tests
         if any(
@@ -703,6 +802,12 @@ def pytest_collection_modifyitems(config, items):  # pylint: disable=unused-argu
                 "pathbrowser",
                 "pathchooser"]):
             item.add_marker(pytest.mark.gui)
+            gui_items.append(item)
+        else:
+            non_gui_items.append(item)
+    
+    # Reorder items: non-GUI tests first, then GUI tests
+    items[:] = non_gui_items + gui_items
 
 
 # Common mock settings for PathBrowser

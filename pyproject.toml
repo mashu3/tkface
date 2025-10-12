@@ -74,18 +74,24 @@ extend-exclude = '''
 )/
 '''
 
-# [tool.pytest.ini_options]
-# testpaths = ["tests"]
-# python_files = ["test_*.py"]
-# python_classes = ["Test*"]
-# python_functions = ["test_*"]
-# addopts = [
-#     "--strict-markers",
-#     "--strict-config",
-#     "--cov=tkface",
-#     "--cov-report=term-missing",
-#     "--cov-report=html",
-# ]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=tkface",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--tb=short",
+    "-v"
+]
+markers = [
+    "gui: marks tests as GUI tests",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
 
 # [tool.mypy]
 # python_version = "3.7"
