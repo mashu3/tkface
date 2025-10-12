@@ -435,9 +435,9 @@ class _DatePickerBase:
         self.year_view_window.focus_force()
         self.year_view_window.update()
         self.year_view_window.lift()
-        # Ensure year view window is on top
+        # Force year view window to be on top and visible even when overlapping
         self.year_view_window.attributes("-topmost", True)
-        self.year_view_window.attributes("-topmost", False)
+        self.year_view_window.after(100, lambda: self.year_view_window.attributes("-topmost", False))
 
     def hide_year_view(self):
         """Hide month selection calendar."""
@@ -593,6 +593,9 @@ class _DatePickerBase:
         self.popup.geometry(popup_geometry)
         self.popup.deiconify()
         self.popup.lift()
+        # Force popup to be on top and visible even when overlapping
+        self.popup.attributes("-topmost", True)
+        self.popup.after(100, lambda: self.popup.attributes("-topmost", False))
         self.popup.bind("<Escape>", lambda e: self.hide_calendar())
         self._setup_click_outside_handling()
         self._bind_parent_movement_events()
