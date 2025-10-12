@@ -750,25 +750,9 @@ class Calendar(tk.Frame):  # pylint: disable=R0902
             width += WEEK_NUMBERS_WIDTH_OFFSET
         width *= self.months
         height = self.popup_height
-        # Adjust position to ensure popup stays within screen bounds
-        try:
-            # Get screen dimensions
-            screen_width = parent_widget.winfo_screenwidth()
-            screen_height = parent_widget.winfo_screenheight()
-            # Adjust x position if popup would go off the right edge
-            if x + width > screen_width:
-                x = max(0, screen_width - width)
-            # Adjust y position if popup would go off the bottom edge
-            if y + height > screen_height:
-                # Try to show popup above the widget instead
-                y = max(0, parent_widget.winfo_rooty() - height)
-                # If still off screen, adjust to fit
-                if y + height > screen_height:
-                    y = max(0, screen_height - height)
-        except (AttributeError, TypeError, OSError) as e:
-            self.logger.debug(
-                "Failed to adjust popup position: %s, using original position", e
-            )
+        
+        # Simple positioning: always show below the widget
+        # No overlap detection or screen boundary adjustments
         return f"{width}x{height}+{x}+{y}"
 
     def bind_date_selected(self, callback):
