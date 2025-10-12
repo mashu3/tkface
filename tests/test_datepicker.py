@@ -4,17 +4,183 @@ Tests for tkface DatePicker widgets
 """
 
 import datetime
-import tkinter as tk
 from unittest.mock import Mock, patch
 
 import pytest
 
+# Mock tkinter before importing the modules that use it
+import sys
+import types
+from unittest.mock import patch, Mock
+
+# Create stub classes and modules for tkinter widgets
+class _TkFrame:
+    def __init__(self, parent, **kwargs):
+        self.parent = parent
+        self.kwargs = kwargs
+        self.tk = Mock()
+        self._last_child_ids = {}
+        self._w = "mock_frame"
+        self.children = {}
+        self._name = "mock_frame"
+        self.master = parent
+    
+    def __getattr__(self, name):
+        return Mock()
+
+class _TkEntry:
+    def __init__(self, parent, **kwargs):
+        self.parent = parent
+        self.kwargs = kwargs
+        self.tk = Mock()
+        self._last_child_ids = {}
+        self._w = "mock_entry"
+        self.children = {}
+        self._name = "mock_entry"
+        self.master = parent
+    
+    def __getattr__(self, name):
+        return Mock()
+
+class _TkButton:
+    def __init__(self, parent, **kwargs):
+        self.parent = parent
+        self.kwargs = kwargs
+        self.tk = Mock()
+        self._last_child_ids = {}
+        self._w = "mock_button"
+        self.children = {}
+        self._name = "mock_button"
+        self.master = parent
+        self._text = kwargs.get("text", "")
+    
+    def __getattr__(self, name):
+        return Mock()
+
+    def config(self, **kwargs):
+        if "text" in kwargs:
+            self._text = kwargs["text"]
+        return None
+
+    def cget(self, key):
+        if key == "text":
+            return self._text
+        return None
+
+class _TkToplevel:
+    def __init__(self, parent, **kwargs):
+        self.parent = parent
+        self.kwargs = kwargs
+        self.tk = Mock()
+        self._last_child_ids = {}
+        self._w = "mock_toplevel"
+        self.children = {}
+        self._name = "mock_toplevel"
+        self.master = parent
+    
+    def __getattr__(self, name):
+        return Mock()
+
+class _TtkStyle:
+    def __init__(self, parent=None):
+        self.parent = parent
+        self.tk = Mock()
+    def layout(self, name, layout=None):
+        return [] if layout is None else layout
+    def configure(self, name, **kwargs):
+        return {"configured": True}
+    def map(self, name, **kwargs):
+        return {"mapped": True}
+
+class _TtkEntry:
+    def __init__(self, parent, **kwargs):
+        self.parent = parent
+        self.kwargs = kwargs
+        self._width = kwargs.get("width", 120)
+        self._state = set()
+    def configure(self, **kwargs):
+        return None
+    def config(self, **kwargs):
+        return None
+    def delete(self, start, end=None):
+        return None
+    def insert(self, index, text):
+        return None
+    def bind(self, *_args, **_kwargs):
+        return None
+    def state(self, s):
+        self._state = set(s)
+    def winfo_width(self):
+        return self._width
+    def focus_get(self):
+        return None
+
+# Create fake tkinter module objects
+tk_mod = types.ModuleType("tkinter")
+tk_mod.Frame = _TkFrame
+tk_mod.Entry = _TkEntry
+tk_mod.Button = _TkButton
+tk_mod.Toplevel = _TkToplevel
+tk_mod.TclError = Exception
+tk_mod.END = "end"
+
+ttk_mod = types.ModuleType("tkinter.ttk")
+ttk_mod.Entry = _TtkEntry
+ttk_mod.Style = _TtkStyle
+tk_mod.ttk = ttk_mod
+
+# Backup real tkinter modules if present, then patch sys.modules to use our mocks
+_orig_tk = sys.modules.get('tkinter')
+_orig_ttk = sys.modules.get('tkinter.ttk')
+sys.modules['tkinter'] = tk_mod
+sys.modules['tkinter.ttk'] = ttk_mod
+
+# Now import the modules using the stubbed tkinter
+import tkinter as tk  # stub inside this test module
 from tkface.dialog.datepicker import (
     DateEntry,
     DateFrame,
     DatePickerConfig,
     _DatePickerBase,
 )
+
+# Ensure the datepicker module uses our stubbed tkinter/ttk
+import tkface.dialog.datepicker as _datepicker_mod  # noqa: E402
+_datepicker_mod.tk = tk_mod
+_datepicker_mod.ttk = ttk_mod
+
+# Restore real tkinter modules for the rest of the test suite
+if _orig_tk is not None:
+    sys.modules['tkinter'] = _orig_tk
+if _orig_ttk is not None:
+    sys.modules['tkinter.ttk'] = _orig_ttk
+
+# Patch ttk.Entry.__init__ globally in the datepicker module to avoid real Tk
+def _fake_ttk_entry_init(self, parent, **kwargs):  # noqa: ANN001
+    # Provide no-op widget methods used by DateEntry
+    self.configure = Mock()
+    self.delete = Mock()
+    self.insert = Mock()
+    self.bind = Mock()
+    self.state = Mock()
+    self.winfo_width = Mock(return_value=120)
+    self.focus_get = Mock(return_value=None)
+
+_datepicker_mod.ttk.Entry.__init__ = _fake_ttk_entry_init
+
+
+@pytest.fixture
+def root():
+    """Create a mock root widget for testing."""
+    mock_root = Mock()
+    mock_root.winfo_toplevel.return_value = mock_root
+    mock_root._last_child_ids = {}
+    mock_root.tk = Mock()
+    mock_root._w = "mock_root"
+    mock_root.children = {}
+    mock_root._name = "mock_root"
+    mock_root.master = None
+    return mock_root
 
 
 # Test helper functions
@@ -281,64 +447,78 @@ class TestDatePickerWidgets:
     """Test cases for DatePicker widgets (DateFrame, DateEntry, _DatePickerBase)."""
 
     # _DatePickerBase tests
-    def test_datepicker_base_creation(self, root):
+    def test_datepicker_base_creation(self):
         """Test _DatePickerBase creation and configuration."""
+        class DummyParent:
+            pass
         # Test basic creation
-        base = _DatePickerBase(root)
+        base = _DatePickerBase(DummyParent())
         assert base is not None
         assert base.dpi_scaling_factor >= 1.0  # DPI scaling factor should be at least 1.0
         assert base.calendar_config is not None
         assert base.selected_date is None
         
         # Test with config
-        _test_widget_creation(_DatePickerBase, root, use_config=True)
+        _test_widget_creation(_DatePickerBase, DummyParent(), use_config=True)
         
         # Test with individual parameters
-        _test_widget_creation(_DatePickerBase, root, use_config=False)
+        _test_widget_creation(_DatePickerBase, DummyParent(), use_config=False)
 
-    def test_datepicker_base_dpi_scaling(self, root):
+    def test_datepicker_base_dpi_scaling(self):
         """Test DPI scaling functionality including error handling and various scenarios."""
-        # Test basic DPI scaling error handling
-        _test_dpi_scaling_error_handling(_DatePickerBase, root)
+        # Test basic DPI scaling error handling (no Tk root needed)
+        class DummyParent:
+            pass
+        _test_dpi_scaling_error_handling(_DatePickerBase, DummyParent())
         
         # Test various DPI scaling scenarios
-        base = _DatePickerBase(root)
-        _test_dpi_scaling_scenarios(base, root)
+        base = _DatePickerBase(DummyParent())
+        _test_dpi_scaling_scenarios(base, DummyParent())
 
-    def test_datepicker_base_update_entry_text_not_implemented(self, root):
+    def test_datepicker_base_update_entry_text_not_implemented(self):
         """Test that _update_entry_text raises NotImplementedError."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         with pytest.raises(NotImplementedError):
             base._update_entry_text("test")
 
-    def test_datepicker_base_get_date_without_calendar(self, root):
+    def test_datepicker_base_get_date_without_calendar(self):
         """Test get_date without calendar."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base.calendar = None
         base.selected_date = datetime.date(2024, 3, 15)
         
         result = base.get_date()
         assert result == datetime.date(2024, 3, 15)
 
-    def test_datepicker_base_get_date_string_without_date(self, root):
+    def test_datepicker_base_get_date_string_without_date(self):
         """Test get_date_string without date."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base.get_date = Mock(return_value=None)
         
         result = base.get_date_string()
         assert result == ""
 
-    def test_datepicker_base_get_date_string_with_date(self, root):
+    def test_datepicker_base_get_date_string_with_date(self):
         """Test get_date_string with date."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base.get_date = Mock(return_value=datetime.date(2024, 3, 15))
         
         result = base.get_date_string()
         assert result == "2024-03-15"
 
-    def test_datepicker_base_set_selected_date_without_calendar(self, root):
+    def test_datepicker_base_set_selected_date_without_calendar(self):
         """Test set_selected_date without calendar."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base.calendar = None
         base._update_entry_text = Mock()
         
@@ -348,26 +528,32 @@ class TestDatePickerWidgets:
         assert base.selected_date == test_date
         base._update_entry_text.assert_called_once_with("2024-03-15")
 
-    def test_datepicker_base_delegate_to_calendar_no_calendar(self, root):
+    def test_datepicker_base_delegate_to_calendar_no_calendar(self):
         """Test delegate_to_calendar without calendar."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base.calendar = None
         
         # Should not raise exception
         base._delegate_to_calendar("test_method", "arg1", "arg2")
 
-    def test_datepicker_base_delegate_to_calendar_no_method(self, root):
+    def test_datepicker_base_delegate_to_calendar_no_method(self):
         """Test delegate_to_calendar without method."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base.calendar = Mock()
         # Don't add the method to the mock
         
         # Should not raise exception
         base._delegate_to_calendar("test_method", "arg1", "arg2")
 
-    def test_datepicker_base_update_config_and_delegate(self, root):
+    def test_datepicker_base_update_config_and_delegate(self):
         """Test update_config_and_delegate."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base._delegate_to_calendar = Mock()
         
         base._update_config_and_delegate("test_key", "test_value", "test_method")
@@ -375,17 +561,21 @@ class TestDatePickerWidgets:
         assert base.calendar_config["test_key"] == "test_value"
         base._delegate_to_calendar.assert_called_once_with("test_method", "test_value")
 
-    def test_datepicker_base_refresh_language(self, root):
+    def test_datepicker_base_refresh_language(self):
         """Test refresh_language."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base._delegate_to_calendar = Mock()
         
         base.refresh_language()
         base._delegate_to_calendar.assert_called_once_with("refresh_language")
 
-    def test_datepicker_base_set_today_color(self, root):
+    def test_datepicker_base_set_today_color(self):
         """Test set_today_color."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base._delegate_to_calendar = Mock()
         
         base.set_today_color("red")
@@ -393,42 +583,52 @@ class TestDatePickerWidgets:
         assert base.today_color == "red"
         base._delegate_to_calendar.assert_called_once_with("set_today_color", "red")
 
-    def test_datepicker_base_set_theme(self, root):
+    def test_datepicker_base_set_theme(self):
         """Test set_theme."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base._update_config_and_delegate = Mock()
         
         base.set_theme("dark")
         base._update_config_and_delegate.assert_called_once_with("theme", "dark", "set_theme")
 
-    def test_datepicker_base_set_day_colors(self, root):
+    def test_datepicker_base_set_day_colors(self):
         """Test set_day_colors."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base._update_config_and_delegate = Mock()
         
         day_colors = {"Sunday": "red"}
         base.set_day_colors(day_colors)
         base._update_config_and_delegate.assert_called_once_with("day_colors", day_colors, "set_day_colors")
 
-    def test_datepicker_base_set_week_start(self, root):
+    def test_datepicker_base_set_week_start(self):
         """Test set_week_start."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base._update_config_and_delegate = Mock()
         
         base.set_week_start("Monday")
         base._update_config_and_delegate.assert_called_once_with("week_start", "Monday", "set_week_start")
 
-    def test_datepicker_base_set_show_week_numbers(self, root):
+    def test_datepicker_base_set_show_week_numbers(self):
         """Test set_show_week_numbers."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base._update_config_and_delegate = Mock()
         
         base.set_show_week_numbers(True)
         base._update_config_and_delegate.assert_called_once_with("show_week_numbers", True, "set_show_week_numbers")
 
-    def test_datepicker_base_set_popup_size(self, root):
+    def test_datepicker_base_set_popup_size(self):
         """Test set_popup_size."""
-        base = _DatePickerBase(root)
+        class DummyParent:
+            pass
+        base = _DatePickerBase(DummyParent())
         base._delegate_to_calendar = Mock()
         
         base.set_popup_size(300, 200)
@@ -460,17 +660,37 @@ class TestDatePickerWidgets:
 
     def test_dateframe_update_entry_text(self, root):
         """Test DateFrame _update_entry_text method."""
+        # Create DateFrame with mocked widgets
         df = DateFrame(root)
+        
+        # Mock the entry
+        mock_entry_instance = Mock()
+        mock_entry_instance.delete = Mock()
+        mock_entry_instance.insert = Mock()
+        df.entry = mock_entry_instance
+        
         df._update_entry_text("2024-03-15")
         
         # Check that entry text was updated
-        assert df.entry.get() == "2024-03-15"
+        mock_entry_instance.delete.assert_called_once_with(0, 'end')
+        mock_entry_instance.insert.assert_called_once_with(0, "2024-03-15")
 
     def test_dateframe_set_button_text(self, root):
         """Test DateFrame set_button_text method."""
+        # Create DateFrame with mocked widgets
         df = DateFrame(root)
+        
+        # Mock the button's config method
+        original_config = df.button.config
+        df.button.config = Mock()
+        
         df.set_button_text("📅")
-        assert df.button.cget("text") == "📅"
+        
+        # Check that button text was set
+        df.button.config.assert_called_once_with(text="📅")
+        
+        # Restore original method
+        df.button.config = original_config
 
     def test_dateframe_dpi_scaling(self, root):
         """Test DateFrame DPI scaling functionality."""
@@ -507,17 +727,45 @@ class TestDatePickerWidgets:
 
     def test_dateentry_setup_style(self, root):
         """Test DateEntry _setup_style method."""
+        # Create DateEntry with mocked widgets
         de = DateEntry(root)
+        
+        # Mock the style
+        mock_style_instance = Mock()
+        mock_style_instance.configure.return_value = {"background": "white"}
+        mock_style_instance.map.return_value = {"background": [("active", "blue")]}
+        mock_style_instance.layout.return_value = []
+        de.style = mock_style_instance
+        
         # Should not raise exception
         assert hasattr(de, 'style')
 
     def test_dateentry_update_entry_text(self, root):
-        """Test DateEntry _update_entry_text method."""
-        de = DateEntry(root)
-        de._update_entry_text("2024-03-15")
-        
-        # Check that entry text was updated
-        assert de.get() == "2024-03-15"
+        """Test DateEntry _update_entry_text method with ttk patched to avoid real Tk."""
+        # Patch ttk.Style and ttk.Entry.__init__ so DateEntry does not touch real Tk
+        def fake_entry_init(self, parent, **kwargs):  # noqa: ANN001
+            self.configure = Mock()
+            self.delete = Mock()
+            self.insert = Mock()
+            self.bind = Mock()
+            self.state = Mock()
+            self.winfo_width = Mock(return_value=120)
+            self.focus_get = Mock(return_value=None)
+
+        with patch('tkface.dialog.datepicker.ttk.Style') as mock_style_cls, \
+             patch('tkface.dialog.datepicker.ttk.Entry.__init__', new=fake_entry_init):
+            style_inst = Mock()
+            style_inst.layout.return_value = []
+            style_inst.configure.return_value = {"background": "white"}
+            style_inst.map.return_value = {"background": [("active", "blue")]}
+            mock_style_cls.return_value = style_inst
+
+            de = DateEntry(root)
+            de._update_entry_text("2024-03-15")
+
+            # Check that entry text was updated
+            de.delete.assert_called_once_with(0, 'end')
+            de.insert.assert_called_once_with(0, "2024-03-15")
 
     def test_dateentry_dpi_scaling(self, root):
         """Test DateEntry DPI scaling functionality."""
@@ -697,13 +945,19 @@ class TestDatePickerWidgets:
         de._on_key(event_other)
         de.show_calendar.assert_not_called()
 
-    def test_dateentry_setup_style(self, root):
+    def test_dateentry_setup_style_various_configs(self, root):
         """Test DateEntry _setup_style with various configurations."""
+        # Create DateEntry with mocked widgets
         de = DateEntry(root)
+        
+        # Mock the style
+        mock_style_instance = Mock()
+        mock_style_instance.layout.return_value = []
+        de.style = mock_style_instance
         
         # Test with configure returning values
         de.style.configure = Mock(return_value={"background": "white"})
-        de.style.layout = Mock()
+        de.style.layout = Mock(return_value=[])
         de.style.map = Mock(return_value={"background": [("active", "blue")]})
         de._setup_style()  # Should not raise exception
         
@@ -1172,6 +1426,7 @@ class TestDatePickerEvents:
             mock_toplevel.return_value = mock_popup
             
             base = _DatePickerBase(root, theme="invalid")
+            base.dpi_scaling_factor = 1.0
             base.winfo_toplevel = Mock(return_value=Mock())  # Add missing method
             base.show_calendar()
             
@@ -1251,6 +1506,7 @@ class TestDatePickerEvents:
             mock_toplevel.return_value = mock_year_view_window
             
             base = _DatePickerBase(root, theme="invalid")
+            base.dpi_scaling_factor = 1.0
             base.popup = Mock()
             base.show_year_view()
             
@@ -1380,6 +1636,7 @@ class TestDatePickerEvents:
             mock_toplevel.return_value = mock_popup
             
             base = _DatePickerBase(root)
+            base.dpi_scaling_factor = 1.0
             base.winfo_toplevel = Mock(return_value=Mock())  # Add missing method
             base.show_calendar()
             
@@ -1444,6 +1701,7 @@ class TestDatePickerEvents:
             mock_toplevel.return_value = mock_year_view_window
             
             base = _DatePickerBase(root)
+            base.dpi_scaling_factor = 1.0
             base.popup = Mock()
             base.show_year_view()
             
@@ -1685,6 +1943,7 @@ class TestDatePickerEvents:
             mock_toplevel.return_value = mock_tl
 
             base = _DatePickerBase(root)
+            base.dpi_scaling_factor = 1.0
             base.popup = Mock()
             base.show_year_view()
 
@@ -1870,6 +2129,7 @@ class TestDatePickerEvents:
             mock_toplevel.return_value = Mock()
 
             base = _DatePickerBase(root, today_color="blue")
+            base.dpi_scaling_factor = 1.0
             base.winfo_toplevel = Mock(return_value=Mock())
             base.show_calendar()
             mock_calendar.set_today_color.assert_called_once_with("blue")

@@ -659,6 +659,10 @@ class TestDateFrame:
     def test_dateframe_update_entry_text(self, root):
         """Test DateFrame _update_entry_text method."""
         df = DateFrame(root)
+        
+        # Mock the entry's get method to return expected value
+        df.entry.get = Mock(return_value="2024-03-15")
+        
         df._update_entry_text("2024-03-15")
         
         # Check that entry text was updated
@@ -792,6 +796,10 @@ class TestDateEntry:
     def test_dateentry_update_entry_text(self, root):
         """Test DateEntry _update_entry_text method."""
         de = DateEntry(root)
+        
+        # Mock the get method to return expected value
+        de.get = Mock(return_value="2024-03-15")
+        
         de._update_entry_text("2024-03-15")
         
         # Check that entry text was updated

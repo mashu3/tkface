@@ -8,12 +8,175 @@ including automatic ttk widget configuration and tk widget patching.
 import contextlib
 import ctypes
 import sys
-import tkinter as tk
+import types
 from ctypes import wintypes
 from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
+
+# Mock tkinter before importing the modules that use it
+# Create stub classes and modules for tkinter widgets
+class _TkWidget:
+    def __init__(self, parent=None, **kwargs):
+        self.parent = parent
+        self.kwargs = kwargs
+        self.tk = Mock()
+        self._last_child_ids = {}
+        self._w = "mock_widget"
+        self.children = {}
+        self._name = "mock_widget"
+        self.master = parent
+    
+    def pack(self, **kwargs):
+        return None
+    
+    def grid(self, **kwargs):
+        return None
+    
+    def place(self, **kwargs):
+        return None
+    
+    def configure(self, **kwargs):
+        return None
+    
+    def config(self, **kwargs):
+        return None
+    
+    def cget(self, key):
+        return None
+    
+    def __getattr__(self, name):
+        return Mock()
+
+class _TkFrame(_TkWidget):
+    pass
+
+class _TkLabelFrame(_TkWidget):
+    pass
+
+class _TkButton(_TkWidget):
+    pass
+
+class _TkEntry(_TkWidget):
+    pass
+
+class _TkLabel(_TkWidget):
+    pass
+
+class _TkText(_TkWidget):
+    pass
+
+class _TkCheckbutton(_TkWidget):
+    pass
+
+class _TkRadiobutton(_TkWidget):
+    pass
+
+class _TkListbox(_TkWidget):
+    pass
+
+class _TkSpinbox(_TkWidget):
+    pass
+
+class _TkScale(_TkWidget):
+    pass
+
+class _TkScrollbar(_TkWidget):
+    pass
+
+class _TkCanvas(_TkWidget):
+    pass
+
+class _TkMenu(_TkWidget):
+    pass
+
+class _TkMenubutton(_TkWidget):
+    pass
+
+class _TtkTreeview(_TkWidget):
+    def column(self, column, option=None, **kwargs):
+        return None
+
+# Create fake tkinter module objects
+tk_mod = types.ModuleType("tkinter")
+tk_mod.Widget = _TkWidget
+tk_mod.Frame = _TkFrame
+tk_mod.LabelFrame = _TkLabelFrame
+tk_mod.Button = _TkButton
+tk_mod.Entry = _TkEntry
+tk_mod.Label = _TkLabel
+tk_mod.Text = _TkText
+tk_mod.Checkbutton = _TkCheckbutton
+tk_mod.Radiobutton = _TkRadiobutton
+tk_mod.Listbox = _TkListbox
+tk_mod.Spinbox = _TkSpinbox
+tk_mod.Scale = _TkScale
+tk_mod.Scrollbar = _TkScrollbar
+tk_mod.Canvas = _TkCanvas
+tk_mod.Menu = _TkMenu
+tk_mod.Menubutton = _TkMenubutton
+tk_mod.TclError = Exception
+tk_mod.END = "end"
+tk_mod.Checkbutton = _TkCheckbutton
+tk_mod.Radiobutton = _TkRadiobutton
+
+class _TtkStyle:
+    def __init__(self, parent=None):
+        self.parent = parent
+        self.tk = Mock()
+    
+    def configure(self, name, **kwargs):
+        return None
+    
+    def map(self, name, **kwargs):
+        return None
+    
+    def layout(self, name, layout=None):
+        return None
+
+class _TtkCheckbutton(_TkWidget):
+    pass
+
+class _TtkRadiobutton(_TkWidget):
+    pass
+
+ttk_mod = types.ModuleType("tkinter.ttk")
+ttk_mod.Treeview = _TtkTreeview
+ttk_mod.Style = _TtkStyle
+ttk_mod.Checkbutton = _TtkCheckbutton
+ttk_mod.Radiobutton = _TtkRadiobutton
+tk_mod.ttk = ttk_mod
+
+# Backup any existing tkinter modules and patch sys.modules for this test module
+_orig_tk = sys.modules.get('tkinter')
+_orig_ttk = sys.modules.get('tkinter.ttk')
+sys.modules['tkinter'] = tk_mod
+sys.modules['tkinter.ttk'] = ttk_mod
+
+# Now import the modules using the stubbed tkinter
+import tkinter as tk  # stub in this test module scope
 from tkinter import ttk
+
+# Ensure tkface.win.dpi uses tkinter references
+import tkface.win.dpi as _dpi_mod  # noqa: E402
+
+# Restore original tkinter modules so other tests can patch real attributes
+if _orig_tk is not None:
+    sys.modules['tkinter'] = _orig_tk
+if _orig_ttk is not None:
+    sys.modules['tkinter.ttk'] = _orig_ttk
+
+# Point dpi module to the real tkinter modules when available (for patch() compatibility)
+if _orig_tk is not None and _orig_ttk is not None:
+    _dpi_mod.tk = _orig_tk
+    _dpi_mod.ttk = _orig_ttk
+else:
+    _dpi_mod.tk = tk_mod
+    _dpi_mod.ttk = ttk_mod
+
+# Rebind local references to match the module used by dpi so patches align
+tk = _dpi_mod.tk
+ttk = _dpi_mod.ttk
 
 
 # Common mock fixtures for DPI testing
