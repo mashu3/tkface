@@ -469,6 +469,9 @@ class _TimePickerBase:
 
             self.popup.deiconify()
             self.popup.lift()
+            # Force popup to be on top and visible even when overlapping
+            self.popup.attributes("-topmost", True)
+            self.popup.after(100, lambda: self.popup.attributes("-topmost", False))
             self.popup.bind("<Escape>", lambda e: self.hide_time_picker())
             self._setup_click_outside_handling()
             self.time_picker.focus_set()
@@ -510,18 +513,8 @@ class _TimePickerBase:
             x = self.winfo_rootx()  # pylint: disable=no-member
             y = self.winfo_rooty() + self.winfo_height()  # pylint: disable=no-member
 
-        # Ensure popup stays on screen
-        screen_width = self.popup.winfo_screenwidth()
-        screen_height = self.popup.winfo_screenheight()
-
-        if x + popup_width > screen_width:
-            x = screen_width - popup_width
-        if y + popup_height > screen_height:
-            y = parent_y - popup_height
-
-        x = max(x, 0)
-        y = max(y, 0)
-
+        # Simple positioning: always show below the widget
+        # No screen boundary adjustments
         self.popup.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
 
     def hide_time_picker(self):
