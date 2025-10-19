@@ -341,11 +341,12 @@ class PathBrowser(tk.Frame):
             options.append(f"{desc} ({pattern})")
 
         self.filter_combo["values"] = options
-        # Set default to first filetype (not "All files" if possible)
+        # Set default to "All files" if available, otherwise use first option
         if options:
-            if len(options) > 1 and options[0] == lang.get("All files", self):
-                # If "All files" is first, use the second option (first filetype)
-                self.filter_combo.set(options[1])
+            all_files_text = lang.get("All files", self)
+            if all_files_text in options:
+                # Use "All files" as default
+                self.filter_combo.set(all_files_text)
             else:
                 # Otherwise use the first option
                 self.filter_combo.set(options[0])

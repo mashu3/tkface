@@ -12,7 +12,46 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from tkface.widget.pathbrowser import FileInfoManager
+from tkface.widget.pathbrowser import FileInfoManager, PathBrowser
+
+
+class TestPathBrowserCoreUpdates:
+    def test_update_filter_options_default_all_files(self, root):
+        """Test that filter defaults to 'All files' when available."""
+        browser = PathBrowser(root)
+        browser.config.filetypes = [
+            ("All files", "*.*"),
+            ("Text files", "*.txt"),
+            ("Python files", "*.py")
+        ]
+        browser.filter_combo = Mock()
+        browser.filter_combo.set = Mock()
+        browser.filter_combo.__setitem__ = Mock()  # Mock item assignment
+        
+        # Mock lang.get to return localized text
+        with patch("tkface.widget.pathbrowser.core.lang.get", return_value="All files"):
+            browser._update_filter_options()
+            
+            # Should set "All files" as default
+            browser.filter_combo.set.assert_called_with("All files (*.*)")
+
+    def test_update_filter_options_fallback_to_first(self, root):
+        """Test that filter falls back to first option when 'All files' not available."""
+        browser = PathBrowser(root)
+        browser.config.filetypes = [
+            ("Text files", "*.txt"),
+            ("Python files", "*.py")
+        ]
+        browser.filter_combo = Mock()
+        browser.filter_combo.set = Mock()
+        browser.filter_combo.__setitem__ = Mock()  # Mock item assignment
+        
+        # Mock lang.get to return localized text
+        with patch("tkface.widget.pathbrowser.core.lang.get", return_value="All files"):
+            browser._update_filter_options()
+            
+            # Should set "All files" as default (since lang.get returns "All files")
+            browser.filter_combo.set.assert_called_with("All files")
 
 
 class TestFileInfoManagerCoverage:

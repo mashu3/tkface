@@ -120,6 +120,15 @@ def _create_main_paned_window(pathbrowser_instance):
     row_height = 25 if utils.IS_WINDOWS else 20
     style.configure("Treeview", rowheight=row_height)
     
+    # Configure tags for highlighting current directory
+    style.configure("Treeview", background="white")
+    style.configure("Treeview.current", background="#e6f3ff", foreground="#0066cc")
+    style.configure("Treeview.normal", background="white")
+    
+    # Configure tag colors for highlighting
+    pathbrowser_instance.tree.tag_configure("current", background="#e6f3ff", foreground="#0066cc")
+    pathbrowser_instance.tree.tag_configure("normal", background="white")
+    
     # Bind to tree selection to adjust indent based on current level
     def adjust_tree_indent(event=None):
         """Adjust tree indent based on current directory level."""
@@ -441,43 +450,64 @@ def setup_pathbrowser_bindings(pathbrowser_instance):
 def load_directory_tree(pathbrowser_instance):
     """Load the directory tree."""
     pathbrowser_instance.tree.delete(*pathbrowser_instance.tree.get_children())
-    # Flatten view to start at the current directory level to avoid left-side slack
+    # Show parent directory and its siblings to provide one level up navigation
     try:
-        base_path = Path(pathbrowser_instance.state.current_dir)
-
-        # List only immediate subdirectories of the current directory as top-level
-        dirs = []
-        for item in base_path.iterdir():
-            if item.is_dir():
-                dirs.append((item.name, str(item)))
+        current_path = Path(pathbrowser_instance.state.current_dir)
+        parent_path = current_path.parent
+        
+        # If we're at root level, show current directory's contents
+        if parent_path == current_path:
+            # We're at root, show current directory's subdirectories
+            base_path = current_path
+            dirs = []
+            for item in base_path.iterdir():
+                if item.is_dir():
+                    dirs.append((item.name, str(item)))
+        else:
+            # Show parent directory and its siblings
+            base_path = parent_path
+            dirs = []
+            
+            # Add siblings of current directory
+            for item in base_path.iterdir():
+                if item.is_dir() and item != current_path:
+                    dirs.append((item.name, str(item)))
+            
+            # Add current directory
+            dirs.append((current_path.name, str(current_path)))
 
         # Sort and add directories
         dirs.sort(key=lambda x: x[0].lower())
 
         for child_name, child_path in dirs:
             if not pathbrowser_instance.tree.exists(child_path):
+                # Check if this is the current directory for highlighting
+                is_current_dir = str(child_path) == str(current_path)
+                
                 # Insert as top-level item (no ancestors, no extra left indent)
                 pathbrowser_instance.tree.insert(
                     "", "end", child_path, text=child_name, open=False
                 )
+                
+                # Highlight current directory with different tags
+                if is_current_dir:
+                    pathbrowser_instance.tree.item(child_path, tags=("current",))
+                    # Also select the current directory to make it more visible
+                    pathbrowser_instance.tree.selection_set(child_path)
+                else:
+                    pathbrowser_instance.tree.item(child_path, tags=("normal",))
 
-                # Add placeholder if the directory has subdirectories (for lazy loading)
-                with suppress(OSError, PermissionError):
-                    has_subdirs = False
-                    for subitem in base_path.joinpath(child_name).iterdir():
-                        if subitem.is_dir():
-                            has_subdirs = True
-                            break
-                    if has_subdirs:
-                        placeholder_id = f"{child_path}_placeholder"
-                        if not pathbrowser_instance.tree.exists(placeholder_id):
-                            pathbrowser_instance.tree.insert(
-                                child_path,
-                                "end",
-                                placeholder_id,
-                                text=lang.get("Loading...", pathbrowser_instance),
-                                open=False,
-                            )
+                # Always add placeholder for directories to show expand button
+                # This ensures the expand/collapse button is always visible for directories
+                placeholder_id = f"{child_path}_placeholder"
+                if not pathbrowser_instance.tree.exists(placeholder_id):
+                    pathbrowser_instance.tree.insert(
+                        child_path,
+                        "end",
+                        placeholder_id,
+                        text=lang.get("Loading...", pathbrowser_instance),
+                        open=False,
+                    )
     except (OSError, PermissionError) as e:
         logger.warning("Failed to load directory tree for %s: %s", base_path, e)
         pathbrowser_instance.status_var.set(
