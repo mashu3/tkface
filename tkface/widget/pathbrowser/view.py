@@ -120,14 +120,7 @@ def _create_main_paned_window(pathbrowser_instance):
     row_height = 25 if utils.IS_WINDOWS else 20
     style.configure("Treeview", rowheight=row_height)
     
-    # Configure tags for highlighting current directory
-    style.configure("Treeview", background="white")
-    style.configure("Treeview.current", background="#e6f3ff", foreground="#0066cc")
-    style.configure("Treeview.normal", background="white")
-    
-    # Configure tag colors for highlighting
-    pathbrowser_instance.tree.tag_configure("current", background="#e6f3ff", foreground="#0066cc")
-    pathbrowser_instance.tree.tag_configure("normal", background="white")
+    # Do not override Treeview colors here; respect OS/theme defaults
     
     # Bind to tree selection to adjust indent based on current level
     def adjust_tree_indent(event=None):
