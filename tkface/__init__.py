@@ -15,7 +15,7 @@ from .win.button import FlatButton as Button
 # Export DPI functions for easy access
 from .win.dpi import enable_dpi_geometry as dpi
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 __all__ = [
     "lang",
     "win",
