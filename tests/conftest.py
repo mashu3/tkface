@@ -58,29 +58,23 @@ def root():
         if "DISPLAY" not in os.environ:
             os.environ["DISPLAY"] = ":0.0"
         
-        # Set TCL_LIBRARY environment variable to help with Tcl initialization
+        # Get the actual Tcl library path from a working Tkinter instance
         import sys
-        if hasattr(sys, 'frozen'):
-            # Running as compiled executable
+        try:
+            # Create a temporary root to get the actual Tcl library path
+            temp_check = tk.Tk()
+            actual_tcl_library = temp_check.tk.eval('info library')
+            temp_check.destroy()
+            
+            # Set the environment variable to the actual path
+            os.environ["TCL_LIBRARY"] = actual_tcl_library
+            logging.debug(f"Set TCL_LIBRARY to: {actual_tcl_library}")
+        except Exception as e:
+            logging.warning(f"Could not determine Tcl library path: {e}")
+            # Fallback to default paths
             tcl_dir = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6')
-        else:
-            # Running as script
-            tcl_dir = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6')
-        
-        # Try to find Tcl library directory
-        if os.path.exists(tcl_dir):
-            os.environ["TCL_LIBRARY"] = tcl_dir
-        else:
-            # Try alternative paths
-            alternative_paths = [
-                os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6'),
-                os.path.join(os.path.dirname(sys.executable), '..', 'tcl', 'tcl8.6'),
-                os.path.join(os.path.dirname(sys.executable), '..', '..', 'tcl', 'tcl8.6'),
-            ]
-            for alt_path in alternative_paths:
-                if os.path.exists(alt_path):
-                    os.environ["TCL_LIBRARY"] = alt_path
-                    break
+            if os.path.exists(tcl_dir):
+                os.environ["TCL_LIBRARY"] = tcl_dir
         
         # Create new root window for each test
         temp_root = tk.Tk()
@@ -146,8 +140,9 @@ def root():
         # Try cleanup for unexpected errors
         try:
             temp_root.destroy()
-        except:
-            pass
+        except Exception as exc:
+            # Log cleanup failure for debugging
+            logging.debug("Failed to destroy temp root during cleanup: %s", exc)
         raise
 
 
@@ -170,29 +165,23 @@ def root_function():
         if "DISPLAY" not in os.environ:
             os.environ["DISPLAY"] = ":0.0"
         
-        # Set TCL_LIBRARY environment variable to help with Tcl initialization
+        # Get the actual Tcl library path from a working Tkinter instance
         import sys
-        if hasattr(sys, 'frozen'):
-            # Running as compiled executable
+        try:
+            # Create a temporary root to get the actual Tcl library path
+            temp_check = tk.Tk()
+            actual_tcl_library = temp_check.tk.eval('info library')
+            temp_check.destroy()
+            
+            # Set the environment variable to the actual path
+            os.environ["TCL_LIBRARY"] = actual_tcl_library
+            logging.debug(f"Set TCL_LIBRARY to: {actual_tcl_library}")
+        except Exception as e:
+            logging.warning(f"Could not determine Tcl library path: {e}")
+            # Fallback to default paths
             tcl_dir = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6')
-        else:
-            # Running as script
-            tcl_dir = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6')
-        
-        # Try to find Tcl library directory
-        if os.path.exists(tcl_dir):
-            os.environ["TCL_LIBRARY"] = tcl_dir
-        else:
-            # Try alternative paths
-            alternative_paths = [
-                os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.6'),
-                os.path.join(os.path.dirname(sys.executable), '..', 'tcl', 'tcl8.6'),
-                os.path.join(os.path.dirname(sys.executable), '..', '..', 'tcl', 'tcl8.6'),
-            ]
-            for alt_path in alternative_paths:
-                if os.path.exists(alt_path):
-                    os.environ["TCL_LIBRARY"] = alt_path
-                    break
+            if os.path.exists(tcl_dir):
+                os.environ["TCL_LIBRARY"] = tcl_dir
         
         # Create new root window
         temp_root = tk.Tk()

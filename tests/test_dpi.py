@@ -7,6 +7,7 @@ including automatic ttk widget configuration and tk widget patching.
 
 import contextlib
 import ctypes
+import logging
 import sys
 import types
 from ctypes import wintypes
@@ -681,8 +682,9 @@ def with_test_context(
                                 # Create a new root
                                 root = tk.Tk()
                                 root.withdraw()
-                        except:
+                        except Exception as exc:
                             # If there's any issue, try to create a new root
+                            logging.debug("Failed to use existing root, creating new one: %s", exc)
                             root = tk.Tk()
                             root.withdraw()
                         
@@ -4084,9 +4086,10 @@ class TestDPICoverageImprovements:
         # This should not raise an exception
         try:
             manager._patch_layout_method("test.method", original_method, 2.0)
-        except Exception:
+        except Exception as exc:
             # If it raises an exception, that's also acceptable for error handling
-            pass
+            # Log the exception for debugging purposes
+            logging.debug("Expected exception in _patch_layout_method: %s", exc)
 
     def test_patch_widget_constructor_error_handling(self):
         """Test _patch_widget_constructor error handling."""
@@ -4101,9 +4104,10 @@ class TestDPICoverageImprovements:
         # This should not raise an exception
         try:
             manager._patch_widget_constructor(mock_widget_class, 2.0, "test.method")
-        except Exception:
+        except Exception as exc:
             # If it raises an exception, that's also acceptable for error handling
-            pass
+            # Log the exception for debugging purposes
+            logging.debug("Expected exception in _patch_widget_constructor: %s", exc)
 
     def test_patch_treeview_method_error_handling(self):
         """Test _patch_treeview_method error handling."""
@@ -4118,9 +4122,10 @@ class TestDPICoverageImprovements:
         # This should not raise an exception
         try:
             manager._patch_treeview_method("test.method", original_method, 2.0, MagicMock())
-        except Exception:
+        except Exception as exc:
             # If it raises an exception, that's also acceptable for error handling
-            pass
+            # Log the exception for debugging purposes
+            logging.debug("Expected exception in _patch_treeview_method: %s", exc)
 
     def test_patch_treeview_method_bound_method_handling(self):
         """Test _patch_treeview_method with bound method."""
@@ -4140,9 +4145,10 @@ class TestDPICoverageImprovements:
         # This should not raise an exception
         try:
             manager._patch_treeview_method("test.method", bound_method, 2.0, MagicMock())
-        except Exception:
+        except Exception as exc:
             # If it raises an exception, that's also acceptable for error handling
-            pass
+            # Log the exception for debugging purposes
+            logging.debug("Expected exception in _patch_treeview_method (bound): %s", exc)
 
     def test_patch_treeview_method_unbound_method_handling(self):
         """Test _patch_treeview_method with unbound method."""
@@ -4158,9 +4164,10 @@ class TestDPICoverageImprovements:
         # This should not raise an exception
         try:
             manager._patch_treeview_method("ttk.Treeview.column", unbound_method, 2.0, MagicMock())
-        except Exception:
+        except Exception as exc:
             # If it raises an exception, that's also acceptable for error handling
-            pass
+            # Log the exception for debugging purposes
+            logging.debug("Expected exception in _patch_treeview_method (unbound): %s", exc)
 
     def test_patch_treeview_method_style_class_handling(self):
         """Test _patch_treeview_method with Style class."""
@@ -4176,9 +4183,10 @@ class TestDPICoverageImprovements:
         # This should not raise an exception
         try:
             manager._patch_treeview_method("ttk.Style.configure", unbound_method, 2.0, MagicMock())
-        except Exception:
+        except Exception as exc:
             # If it raises an exception, that's also acceptable for error handling
-            pass
+            # Log the exception for debugging purposes
+            logging.debug("Expected exception in _patch_treeview_method (Style): %s", exc)
 
     def test_scale_layout_spec_recursive_children_scaling(self):
         """Test recursive layout spec scaling with children."""

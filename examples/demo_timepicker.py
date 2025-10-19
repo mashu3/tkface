@@ -614,8 +614,9 @@ class TimePickerDemo:
         # Ensure the widget can take focus when clicked
         try:
             entry_widget.configure(takefocus=1)
-        except Exception:  # pylint: disable=broad-except
-            pass
+        except Exception as exc:  # pylint: disable=broad-except
+            # Log configuration failure for debugging
+            self.logger.debug("Failed to configure takefocus for %s: %s", name, exc)
 
         def log_evt(evt_name, event):
             try:
@@ -633,8 +634,9 @@ class TimePickerDemo:
             try:
                 entry_widget.focus_force()
                 entry_widget.after_idle(entry_widget.focus_force)
-            except Exception:
-                pass
+            except Exception as exc:
+                # Log focus failure for debugging
+                self.logger.debug("Failed to force focus for %s: %s", name, exc)
             log_evt("Button-1", event)
 
         entry_widget.bind("<Button-1>", on_button1, add="+")
@@ -644,8 +646,9 @@ class TimePickerDemo:
             try:
                 entry_widget.select_range(0, tk.END)
                 entry_widget.icursor(tk.END)
-            except Exception:
-                pass
+            except Exception as exc:
+                # Log selection failure for debugging
+                self.logger.debug("Failed to select range for %s: %s", name, exc)
 
         entry_widget.bind("<FocusIn>", on_focus_in, add="+")
 
