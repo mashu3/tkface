@@ -3,11 +3,9 @@ from . import dialog, lang, widget, win
 # Export messagebox and simpledialog for backward compatibility
 from .dialog import messagebox, pathchooser, simpledialog
 from .dialog.datepicker import DateEntry, DateFrame
-from .dialog.timepicker import TimeEntry, TimeFrame
 
 # Export Calendar and DateEntry for backward compatibility
 from .widget.calendar import Calendar
-from .widget.timespinner import TimeSpinner
 
 # Export Windows-specific flat button as Button
 from .win.button import FlatButton as Button
@@ -26,9 +24,6 @@ __all__ = [
     "Calendar",
     "DateFrame",
     "DateEntry",
-    "TimeFrame",
-    "TimeEntry",
-    "TimeSpinner",
     "messagebox",
     "simpledialog",
     "pathchooser",
