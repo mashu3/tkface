@@ -554,25 +554,16 @@ def populate_tree_node(pathbrowser_instance, parent):
                     parent, "end", child_path, text=child_name, open=False
                 )
 
-                # Check if directory has subdirectories (lazy loading)
-                with suppress(OSError, PermissionError):
-                    # Quick check for subdirectories without full enumeration
-                    has_subdirs = False
-                    for subitem in path_obj.joinpath(child_name).iterdir():
-                        if subitem.is_dir():
-                            has_subdirs = True
-                            break
-
-                    if has_subdirs:
-                        # Add placeholder for lazy loading
-                        placeholder_id = f"{child_path}_placeholder"
-                        pathbrowser_instance.tree.insert(
-                            child_path,
-                            "end",
-                            placeholder_id,
-                            text=lang.get("Loading...", pathbrowser_instance),
-                            open=False,
-                        )
+                # Always add placeholder for directories to show expand button
+                # This ensures the expand/collapse button is always visible for directories
+                placeholder_id = f"{child_path}_placeholder"
+                pathbrowser_instance.tree.insert(
+                    child_path,
+                    "end",
+                    placeholder_id,
+                    text=lang.get("Loading...", pathbrowser_instance),
+                    open=False,
+                )
 
     except (OSError, PermissionError) as e:
         logger.warning("Failed to populate tree node for %s: %s", parent, e)

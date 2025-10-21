@@ -803,31 +803,24 @@ class TestPopulateTreeNodeAdditional:
             # Should skip the symlink due to loop detection
             browser_with_state.tree.insert.assert_not_called()
 
-    def test_populate_tree_node_has_subdirs_placeholder(self, browser_with_state):
-        """Test adding placeholder for directories with subdirectories."""
+    def test_populate_tree_node_always_adds_placeholder(self, browser_with_state):
+        """Test that placeholder is always added for all directories."""
         browser_with_state.tree = Mock()
         browser_with_state.tree.get_children.return_value = []
         browser_with_state.tree.exists.return_value = False
         browser_with_state.tree.insert = Mock()
         browser_with_state.status_var = Mock()
         
-        # Mock path with directories that have subdirectories
+        # Mock path with directories
         mock_path = Mock()
         mock_item = Mock()
         mock_item.name = "test_dir"
         mock_item.is_dir.return_value = True
         mock_path.iterdir.return_value = [mock_item]
         
-        # Mock subdirectory check
-        mock_subpath = Mock()
-        mock_subitem = Mock()
-        mock_subitem.is_dir.return_value = True
-        mock_subpath.iterdir.return_value = [mock_subitem]
-        mock_path.joinpath.return_value = mock_subpath
-        
         with patch("tkface.widget.pathbrowser.view.Path", return_value=mock_path):
             view.populate_tree_node(browser_with_state, "/test")
-            # Should add placeholder for directory with subdirs
+            # Should always add placeholder for all directories
             assert browser_with_state.tree.insert.call_count >= 2  # Directory + placeholder
 
 
