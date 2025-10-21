@@ -52,7 +52,7 @@ class TestPathBrowserModule:
         assert config.select == "file"
         assert config.multiple is False
         assert config.initialdir is None
-        assert config.filetypes == [("All files", "*.*")]
+        assert config.filetypes is None
         assert config.ok_label == "ok"
         assert config.cancel_label == "cancel"
         assert config.max_cache_size == 1000

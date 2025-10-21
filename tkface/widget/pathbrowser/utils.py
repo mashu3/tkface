@@ -135,10 +135,18 @@ def matches_filter(
     if current_filter == all_files_text:
         return True
 
+    # If no filetypes specified, show all files
+    if not filetypes:
+        return True
+
     # Find the pattern for the selected filter
     for desc, pattern in filetypes:
         if current_filter == f"{desc} ({pattern})":
-            if pattern == "*.*":
+            # Check for patterns that match all files
+            if (pattern == "*.*" or 
+                pattern == "*" or 
+                pattern == "" or
+                desc.lower() == "all files"):
                 return True
 
             # Handle multiple patterns separated by spaces

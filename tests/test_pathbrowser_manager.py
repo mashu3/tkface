@@ -50,8 +50,8 @@ class TestPathBrowserCoreUpdates:
         with patch("tkface.widget.pathbrowser.core.lang.get", return_value="All files"):
             browser._update_filter_options()
             
-            # Should set "All files" as default (since lang.get returns "All files")
-            browser.filter_combo.set.assert_called_with("All files")
+            # Should set first filetype as default
+            browser.filter_combo.set.assert_called_with("Text files (*.txt)")
 
 
 class TestFileInfoManagerCoverage:

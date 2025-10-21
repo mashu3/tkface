@@ -36,9 +36,7 @@ class PathBrowserConfig:
     select: str = "file"
     multiple: bool = False
     initialdir: Optional[str] = None
-    filetypes: List[Tuple[str, str]] = field(
-        default_factory=lambda: [("All files", "*.*")]
-    )
+    filetypes: Optional[List[Tuple[str, str]]] = None
     ok_label: str = "ok"
     cancel_label: str = "cancel"
     save_mode: bool = False
@@ -327,29 +325,33 @@ class PathBrowser(tk.Frame):
         options = []
         all_files_added = False
 
-        # Add "All files" option first if not already in filetypes
-        for desc, pattern in self.config.filetypes:
-            if desc.lower() == "all files" or pattern == "*.*":
-                all_files_added = True
-                break
-
-        if not all_files_added:
+        # If no filetypes specified, use "All files" as default
+        if not self.config.filetypes:
             options.append(lang.get("All files", self))
+            all_files_added = True
+        else:
+            # Check if "All files" is explicitly in filetypes by checking for patterns that match all files
+            for desc, pattern in self.config.filetypes:
+                # Check for patterns that would match all files (no extension restrictions)
+                if (pattern == "*.*" or 
+                    pattern == "*" or 
+                    pattern == "" or
+                    desc.lower() == "all files"):
+                    all_files_added = True
+                    break
 
-        # Add all filetypes
-        for desc, pattern in self.config.filetypes:
-            options.append(f"{desc} ({pattern})")
+            # Add all filetypes
+            for desc, pattern in self.config.filetypes:
+                options.append(f"{desc} ({pattern})")
+
+            # Always add "All files" at the end if not already present
+            if not all_files_added:
+                options.append(lang.get("All files", self))
 
         self.filter_combo["values"] = options
-        # Set default to "All files" if available, otherwise use first option
+        # Set default to first option (which is the first filetype, not "All files")
         if options:
-            all_files_text = lang.get("All files", self)
-            if all_files_text in options:
-                # Use "All files" as default
-                self.filter_combo.set(all_files_text)
-            else:
-                # Otherwise use the first option
-                self.filter_combo.set(options[0])
+            self.filter_combo.set(options[0])
 
     def _on_tree_select(self, event):  # pylint: disable=unused-argument,no-member
         """Handle tree selection."""

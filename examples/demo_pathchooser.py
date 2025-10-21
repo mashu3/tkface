@@ -30,18 +30,10 @@ class FileDialogDemo:
         self.y_var = tk.StringVar(value="None")
         self.unround_var = tk.BooleanVar(value=True)
         
-        # File type checkboxes
-        self.filetype_vars = {
-            "Text Files": tk.BooleanVar(value=True),
-            "Python Files": tk.BooleanVar(value=True),
-            "Image Files": tk.BooleanVar(value=False),
-            "Document Files": tk.BooleanVar(value=False),
-            "Audio Files": tk.BooleanVar(value=False),
-            "Video Files": tk.BooleanVar(value=False)
-        }
         
-        # File type definitions
+        # File type definitions (including "All files")
         self.filetype_definitions = {
+            "All Files": ("All files", "*.*"),
             "Text Files": ("Text files", "*.txt"),
             "Python Files": ("Python files", "*.py"),
             "Image Files": ("Image files", "*.png *.jpg *.jpeg *.gif *.bmp *.tiff"),
@@ -49,6 +41,14 @@ class FileDialogDemo:
             "Audio Files": ("Audio files", "*.mp3 *.wav *.flac *.aac"),
             "Video Files": ("Video files", "*.mp4 *.avi *.mov *.mkv *.wmv")
         }
+        
+        # File type variables for checkboxes
+        self.filetype_vars = {}
+        for filetype in self.filetype_definitions.keys():
+            self.filetype_vars[filetype] = tk.BooleanVar(value=filetype in ["Text Files", "Python Files"])
+        
+        # File type order (for drag and drop)
+        self.filetype_order = list(self.filetype_definitions.keys())
         
         # Main frame
         main_frame = tk.Frame(root)
@@ -125,81 +125,83 @@ class FileDialogDemo:
             )
             unround_check.pack(side=tk.LEFT)
         
-        # Configuration controls - Row 3 (File Types Checkboxes)
+        # Configuration controls - Row 3 (Integrated File Types Management)
         config_row3 = tk.Frame(config_frame)
         config_row3.pack(fill="x", pady=(0, 10))
         
         # File types label
         ttk.Label(config_row3, text="File Types:").pack(side=tk.LEFT)
         
-        # File types checkboxes frame
+        # File types checkboxes in simple rows
         filetypes_frame = tk.Frame(config_row3)
         filetypes_frame.pack(side=tk.LEFT, padx=(5, 0), fill="x", expand=True)
         
-        # Create checkboxes in two rows
+        # Create checkboxes in rows
         checkbox_row1 = tk.Frame(filetypes_frame)
         checkbox_row1.pack(fill="x", pady=(0, 5))
         
         checkbox_row2 = tk.Frame(filetypes_frame)
         checkbox_row2.pack(fill="x")
         
-        # Row 1 checkboxes (3 items)
-        self.text_files_check = ttk.Checkbutton(
-            checkbox_row1, 
-            text="Text Files", 
-            variable=self.filetype_vars["Text Files"],
-            command=self.update_filetypes_from_checkboxes
-        )
-        self.text_files_check.pack(side=tk.LEFT, padx=(0, 15))
+        # Create checkboxes for all file types
+        self.filetype_checkboxes = {}
+        row1_filetypes = self.filetype_order[:4]  # First 4 filetypes
+        row2_filetypes = self.filetype_order[4:]  # Remaining filetypes
         
-        self.python_files_check = ttk.Checkbutton(
-            checkbox_row1, 
-            text="Python Files", 
-            variable=self.filetype_vars["Python Files"],
-            command=self.update_filetypes_from_checkboxes
-        )
-        self.python_files_check.pack(side=tk.LEFT, padx=(0, 15))
+        # Row 1 checkboxes
+        for i, filetype in enumerate(row1_filetypes):
+            var = self.filetype_vars[filetype]
+            checkbox = ttk.Checkbutton(
+                checkbox_row1,
+                text=filetype,
+                variable=var,
+                command=self.update_filetypes_from_checkboxes
+            )
+            checkbox.pack(side=tk.LEFT, padx=(0, 15))
+            self.filetype_checkboxes[filetype] = checkbox
         
-        self.image_files_check = ttk.Checkbutton(
-            checkbox_row1, 
-            text="Image Files", 
-            variable=self.filetype_vars["Image Files"],
-            command=self.update_filetypes_from_checkboxes
-        )
-        self.image_files_check.pack(side=tk.LEFT, padx=(0, 15))
+        # Row 2 checkboxes
+        for i, filetype in enumerate(row2_filetypes):
+            var = self.filetype_vars[filetype]
+            checkbox = ttk.Checkbutton(
+                checkbox_row2,
+                text=filetype,
+                variable=var,
+                command=self.update_filetypes_from_checkboxes
+            )
+            checkbox.pack(side=tk.LEFT, padx=(0, 15))
+            self.filetype_checkboxes[filetype] = checkbox
         
-        # Row 2 checkboxes (3 items)
-        self.document_files_check = ttk.Checkbutton(
-            checkbox_row2, 
-            text="Document Files", 
-            variable=self.filetype_vars["Document Files"],
-            command=self.update_filetypes_from_checkboxes
-        )
-        self.document_files_check.pack(side=tk.LEFT, padx=(0, 15))
-        
-        self.audio_files_check = ttk.Checkbutton(
-            checkbox_row2, 
-            text="Audio Files", 
-            variable=self.filetype_vars["Audio Files"],
-            command=self.update_filetypes_from_checkboxes
-        )
-        self.audio_files_check.pack(side=tk.LEFT, padx=(0, 15))
-        
-        self.video_files_check = ttk.Checkbutton(
-            checkbox_row2, 
-            text="Video Files", 
-            variable=self.filetype_vars["Video Files"],
-            command=self.update_filetypes_from_checkboxes
-        )
-        self.video_files_check.pack(side=tk.LEFT, padx=(0, 15))
-        
-        # Configuration controls - Row 4 (Initial Directory)
+        # Configuration controls - Row 4 (Selected File Types Order)
         config_row4 = tk.Frame(config_frame)
         config_row4.pack(fill="x", pady=(0, 10))
         
+        # Selected file types order label
+        ttk.Label(config_row4, text="Selected File Types Order:").pack(side=tk.LEFT)
+        
+        # Selected file types order management frame
+        selected_order_frame = tk.Frame(config_row4)
+        selected_order_frame.pack(side=tk.LEFT, padx=(5, 0), fill="x", expand=True)
+        
+        # Selected file types listbox
+        self.selected_filetypes_listbox = tk.Listbox(selected_order_frame, height=3, selectmode=tk.SINGLE)
+        self.selected_filetypes_listbox.pack(side=tk.LEFT, fill="x", expand=True)
+        
+        # Selected order control buttons
+        selected_order_buttons_frame = tk.Frame(selected_order_frame)
+        selected_order_buttons_frame.pack(side=tk.LEFT, padx=(5, 0))
+        
+        ttk.Label(selected_order_buttons_frame, text="Order:").pack(side=tk.TOP, pady=(0, 5))
+        ttk.Button(selected_order_buttons_frame, text="↑", width=4, command=self.move_selected_filetype_up).pack(side=tk.TOP, pady=(0, 2))
+        ttk.Button(selected_order_buttons_frame, text="↓", width=4, command=self.move_selected_filetype_down).pack(side=tk.TOP, pady=(0, 2))
+        
+        # Configuration controls - Row 5 (Initial Directory)
+        config_row5 = tk.Frame(config_frame)
+        config_row5.pack(fill="x", pady=(0, 10))
+        
         # Initial directory entry
-        ttk.Label(config_row4, text="Initial Dir:").pack(side=tk.LEFT)
-        initialdir_entry = ttk.Entry(config_row4, textvariable=self.initialdir_var, width=60)
+        ttk.Label(config_row5, text="Initial Dir:").pack(side=tk.LEFT)
+        initialdir_entry = ttk.Entry(config_row5, textvariable=self.initialdir_var, width=60)
         initialdir_entry.pack(side=tk.LEFT, padx=(5, 0), fill="x", expand=True)
         initialdir_entry.bind("<KeyRelease>", lambda e: self.validate_and_generate_code())
         
@@ -248,6 +250,9 @@ class FileDialogDemo:
         
         self.result_text.pack(side=tk.LEFT, fill="both", expand=True)
         scrollbar.pack(side=tk.RIGHT, fill="y")
+        
+        # Initialize selected filetypes listbox
+        self.update_selected_filetypes_listbox()
         
         # Initialize dialog type settings and generate initial code
         self.update_dialog_type()
@@ -355,9 +360,10 @@ class FileDialogDemo:
         try:
             # Parse filetypes if provided
             filetypes = None
-            if self.filetypes_var.get():
+            filetypes_value = self.filetypes_var.get()
+            if filetypes_value and filetypes_value != "None":
                 try:
-                    filetypes = eval(self.filetypes_var.get())
+                    filetypes = eval(filetypes_value)
                 except (SyntaxError, NameError, TypeError, ValueError):
                     # If evaluation fails, use default
                     filetypes = None
@@ -503,33 +509,96 @@ class FileDialogDemo:
     
     def _set_filetype_checkboxes_state(self, state):
         """Set the state of all file type checkboxes."""
-        checkboxes = [
-            self.text_files_check,
-            self.python_files_check,
-            self.image_files_check,
-            self.document_files_check,
-            self.audio_files_check,
-            self.video_files_check
-        ]
-        
-        for checkbox in checkboxes:
+        for checkbox in self.filetype_checkboxes.values():
             checkbox.config(state=state)
     
     def update_filetypes_from_checkboxes(self):
         """Update file types from checkbox selections."""
         selected_types = []
         
-        for filetype, var in self.filetype_vars.items():
-            if var.get():
+        # Use the order from filetype_order
+        for filetype in self.filetype_order:
+            if filetype in self.filetype_vars and self.filetype_vars[filetype].get():
                 description, pattern = self.filetype_definitions[filetype]
                 selected_types.append((description, pattern))
         
-        # "All files" is automatically added by PathBrowser when filetypes is None or empty
+        # Update selected filetypes listbox
+        self.update_selected_filetypes_listbox()
         
         # Convert to string format
-        filetypes_str = str(selected_types)
+        filetypes_str = str(selected_types) if selected_types else "None"
         self.filetypes_var.set(filetypes_str)
+        
         self.generate_code()
+    
+    
+    def update_selected_filetypes_listbox(self):
+        """Update the selected filetypes listbox display."""
+        self.selected_filetypes_listbox.delete(0, tk.END)
+        
+        # Get selected filetypes in order
+        selected_filetypes = []
+        for filetype in self.filetype_order:
+            if filetype in self.filetype_vars and self.filetype_vars[filetype].get():
+                selected_filetypes.append(filetype)
+        
+        # Add to listbox
+        for filetype in selected_filetypes:
+            self.selected_filetypes_listbox.insert(tk.END, filetype)
+    
+    def move_selected_filetype_up(self):
+        """Move selected filetype up in the selected list."""
+        selection = self.selected_filetypes_listbox.curselection()
+        if selection and selection[0] > 0:
+            index = selection[0]
+            # Get the selected filetype from the listbox
+            selected_filetype = self.selected_filetypes_listbox.get(index)
+            
+            # Find its position in the main order
+            main_index = self.filetype_order.index(selected_filetype)
+            prev_index = None
+            
+            # Find the previous selected filetype in main order
+            for i in range(main_index - 1, -1, -1):
+                if self.filetype_order[i] in self.filetype_vars and self.filetype_vars[self.filetype_order[i]].get():
+                    prev_index = i
+                    break
+            
+            if prev_index is not None:
+                # Swap in main order
+                self.filetype_order[main_index], self.filetype_order[prev_index] = \
+                    self.filetype_order[prev_index], self.filetype_order[main_index]
+                self.update_selected_filetypes_listbox()
+                # Keep the same item selected
+                self.selected_filetypes_listbox.selection_set(index - 1)
+                self.update_filetypes_from_checkboxes()
+    
+    def move_selected_filetype_down(self):
+        """Move selected filetype down in the selected list."""
+        selection = self.selected_filetypes_listbox.curselection()
+        if selection and selection[0] < self.selected_filetypes_listbox.size() - 1:
+            index = selection[0]
+            # Get the selected filetype from the listbox
+            selected_filetype = self.selected_filetypes_listbox.get(index)
+            
+            # Find its position in the main order
+            main_index = self.filetype_order.index(selected_filetype)
+            next_index = None
+            
+            # Find the next selected filetype in main order
+            for i in range(main_index + 1, len(self.filetype_order)):
+                if self.filetype_order[i] in self.filetype_vars and self.filetype_vars[self.filetype_order[i]].get():
+                    next_index = i
+                    break
+            
+            if next_index is not None:
+                # Swap in main order
+                self.filetype_order[main_index], self.filetype_order[next_index] = \
+                    self.filetype_order[next_index], self.filetype_order[main_index]
+                self.update_selected_filetypes_listbox()
+                # Keep the same item selected
+                self.selected_filetypes_listbox.selection_set(index + 1)
+                self.update_filetypes_from_checkboxes()
     
     def generate_code(self):
         """Generate Python code for the current pathchooser configuration."""
@@ -561,17 +630,22 @@ class FileDialogDemo:
         
         # Add filetypes for appropriate dialogs (not for asksavefile with fixed filename)
         if dialog_type in ["askopenfile", "askopenfiles", "askpath"] and self.filetypes_var.get():
-            try:
-                # Try to evaluate the filetypes string
-                filetypes = eval(self.filetypes_var.get())
-                if filetypes:
-                    code_lines.append("    filetypes=[")
-                    for filetype in filetypes:
-                        code_lines.append(f"        {filetype},")
-                    code_lines.append("    ],")
-            except (SyntaxError, NameError, TypeError, ValueError):
-                # If evaluation fails, add as string
-                code_lines.append(f"    filetypes={self.filetypes_var.get()},")
+            filetypes_value = self.filetypes_var.get()
+            if filetypes_value == "None":
+                # Don't add filetypes parameter when None (will use default "All files")
+                pass
+            else:
+                try:
+                    # Try to evaluate the filetypes string
+                    filetypes = eval(filetypes_value)
+                    if filetypes:
+                        code_lines.append("    filetypes=[")
+                        for filetype in filetypes:
+                            code_lines.append(f"        {filetype},")
+                        code_lines.append("    ],")
+                except (SyntaxError, NameError, TypeError, ValueError):
+                    # If evaluation fails, add as string
+                    code_lines.append(f"    filetypes={filetypes_value},")
         
         # Add select parameter for askpath
         if dialog_type == "askpath" and self.select_var.get() != "file":

@@ -1484,8 +1484,8 @@ class TestPathBrowserCoreAdditionalCoverage:
         # Mock lang.get to return localized text
         with patch("tkface.widget.pathbrowser.core.lang.get", return_value="All files"):
             browser._update_filter_options()
-            # Should set to "All files" as default
-            browser.filter_combo.set.assert_called_with("All files")
+            # Should set to first filetype as default
+            browser.filter_combo.set.assert_called_with("Text files (*.txt)")
 
     def test_go_up_no_parent(self, root):
         """Test _go_up method with no parent directory."""
