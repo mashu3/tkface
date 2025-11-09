@@ -523,15 +523,15 @@ class DateEntryDemo:
         else:  # DateEntry
             self.button_text_entry.config(state="disabled")
 
-    def generate_code(self):
-        """Generate Python code for the current DatePicker configuration."""
-        # Build the code string
-        dateentry_class = (
-            "DateEntry"
-            if self.dateentry_type_var.get() == "DateEntry"
-            else "DateFrame"
-        )
-        code_lines = [
+    def _get_dateentry_class(self):
+        """Get the DateEntry class name based on current type."""
+        if self.dateentry_type_var.get() == "DateEntry":
+            return "DateEntry"
+        return "DateFrame"
+
+    def _build_constructor_header(self, dateentry_class):
+        """Build the constructor header lines."""
+        return [
             "import tkinter as tk",
             "import tkface",
             "",
@@ -539,65 +539,60 @@ class DateEntryDemo:
             f"dateentry = tkface.{dateentry_class}(",
             "    parent,  # Replace 'parent' with your parent widget",
         ]
-        # Get current date format
+
+    def _add_required_params(self, code_lines):
+        """Add required parameters to code lines."""
         current_format = self.date_formats[self.format_var.get()]
         code_lines.append(f"    date_format='{current_format}',")
-        # Add year and month if initial date is set and different from current
-        # date
-        initial_date = self.initial_dateentry.get_date()
-        current_date = datetime.date.today()
+
+    def _add_year_month_params(self, code_lines, initial_date, current_date):
+        """Add year and month parameters if needed."""
         if initial_date and (
             initial_date.year != current_date.year
             or initial_date.month != current_date.month
         ):
             code_lines.append(f"    year={initial_date.year},")
             code_lines.append(f"    month={initial_date.month},")
-        # Add optional parameters based on current settings
+
+    def _add_optional_params(self, code_lines):
+        """Add optional parameters to code lines."""
         if self.theme_var.get() != "light":
             code_lines.append(f"    theme='{self.theme_var.get()}',")
         if self.lang_var.get() != "en":
             code_lines.append(f"    language='{self.lang_var.get()}',")
         if self.week_start_var.get() != "Sunday":
             code_lines.append(f"    week_start='{self.week_start_var.get()}',")
-        # Add weekend colors if not default
+        self._add_weekend_colors_param(code_lines)
+        if self.today_color_var.get() != "yellow":
+            code_lines.append(f"    today_color='{self.today_color_var.get()}',")
+        if self.show_week_var.get():
+            code_lines.append("    show_week_numbers=True,")
+        if (
+            self.dateentry_type_var.get() == "DateFrame"
+            and self.button_text_var.get() != "📅"
+        ):
+            code_lines.append(f"    button_text='{self.button_text_var.get()}',")
+
+    def _add_weekend_colors_param(self, code_lines):
+        """Add weekend colors parameter if not default."""
         if (
             self.sunday_color_var.get() != "lightgray"
             or self.saturday_color_var.get() != "lightgray"
         ):
             code_lines.append("    day_colors={")
             if self.sunday_color_var.get() != "lightgray":
-                sunday_color = self.sunday_color_var.get()
-                code_lines.append(f"        'Sunday': '{sunday_color}',")
+                code_lines.append(
+                    f"        'Sunday': '{self.sunday_color_var.get()}',"
+                )
             if self.saturday_color_var.get() != "lightgray":
-                saturday_color = self.saturday_color_var.get()
-                code_lines.append(f"        'Saturday': '{saturday_color}',")
+                code_lines.append(
+                    f"        'Saturday': '{self.saturday_color_var.get()}',"
+                )
             code_lines.append("    },")
-        # Add holidays (only if not empty)
-        # Note: holidays parameter is omitted when empty (default behavior)
-        # Add today color if not default
-        if self.today_color_var.get() != "yellow":
-            today_color = self.today_color_var.get()
-            code_lines.append(f"    today_color='{today_color}',")
-        # Add week numbers if enabled
-        if self.show_week_var.get():
-            code_lines.append("    show_week_numbers=True,")
-        # Add button text if not default (only for DateFrame type)
-        if (
-            self.dateentry_type_var.get() == "DateFrame"
-            and self.button_text_var.get() != "📅"
-        ):
-            button_text = self.button_text_var.get()
-            code_lines.append(f"    button_text='{button_text}',")
-        code_lines.extend(
-            [
-                ")",
-                "",
-                "# Additional setup if needed:",
-            ]
-        )
-        # Add initial date setting if available and different from current date
+
+    def _add_initial_date_code(self, code_lines, initial_date, current_date):
+        """Add initial date setting code if needed."""
         if initial_date and initial_date != current_date:
-            # Create date string
             date_args = f"{initial_date.year}, {initial_date.month}, {initial_date.day}"
             date_str = f"dateentry.set_selected_date(datetime.date({date_args}))"
             code_lines.extend(
@@ -607,12 +602,34 @@ class DateEntryDemo:
                     "",
                 ]
             )
+
+    def _add_usage_example(self, code_lines):
+        """Add usage example code."""
         code_lines.extend(
             [
                 "if dateentry.get_date():",
                 "    print('Selected date: ' + dateentry.get_date_string())",
             ]
         )
+
+    def generate_code(self):
+        """Generate Python code for the current DatePicker configuration."""
+        dateentry_class = self._get_dateentry_class()
+        code_lines = self._build_constructor_header(dateentry_class)
+        self._add_required_params(code_lines)
+        initial_date = self.initial_dateentry.get_date()
+        current_date = datetime.date.today()
+        self._add_year_month_params(code_lines, initial_date, current_date)
+        self._add_optional_params(code_lines)
+        code_lines.extend(
+            [
+                ")",
+                "",
+                "# Additional setup if needed:",
+            ]
+        )
+        self._add_initial_date_code(code_lines, initial_date, current_date)
+        self._add_usage_example(code_lines)
         # Update code display
         self.code_text.delete("1.0", tk.END)
         code_text = "\n".join(code_lines)
