@@ -18,13 +18,11 @@ from tkface.widget.pathbrowser.core import PathBrowserConfig
 class TestPathBrowserCoreAdditionalCoverage:
     """Additional tests for PathBrowser core functionality to improve coverage."""
     
-    def _create_browser(self, root, **kwargs):
-        """Create PathBrowser instance with common setup."""
-        # Separate PathBrowser constructor parameters from mock attributes
+    def _separate_params_and_attributes(self, kwargs):
+        """Separate PathBrowser constructor parameters from mock attributes."""
         pathbrowser_params = {}
         mock_attributes = {}
         
-        # Known PathBrowser constructor parameters
         valid_params = {
             'select', 'multiple', 'initialdir', 'filetypes', 'ok_label', 
             'cancel_label', 'save_mode', 'initialfile', 'config'
@@ -36,39 +34,54 @@ class TestPathBrowserCoreAdditionalCoverage:
             else:
                 mock_attributes[key] = value
         
-        # Handle Mock config objects by creating proper PathBrowserConfig
+        return pathbrowser_params, mock_attributes
+    
+    def _get_mock_attribute_value(self, attr, value):
+        """Get proper value for Mock attribute, using defaults when needed."""
+        if not hasattr(value, '_mock_name'):
+            return value
+        
+        if attr == 'filetypes':
+            return [("All files", "*.*")]
+        if attr == 'initialdir':
+            return None
+        if attr == 'max_cache_size':
+            return 1000
+        if attr == 'batch_size':
+            return 100
+        
+        return value
+    
+    def _process_mock_config(self, config):
+        """Convert Mock config object to proper PathBrowserConfig."""
+        from tkface.widget.pathbrowser.core import PathBrowserConfig
+        
+        proper_config = PathBrowserConfig()
+        config_attrs = [
+            'select', 'multiple', 'initialdir', 'filetypes', 'ok_label', 
+            'cancel_label', 'save_mode', 'initialfile', 'max_cache_size', 
+            'batch_size', 'enable_memory_monitoring', 'show_hidden_files', 'lazy_loading'
+        ]
+        
+        for attr in config_attrs:
+            if hasattr(config, attr):
+                value = getattr(config, attr)
+                value = self._get_mock_attribute_value(attr, value)
+                setattr(proper_config, attr, value)
+        
+        return proper_config
+    
+    def _create_browser(self, root, **kwargs):
+        """Create PathBrowser instance with common setup."""
+        pathbrowser_params, mock_attributes = self._separate_params_and_attributes(kwargs)
+        
         if 'config' in pathbrowser_params:
             config = pathbrowser_params['config']
-            if hasattr(config, '_mock_name'):  # It's a Mock object
-                from tkface.widget.pathbrowser.core import PathBrowserConfig
-
-                # Create a proper config with Mock attributes as overrides
-                proper_config = PathBrowserConfig()
-                for attr in ['select', 'multiple', 'initialdir', 'filetypes', 'ok_label', 
-                           'cancel_label', 'save_mode', 'initialfile', 'max_cache_size', 
-                           'batch_size', 'enable_memory_monitoring', 'show_hidden_files', 'lazy_loading']:
-                    if hasattr(config, attr):
-                        value = getattr(config, attr)
-                        # Handle special cases for Mock objects
-                        if attr == 'filetypes' and hasattr(value, '_mock_name'):
-                            # Use default filetypes for Mock objects
-                            value = [("All files", "*.*")]
-                        elif attr == 'initialdir' and hasattr(value, '_mock_name'):
-                            # Use None for Mock initialdir
-                            value = None
-                        elif attr in ['max_cache_size', 'batch_size'] and hasattr(value, '_mock_name'):
-                            # Use default values for Mock numeric attributes
-                            if attr == 'max_cache_size':
-                                value = 1000
-                            elif attr == 'batch_size':
-                                value = 100
-                        setattr(proper_config, attr, value)
-                pathbrowser_params['config'] = proper_config
+            if hasattr(config, '_mock_name'):
+                pathbrowser_params['config'] = self._process_mock_config(config)
         
-        # Create PathBrowser with valid parameters
         browser = PathBrowser(root, **pathbrowser_params)
         
-        # Set mock attributes after creation
         for attr, value in mock_attributes.items():
             setattr(browser, attr, value)
         
