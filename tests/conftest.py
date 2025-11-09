@@ -1683,6 +1683,178 @@ def simpledialog_class_mock():
         yield mock_class
 
 
+def _create_mock_toplevel():
+    """Create and configure a mock Toplevel widget."""
+    mock_toplevel = Mock()
+    mock_toplevel.wait_window = Mock()
+    mock_toplevel.grab_set = Mock()
+    mock_toplevel.lift = Mock()
+    mock_toplevel.focus_set = Mock()
+    mock_toplevel.bind = Mock()
+    mock_toplevel.destroy = Mock()
+    mock_toplevel.configure = Mock()
+    mock_toplevel.geometry = Mock()
+    mock_toplevel.title = Mock()
+    mock_toplevel.transient = Mock()
+    mock_toplevel.winfo_toplevel = Mock(return_value=mock_toplevel)
+    mock_toplevel.winfo_rootx = Mock(return_value=100)
+    mock_toplevel.winfo_rooty = Mock(return_value=100)
+    mock_toplevel.winfo_width = Mock(return_value=300)
+    mock_toplevel.winfo_height = Mock(return_value=200)
+    mock_toplevel.winfo_reqwidth = Mock(return_value=300)
+    mock_toplevel.winfo_reqheight = Mock(return_value=200)
+    mock_toplevel.update_idletasks = Mock()
+    mock_toplevel.update = Mock()
+    mock_toplevel.after = Mock()
+    mock_toplevel.event_generate = Mock()
+    mock_toplevel.clipboard_clear = Mock()
+    mock_toplevel.clipboard_append = Mock()
+    return mock_toplevel
+
+
+def _create_mock_widgets():
+    """Create and configure all mock widgets."""
+    mock_label = Mock()
+    mock_label.grid = Mock()
+    mock_label.pack = Mock()
+    mock_label.configure = Mock()
+    
+    mock_button = Mock()
+    mock_button.pack = Mock()
+    mock_button.bind = Mock()
+    mock_button.focus_set = Mock()
+    mock_button.invoke = Mock()
+    mock_button.cget = Mock(return_value="Button Text")
+    mock_button.configure = Mock()
+    
+    mock_entry = Mock()
+    mock_entry.grid = Mock()
+    mock_entry.bind = Mock()
+    mock_entry.focus_set = Mock()
+    mock_entry.configure = Mock()
+    mock_entry.get = Mock(return_value="test")
+    mock_entry.insert = Mock()
+    mock_entry.delete = Mock()
+    
+    mock_frame = Mock()
+    mock_frame.pack = Mock()
+    mock_frame.grid = Mock()
+    mock_frame.configure = Mock()
+    
+    mock_listbox = Mock()
+    mock_listbox.pack = Mock()
+    mock_listbox.bind = Mock()
+    mock_listbox.insert = Mock()
+    mock_listbox.selection_set = Mock()
+    mock_listbox.curselection = Mock(return_value=[])
+    mock_listbox.yview = Mock()
+    mock_listbox.configure = Mock()
+    
+    mock_scrollbar = Mock()
+    mock_scrollbar.pack = Mock()
+    mock_scrollbar.config = Mock()
+    mock_scrollbar.configure = Mock()
+    
+    mock_stringvar = Mock()
+    mock_stringvar.get = Mock(return_value="")
+    mock_stringvar.set = Mock()
+    
+    return {
+        "label": mock_label,
+        "button": mock_button,
+        "entry": mock_entry,
+        "frame": mock_frame,
+        "listbox": mock_listbox,
+        "scrollbar": mock_scrollbar,
+        "stringvar": mock_stringvar,
+    }
+
+
+def _setup_mock_instance_attributes(instance, mock_toplevel, mock_button, mock_stringvar, mock_logger_instance):
+    """Set up basic attributes on a mock instance."""
+    instance.window = mock_toplevel
+    instance.listbox = None
+    instance.choices = None
+    instance.multiple = False
+    instance.initial_selection = []
+    instance.validate_func = None
+    instance.entry_var = mock_stringvar
+    instance.ok_btn = mock_button
+    instance.cancel_btn = mock_button
+    instance.result = None
+    instance.language = "en"
+    instance.logger = mock_logger_instance
+
+
+def _setup_mock_instance_methods(instance):
+    """Set up methods with actual behavior on a mock instance."""
+    def mock_close():
+        instance.window.destroy()
+    instance.close = mock_close
+    
+    def mock_on_cancel():
+        instance.result = None
+        instance.close()
+    instance._on_cancel = mock_on_cancel
+    
+    def mock_get_selection_result():
+        if hasattr(instance, 'listbox') and instance.listbox is not None:
+            if hasattr(instance.listbox, 'curselection'):
+                selection = instance.listbox.curselection()
+                if selection:
+                    return f"Option {selection[0] + 1}"
+                return None
+            return "Choice 1"
+        entry_value = instance.entry_var.get()
+        return entry_value if entry_value else None
+    instance._get_selection_result = mock_get_selection_result
+    
+    def mock_on_ok():
+        result = instance._get_selection_result()
+        if instance.validate_func is not None:
+            if instance.validate_func(result):
+                instance.result = result
+                instance.close()
+            else:
+                from tkface.dialog import messagebox
+                messagebox.showwarning("Validation Error", "Invalid input")
+        else:
+            instance.result = result
+            instance.close()
+    instance._on_ok = mock_on_ok
+    
+    def mock_on_double_click(event):
+        if hasattr(instance, 'listbox') and instance.listbox is not None:
+            selection = instance.listbox.curselection()
+            if selection:
+                result = f"Option {selection[0] + 1}"
+                instance.set_result(result)
+    instance._on_double_click = mock_on_double_click
+    
+    def mock_set_result(value):
+        instance.result = value
+    instance.set_result = mock_set_result
+    
+    instance._create_content = Mock(return_value=None)
+    instance._create_buttons = Mock()
+    instance._set_window_position = Mock()
+
+
+def _mock_custom_simpledialog_new(cls, mock_toplevel, mock_button, mock_stringvar, mock_logger_instance, *args, **kwargs):
+    """Create a mock CustomSimpleDialog instance."""
+    instance = Mock()
+    _setup_mock_instance_attributes(instance, mock_toplevel, mock_button, mock_stringvar, mock_logger_instance)
+    _setup_mock_instance_methods(instance)
+    
+    if hasattr(cls, '__init__') and cls.__init__ is not object.__init__:
+        try:
+            cls.__init__(instance, *args, **kwargs)
+        except Exception as e:
+            logging.debug(f"Failed to initialize CustomSimpleDialog: {e}")
+    
+    return instance
+
+
 @pytest.fixture
 def simpledialog_real_instance():
     """Provide comprehensive mocking for CustomSimpleDialog to allow real instance creation."""
@@ -1702,196 +1874,44 @@ def simpledialog_real_instance():
          patch("tkface.dialog.simpledialog.logging.getLogger") as mock_logger, \
          patch("tkface.dialog.simpledialog.CustomSimpleDialog.__new__") as mock_new:
         
-        # Configure lang.get to return the key as the value
         mock_lang_get.side_effect = lambda key, *args, **kwargs: key
         
-        # Mock logger
         mock_logger_instance = Mock()
         mock_logger.return_value = mock_logger_instance
         
-        # Mock CustomSimpleDialog.__new__ to return a proper instance
-        def mock_custom_simpledialog_new(cls, *args, **kwargs):
-            # Create a mock instance
-            instance = Mock()
-            instance.window = mock_toplevel
-            instance.listbox = None
-            instance.choices = None
-            instance.multiple = False
-            instance.initial_selection = []
-            instance.validate_func = None
-            instance.entry_var = mock_stringvar
-            instance.ok_btn = mock_button
-            instance.cancel_btn = mock_button
-            instance.result = None
-            instance.language = "en"
-            instance.logger = mock_logger_instance
-            
-            # Set up methods with actual behavior
-            def mock_close():
-                instance.window.destroy()
-            instance.close = mock_close
-            
-            def mock_on_cancel():
-                instance.result = None
-                instance.close()
-            instance._on_cancel = mock_on_cancel
-            
-            def mock_on_ok():
-                result = instance._get_selection_result()
-                if instance.validate_func is not None:
-                    if instance.validate_func(result):
-                        instance.result = result
-                        instance.close()
-                    else:
-                        # Show warning message
-                        from tkface.dialog import messagebox
-                        messagebox.showwarning("Validation Error", "Invalid input")
-                else:
-                    instance.result = result
-                    instance.close()
-            instance._on_ok = mock_on_ok
-            
-            def mock_get_selection_result():
-                if hasattr(instance, 'listbox') and instance.listbox is not None:
-                    # Check if listbox has selection
-                    if hasattr(instance.listbox, 'curselection'):
-                        selection = instance.listbox.curselection()
-                        if selection:
-                            # Return the selected item
-                            return f"Option {selection[0] + 1}"
-                        else:
-                            return None
-                    else:
-                        return "Choice 1"
-                else:
-                    # Simulate entry value - return None if empty
-                    entry_value = instance.entry_var.get()
-                    return entry_value if entry_value else None
-            instance._get_selection_result = mock_get_selection_result
-            
-            def mock_on_double_click(event):
-                if hasattr(instance, 'listbox') and instance.listbox is not None:
-                    selection = instance.listbox.curselection()
-                    if selection:
-                        result = f"Option {selection[0] + 1}"
-                        instance.set_result(result)
-            instance._on_double_click = mock_on_double_click
-            
-            def mock_set_result(value):
-                instance.result = value
-            instance.set_result = mock_set_result
-            
-            instance._create_content = Mock(return_value=None)
-            instance._create_buttons = Mock()
-            instance._set_window_position = Mock()
-            
-            # Call the actual __init__ method if it exists
-            if hasattr(cls, '__init__') and cls.__init__ is not object.__init__:
-                try:
-                    cls.__init__(instance, *args, **kwargs)
-                except Exception as e:
-                    # If __init__ fails, continue with mock instance
-                    logging.debug(f"Failed to initialize CustomSimpleDialog: {e}")
-            
-            return instance
+        mock_toplevel = _create_mock_toplevel()
+        mock_widgets = _create_mock_widgets()
         
-        mock_new.side_effect = mock_custom_simpledialog_new
+        def mock_custom_simpledialog_new_wrapper(cls, *args, **kwargs):
+            return _mock_custom_simpledialog_new(
+                cls, mock_toplevel, mock_widgets["button"],
+                mock_widgets["stringvar"], mock_logger_instance, *args, **kwargs
+            )
         
-        # Create comprehensive mock instances
-        mock_toplevel = Mock()
-        mock_toplevel.wait_window = Mock()
-        mock_toplevel.grab_set = Mock()
-        mock_toplevel.lift = Mock()
-        mock_toplevel.focus_set = Mock()
-        mock_toplevel.bind = Mock()
-        mock_toplevel.destroy = Mock()
-        mock_toplevel.configure = Mock()
-        mock_toplevel.geometry = Mock()
-        mock_toplevel.title = Mock()
-        mock_toplevel.transient = Mock()
-        mock_toplevel.winfo_toplevel = Mock(return_value=mock_toplevel)
-        mock_toplevel.winfo_rootx = Mock(return_value=100)
-        mock_toplevel.winfo_rooty = Mock(return_value=100)
-        mock_toplevel.winfo_width = Mock(return_value=300)
-        mock_toplevel.winfo_height = Mock(return_value=200)
-        mock_toplevel.winfo_reqwidth = Mock(return_value=300)
-        mock_toplevel.winfo_reqheight = Mock(return_value=200)
-        mock_toplevel.update_idletasks = Mock()
-        mock_toplevel.update = Mock()
-        mock_toplevel.after = Mock()
-        mock_toplevel.event_generate = Mock()
-        mock_toplevel.clipboard_clear = Mock()
-        mock_toplevel.clipboard_append = Mock()
+        mock_new.side_effect = mock_custom_simpledialog_new_wrapper
         
-        mock_label = Mock()
-        mock_label.grid = Mock()
-        mock_label.pack = Mock()
-        mock_label.configure = Mock()
-        
-        mock_button = Mock()
-        mock_button.pack = Mock()
-        mock_button.bind = Mock()
-        mock_button.focus_set = Mock()
-        mock_button.invoke = Mock()
-        mock_button.cget = Mock(return_value="Button Text")
-        mock_button.configure = Mock()
-        
-        mock_entry = Mock()
-        mock_entry.grid = Mock()
-        mock_entry.bind = Mock()
-        mock_entry.focus_set = Mock()
-        mock_entry.configure = Mock()
-        mock_entry.get = Mock(return_value="test")
-        mock_entry.insert = Mock()
-        mock_entry.delete = Mock()
-        
-        mock_frame = Mock()
-        mock_frame.pack = Mock()
-        mock_frame.grid = Mock()
-        mock_frame.configure = Mock()
-        
-        mock_listbox = Mock()
-        mock_listbox.pack = Mock()
-        mock_listbox.bind = Mock()
-        mock_listbox.insert = Mock()
-        mock_listbox.selection_set = Mock()
-        mock_listbox.curselection = Mock(return_value=[])
-        mock_listbox.yview = Mock()
-        mock_listbox.configure = Mock()
-        
-        mock_scrollbar = Mock()
-        mock_scrollbar.pack = Mock()
-        mock_scrollbar.config = Mock()
-        mock_scrollbar.configure = Mock()
-        
-        mock_stringvar = Mock()
-        mock_stringvar.get = Mock(return_value="")
-        mock_stringvar.set = Mock()
-        
-        # Set return values for constructors
         mock_toplevel_class.return_value = mock_toplevel
-        mock_label_class.return_value = mock_label
-        mock_button_class.return_value = mock_button
-        mock_entry_class.return_value = mock_entry
-        mock_frame_class.return_value = mock_frame
-        mock_scrollbar_class.return_value = mock_scrollbar
-        mock_listbox_class.return_value = mock_listbox
-        mock_stringvar_class.return_value = mock_stringvar
+        mock_label_class.return_value = mock_widgets["label"]
+        mock_button_class.return_value = mock_widgets["button"]
+        mock_entry_class.return_value = mock_widgets["entry"]
+        mock_frame_class.return_value = mock_widgets["frame"]
+        mock_scrollbar_class.return_value = mock_widgets["scrollbar"]
+        mock_listbox_class.return_value = mock_widgets["listbox"]
+        mock_stringvar_class.return_value = mock_widgets["stringvar"]
         
-        # Mock _setup_dialog_base to return a mock root and language
         mock_root = Mock()
         mock_root.tk = Mock()
         mock_setup.return_value = (mock_root, False, "en")
         
         yield {
             "toplevel": mock_toplevel,
-            "label": mock_label,
-            "button": mock_button,
-            "entry": mock_entry,
-            "frame": mock_frame,
-            "listbox": mock_listbox,
-            "scrollbar": mock_scrollbar,
-            "stringvar": mock_stringvar,
+            "label": mock_widgets["label"],
+            "button": mock_widgets["button"],
+            "entry": mock_widgets["entry"],
+            "frame": mock_widgets["frame"],
+            "listbox": mock_widgets["listbox"],
+            "scrollbar": mock_widgets["scrollbar"],
+            "stringvar": mock_widgets["stringvar"],
             "logger": mock_logger_instance,
             "new": mock_new,
         }
