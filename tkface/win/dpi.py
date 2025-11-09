@@ -741,13 +741,15 @@ class DPIManager:
         """Patch widget constructors with scaling."""
         self._patch_standard_widgets(scaling_factor)
         self._patch_button_constructor(scaling_factor)
+        self._patch_text_constructor(scaling_factor)
+        self._patch_listbox_constructor(scaling_factor)
 
     def _patch_standard_widgets(self, scaling_factor: ScalingFactor) -> None:
         """Patch standard widget constructors with scaling."""
-        # Standard tk widgets (Button excluded - has special handling)
+        # Standard tk widgets (Button, Text, Listbox excluded - have special handling)
         tk_widgets = [
-            tk.LabelFrame, tk.Frame, tk.Entry, tk.Label, tk.Text,
-            tk.Checkbutton, tk.Radiobutton, tk.Listbox, tk.Spinbox,
+            tk.LabelFrame, tk.Frame, tk.Entry, tk.Label,
+            tk.Checkbutton, tk.Radiobutton, tk.Spinbox,
             tk.Scale, tk.Scrollbar, tk.Canvas, tk.Menu, tk.Menubutton,
         ]
         
@@ -835,6 +837,34 @@ class DPIManager:
             return original(self, parent, **scaled_kwargs)
         
         self._patch_widget_constructor(tk.Button, scaling_factor, "tk.Button.__init__", button_handler)
+
+    def _patch_text_constructor(self, scaling_factor: ScalingFactor) -> None:
+        """Patch the Text constructor with scaling (excluding height which specifies line count)."""
+        def text_handler(self, parent, kwargs, original, scaling_factor, manager):
+            # Use unified method but exclude height from scaling (height is line count, not pixels)
+            scaled_kwargs = manager._scale_widget_kwargs(
+                kwargs, scaling_factor, scale_padding=True, scale_length=True
+            )
+            # Restore original height value (line count should not be scaled)
+            if "height" in kwargs:
+                scaled_kwargs["height"] = kwargs["height"]
+            return original(self, parent, **scaled_kwargs)
+        
+        self._patch_widget_constructor(tk.Text, scaling_factor, "tk.Text.__init__", text_handler)
+
+    def _patch_listbox_constructor(self, scaling_factor: ScalingFactor) -> None:
+        """Patch the Listbox constructor with scaling (excluding height which specifies line count)."""
+        def listbox_handler(self, parent, kwargs, original, scaling_factor, manager):
+            # Use unified method but exclude height from scaling (height is line count, not pixels)
+            scaled_kwargs = manager._scale_widget_kwargs(
+                kwargs, scaling_factor, scale_padding=True, scale_length=True
+            )
+            # Restore original height value (line count should not be scaled)
+            if "height" in kwargs:
+                scaled_kwargs["height"] = kwargs["height"]
+            return original(self, parent, **scaled_kwargs)
+        
+        self._patch_widget_constructor(tk.Listbox, scaling_factor, "tk.Listbox.__init__", listbox_handler)
 
     def _patch_treeview_methods(self, scaling_factor: ScalingFactor) -> None:
         """Patch TreeView methods with scaling."""

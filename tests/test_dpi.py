@@ -1384,9 +1384,15 @@ def helper__test_tkinter_constructor_patch(tk_class, manager, scaling_factor, **
         setattr(tk_class, '__init__', mock_original_init)
         
         # Apply the patch
-        # Handle special case for Button
+        # Handle special cases for Button, Text, and Listbox
         if tk_class.__name__ == 'Button':
             patch_method = getattr(manager, '_patch_button_constructor')
+            patch_method(scaling_factor)
+        elif tk_class.__name__ == 'Text':
+            patch_method = getattr(manager, '_patch_text_constructor')
+            patch_method(scaling_factor)
+        elif tk_class.__name__ == 'Listbox':
+            patch_method = getattr(manager, '_patch_listbox_constructor')
             patch_method(scaling_factor)
         else:
             # Use unified patching method
@@ -1403,7 +1409,10 @@ def helper__test_tkinter_constructor_patch(tk_class, manager, scaling_factor, **
         # Calculate expected values
         expected_kwargs = {}
         for key, value in test_kwargs.items():
-            if key in ['padx', 'pady', 'bd', 'wraplength', 'width', 'height']:
+            # Text and Listbox height should not be scaled (it's line count, not pixels)
+            if key == 'height' and tk_class.__name__ in ('Text', 'Listbox'):
+                expected_kwargs[key] = value
+            elif key in ['padx', 'pady', 'bd', 'wraplength', 'width', 'height']:
                 if isinstance(value, tuple):
                     expected_kwargs[key] = tuple(int(v * scaling_factor) for v in value)
                 else:
@@ -1419,8 +1428,15 @@ def helper__test_tkinter_constructor_patch_no_scaling(tk_class, manager, scaling
     """Helper function to test tkinter constructor patching without scaling parameters."""
     with TkinterMethodPatchContext(tk_class, '__init__', manager, scaling_factor) as patch_ctx:
         # Apply the patch
+        # Handle special cases for Button, Text, and Listbox
         if tk_class.__name__ == 'Button':
             patch_method = getattr(manager, '_patch_button_constructor')
+            patch_method(scaling_factor)
+        elif tk_class.__name__ == 'Text':
+            patch_method = getattr(manager, '_patch_text_constructor')
+            patch_method(scaling_factor)
+        elif tk_class.__name__ == 'Listbox':
+            patch_method = getattr(manager, '_patch_listbox_constructor')
             patch_method(scaling_factor)
         else:
             patch_method = getattr(manager, '_apply_standard_widget_patch')
@@ -2761,6 +2777,8 @@ class TestDPIWidgetPatching:
         # Text tests
         (tk.Text, 1.5, {"bd": 4}, {"bd": 6}),
         (tk.Text, 2.0, {"bd": 2}, {"bd": 4}),
+        (tk.Text, 2.0, {"height": 8}, {"height": 8}),  # height is line count, not scaled
+        (tk.Text, 1.5, {"height": 10, "bd": 2}, {"height": 10, "bd": 3}),
         # Checkbutton tests
         (tk.Checkbutton, 2.0, {"bd": 2}, {"bd": 4}),
         (tk.Checkbutton, 1.5, {"bd": 3}, {"bd": 4}),
@@ -2770,6 +2788,8 @@ class TestDPIWidgetPatching:
         # Listbox tests
         (tk.Listbox, 2.0, {"bd": 1}, {"bd": 2}),
         (tk.Listbox, 1.5, {"bd": 4}, {"bd": 6}),
+        (tk.Listbox, 2.0, {"height": 5}, {"height": 5}),  # height is line count, not scaled
+        (tk.Listbox, 1.5, {"height": 3, "bd": 2}, {"height": 3, "bd": 3}),
         # Spinbox tests
         (tk.Spinbox, 1.5, {"bd": 4}, {"bd": 6}),
         (tk.Spinbox, 2.0, {"bd": 2}, {"bd": 4}),
@@ -2834,9 +2854,9 @@ class TestDPIWidgetPatching:
         _test_tkinter_constructor_patch_with_context(manager, tk.Label, '_apply_standard_widget_patch', 2.0)
 
     def test_patch_text_constructor(self):
-        """Test _apply_standard_widget_patch for Text."""
+        """Test _patch_text_constructor for Text."""
         manager = create_dpi_manager_for_test()
-        _test_tkinter_constructor_patch_with_context(manager, tk.Text, '_apply_standard_widget_patch', 2.0)
+        _test_tkinter_constructor_patch_with_context(manager, tk.Text, '_patch_text_constructor', 2.0)
 
 
     def test_patch_checkbutton_constructor(self):
@@ -2852,9 +2872,9 @@ class TestDPIWidgetPatching:
 
 
     def test_patch_listbox_constructor(self):
-        """Test _apply_standard_widget_patch for Listbox."""
+        """Test _patch_listbox_constructor for Listbox."""
         manager = create_dpi_manager_for_test()
-        _test_tkinter_constructor_patch_with_context(manager, tk.Listbox, '_apply_standard_widget_patch', 2.0)
+        _test_tkinter_constructor_patch_with_context(manager, tk.Listbox, '_patch_listbox_constructor', 2.0)
 
 
     def test_patch_spinbox_constructor(self):
@@ -3275,10 +3295,21 @@ class TestDPICoverageImprovements:
         self._test_constructor_patch(
             manager=manager,
             widget_class=tk.Text,
-            patch_method='_apply_standard_widget_patch',
+            patch_method='_patch_text_constructor',
             patch_path='tkinter.Text.__init__',
             input_kwargs={'padx': 10, 'pady': 20, 'bd': 2},
             expected_kwargs={'padx': 20, 'pady': 40, 'bd': 4}  # Unified rule: all scale
+        )
+
+    def test_text_constructor_patch_with_height(self, manager):
+        """Test Text constructor patching with height (should not be scaled)."""
+        self._test_constructor_patch(
+            manager=manager,
+            widget_class=tk.Text,
+            patch_method='_patch_text_constructor',
+            patch_path='tkinter.Text.__init__',
+            input_kwargs={'height': 8, 'bd': 2},
+            expected_kwargs={'height': 8, 'bd': 4}  # height is line count, not scaled
         )
 
     def test_checkbutton_constructor_patch_with_padding(self, manager):
@@ -3308,10 +3339,21 @@ class TestDPICoverageImprovements:
         self._test_constructor_patch(
             manager=manager,
             widget_class=tk.Listbox,
-            patch_method='_apply_standard_widget_patch',
+            patch_method='_patch_listbox_constructor',
             patch_path='tkinter.Listbox.__init__',
             input_kwargs={'padx': 10, 'pady': 20, 'bd': 2},
             expected_kwargs={'padx': 20, 'pady': 40, 'bd': 4}  # Unified rule: all scale
+        )
+
+    def test_listbox_constructor_patch_with_height(self, manager):
+        """Test Listbox constructor patching with height (should not be scaled)."""
+        self._test_constructor_patch(
+            manager=manager,
+            widget_class=tk.Listbox,
+            patch_method='_patch_listbox_constructor',
+            patch_path='tkinter.Listbox.__init__',
+            input_kwargs={'height': 5, 'bd': 2},
+            expected_kwargs={'height': 5, 'bd': 4}  # height is line count, not scaled
         )
 
     def test_spinbox_constructor_patch_with_padding(self, manager):
