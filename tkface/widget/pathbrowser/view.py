@@ -90,6 +90,10 @@ def _create_main_paned_window(pathbrowser_instance):
     pathbrowser_instance.tree_frame = ttk.Frame(pathbrowser_instance.paned)
     pathbrowser_instance.paned.add(pathbrowser_instance.tree_frame, weight=2)
 
+    # Configure grid weights for proper scrolling (teratail solution)
+    pathbrowser_instance.tree_frame.grid_columnconfigure(0, weight=1)
+    pathbrowser_instance.tree_frame.grid_rowconfigure(0, weight=1)
+
     # Directory tree with icons and better styling
     pathbrowser_instance.tree = ttk.Treeview(
         pathbrowser_instance.tree_frame,
@@ -97,7 +101,17 @@ def _create_main_paned_window(pathbrowser_instance):
         selectmode="browse",
         height=10,  # Reduced height for smaller dialog
     )
-    pathbrowser_instance.tree.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+    # Add scrollbars for directory tree
+    tree_v_scrollbar = ttk.Scrollbar(
+        pathbrowser_instance.tree_frame,
+        orient=tk.VERTICAL,
+        command=pathbrowser_instance.tree.yview
+    )
+    pathbrowser_instance.tree.configure(yscrollcommand=tree_v_scrollbar.set)
+    
+    # Use grid instead of pack for better control (teratail solution)
+    pathbrowser_instance.tree.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
+    tree_v_scrollbar.grid(row=0, column=1, sticky="ns")
     
     # Set initial sash position to give 200px to the tree view (DPI-scaled)
     # This will be applied after the paned window is fully created
@@ -156,6 +170,10 @@ def _create_file_list(pathbrowser_instance):
     pathbrowser_instance.file_frame = ttk.Frame(pathbrowser_instance.paned)
     pathbrowser_instance.paned.add(pathbrowser_instance.file_frame, weight=2)
 
+    # Configure grid weights for proper scrolling (teratail solution)
+    pathbrowser_instance.file_frame.grid_columnconfigure(0, weight=1)
+    pathbrowser_instance.file_frame.grid_rowconfigure(0, weight=1)
+
     # File list as Treeview for better appearance
     select_mode = "extended" if pathbrowser_instance.config.multiple else "browse"
     pathbrowser_instance.file_tree = ttk.Treeview(
@@ -202,7 +220,17 @@ def _create_file_list(pathbrowser_instance):
     row_height = 20
     style.configure("Treeview", rowheight=row_height)
 
-    pathbrowser_instance.file_tree.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+    # Add scrollbars for file tree
+    file_v_scrollbar = ttk.Scrollbar(
+        pathbrowser_instance.file_frame,
+        orient=tk.VERTICAL,
+        command=pathbrowser_instance.file_tree.yview
+    )
+    pathbrowser_instance.file_tree.configure(yscrollcommand=file_v_scrollbar.set)
+    
+    # Use grid instead of pack for better control (teratail solution)
+    pathbrowser_instance.file_tree.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
+    file_v_scrollbar.grid(row=0, column=1, sticky="ns")
 
 
 def _create_status_and_buttons(pathbrowser_instance):
@@ -501,6 +529,16 @@ def load_directory_tree(pathbrowser_instance):
                         text=lang.get("Loading...", pathbrowser_instance),
                         open=False,
                     )
+        
+        # Scroll to show the current directory after the tree is populated
+        try:
+            current_path_str = str(current_path)
+            if pathbrowser_instance.tree.exists(current_path_str):
+                pathbrowser_instance.tree.see(current_path_str)
+        except tk.TclError:
+            # Item might not exist or tree not ready yet, ignore
+            pass
+        
     except (OSError, PermissionError) as e:
         logger.warning("Failed to load directory tree for %s: %s", base_path, e)
         pathbrowser_instance.status_var.set(
