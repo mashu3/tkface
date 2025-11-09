@@ -2617,12 +2617,17 @@ class TestDPIWidgetPatching:
 
         with patch.object(manager, '_apply_standard_widget_patch') as mock_apply_patch:
             with patch.object(manager, '_patch_button_constructor') as mock_button:
-                manager._patch_widget_constructors(2.0)
-                
-                # Verify that _apply_standard_widget_patch was called for all widgets
-                expected_calls = 17  # Number of standard tk and ttk widgets (updated count)
-                assert mock_apply_patch.call_count == expected_calls
-                mock_button.assert_called_once_with(2.0)
+                with patch.object(manager, '_patch_text_constructor') as mock_text:
+                    with patch.object(manager, '_patch_listbox_constructor') as mock_listbox:
+                        manager._patch_widget_constructors(2.0)
+                        
+                        # Verify that _apply_standard_widget_patch was called for all widgets
+                        # Text and Listbox are excluded (have special handling)
+                        expected_calls = 15  # Number of standard tk and ttk widgets (Text and Listbox excluded)
+                        assert mock_apply_patch.call_count == expected_calls
+                        mock_button.assert_called_once_with(2.0)
+                        mock_text.assert_called_once_with(2.0)
+                        mock_listbox.assert_called_once_with(2.0)
 
     def test_patch_standard_tk_widgets(self):
         """Test _apply_standard_widget_patch method."""
