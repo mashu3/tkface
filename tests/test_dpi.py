@@ -610,6 +610,152 @@ def create_mock_root_without_dpi_scaling():
 
 
 # Comprehensive test context helper
+def _setup_wintypes_mock(wintypes_mock):
+    """Setup wintypes mock context if specified."""
+    if not wintypes_mock:
+        return None
+    return WintypesPointerMockContext(
+        wintypes_mock.get('hwnd', 12345),
+        wintypes_mock.get('monitor_handle', 2),
+        wintypes_mock.get('x_dpi', 96),
+        wintypes_mock.get('y_dpi', 96)
+    )
+
+
+def _setup_windll_config(patch_ctx, windll_config):
+    """Setup windll configuration if specified."""
+    if not windll_config:
+        return
+    patch_ctx.get_windll().shcore.GetDpiForMonitor.return_value = windll_config.get('get_dpi_return')
+    patch_ctx.get_windll().shcore.GetScaleFactorForDevice.return_value = windll_config.get('get_scale_return', 200)
+
+
+def _setup_tkinter_root():
+    """Setup tkinter root if needed."""
+    try:
+        # Check if Tkinter is already running
+        try:
+            existing_root = tk._default_root
+            if existing_root is not None:
+                # If there's already a root, use it
+                root = existing_root
+            else:
+                # Create a new root
+                root = tk.Tk()
+                root.withdraw()
+        except Exception as exc:
+            # If there's any issue, try to create a new root
+            logging.debug("Failed to use existing root, creating new one: %s", exc)
+            root = tk.Tk()
+            root.withdraw()
+        
+        # Test if the root is actually working
+        root.update_idletasks()
+        return root
+    except (tk.TclError, RuntimeError, Exception) as e:
+        # If Tkinter is not available, skip the test
+        pytest.skip(f"Tkinter not available: {e}")
+
+
+def _apply_patches(manager, patches):
+    """Apply patches to manager methods."""
+    patch_contexts = []
+    if not patches:
+        return patch_contexts
+    
+    for patch_config in patches:
+        target = patch_config['target']
+        method_name = target.split('.')[-1]
+        patch_ctx_obj = patch.object(
+            manager, method_name,
+            return_value=patch_config.get('return_value'),
+            side_effect=patch_config.get('side_effect')
+        )
+        patch_contexts.append(patch_ctx_obj)
+    return patch_contexts
+
+
+def _apply_tkinter_patches(manager, tkinter_patches, original_methods):
+    """Apply tkinter patches and store original methods."""
+    if not tkinter_patches:
+        return
+    
+    for patch_config in tkinter_patches:
+        tk_class = patch_config['class']
+        method_name = patch_config['method']
+        scaling_factor = patch_config.get('scaling_factor', 2.0)
+        
+        original_method = getattr(tk_class, method_name)
+        original_methods[(tk_class, method_name)] = original_method
+        
+        # Apply the patch
+        if method_name == '__init__':
+            # For constructors, use the unified method
+            if tk_class.__name__ == 'Button':
+                patch_method = getattr(manager, '_patch_button_constructor')
+                patch_method(scaling_factor)
+            else:
+                # For other constructors, use the unified method
+                patch_method = getattr(manager, '_apply_standard_widget_patch')
+                patch_method(tk_class, scaling_factor)
+        else:
+            # For layout methods, add '_method' suffix
+            patch_method = getattr(manager, f'_patch_{method_name}_method')
+            patch_method(scaling_factor)
+
+
+def _apply_treeview_patches(treeview_patches, original_methods):
+    """Apply treeview patches and store original methods."""
+    if not treeview_patches:
+        return
+    
+    from tkinter import ttk
+    if 'column' in treeview_patches:
+        original_methods[(ttk.Treeview, 'column')] = ttk.Treeview.column
+    if 'style' in treeview_patches:
+        original_methods[(ttk.Style, 'configure')] = ttk.Style.configure
+
+
+def _prepare_test_args(self, manager, patch_ctx, wintypes_ctx, root, args, test_func, is_windows):
+    """Prepare test arguments based on test function signature."""
+    test_args = [self, manager, patch_ctx]
+    if wintypes_ctx:
+        test_args.append(wintypes_ctx)
+    if root:
+        test_args.insert(1, root)  # Insert root after self
+    
+    # Add commonly needed mock objects if test function expects them
+    import inspect
+    sig = inspect.signature(test_func)
+    param_names = list(sig.parameters.keys())
+    
+    # Add mock objects if they are expected by the test function
+    if 'mock_root' in param_names:
+        test_args.append(create_basic_mock_root())
+    if 'mock_windll' in param_names:
+        test_args.append(patch_ctx.get_windll() if is_windows else None)
+    if 'mock_dpi_values' in param_names:
+        test_args.append((192, 192, 2.0) if is_windows else (96, 96, 1.0))
+    
+    test_args.extend(args)
+    return test_args
+
+
+def _cleanup_test_context(original_methods, root):
+    """Cleanup test context by restoring original methods and destroying root."""
+    # Restore original methods
+    for (tk_class, method_name), original_method in original_methods.items():
+        setattr(tk_class, method_name, original_method)
+    
+    # Cleanup root
+    if root:
+        try:
+            root.destroy()
+        except Exception as e:
+            # Log cleanup errors but don't fail the test
+            print(f"Warning: Failed to destroy root in cleanup: {e}")
+
+
 def with_test_context(
     is_windows=True,
     wintypes_mock=None,
@@ -652,97 +798,28 @@ def with_test_context(
                 manager = create_dpi_manager_for_test()
                 
                 # Setup wintypes mock if specified
-                wintypes_ctx = None
-                if wintypes_mock:
-                    wintypes_ctx = WintypesPointerMockContext(
-                        wintypes_mock.get('hwnd', 12345),
-                        wintypes_mock.get('monitor_handle', 2),
-                        wintypes_mock.get('x_dpi', 96),
-                        wintypes_mock.get('y_dpi', 96)
-                    )
+                wintypes_ctx = _setup_wintypes_mock(wintypes_mock)
                 
                 # Setup windll config if specified
-                windll_ctx = None
-                if windll_config:
-                    # Configure windll directly in patch_ctx
-                    patch_ctx.get_windll().shcore.GetDpiForMonitor.return_value = windll_config.get('get_dpi_return')
-                    patch_ctx.get_windll().shcore.GetScaleFactorForDevice.return_value = windll_config.get('get_scale_return', 200)
+                _setup_windll_config(patch_ctx, windll_config)
                 
                 # Setup tkinter root if specified
                 root = None
                 if real_tkinter_root:
-                    try:
-                        # Check if Tkinter is already running
-                        try:
-                            existing_root = tk._default_root
-                            if existing_root is not None:
-                                # If there's already a root, use it
-                                root = existing_root
-                            else:
-                                # Create a new root
-                                root = tk.Tk()
-                                root.withdraw()
-                        except Exception as exc:
-                            # If there's any issue, try to create a new root
-                            logging.debug("Failed to use existing root, creating new one: %s", exc)
-                            root = tk.Tk()
-                            root.withdraw()
-                        
-                        # Test if the root is actually working
-                        root.update_idletasks()
-                    except (tk.TclError, RuntimeError, Exception) as e:
-                        # If Tkinter is not available, skip the test
-                        pytest.skip(f"Tkinter not available: {e}")
+                    root = _setup_tkinter_root()
                 
                 # Store original methods for restoration
                 original_methods = {}
                 
                 try:
                     # Apply patches
-                    patch_contexts = []
-                    if patches:
-                        for patch_config in patches:
-                            target = patch_config['target']
-                            method_name = target.split('.')[-1]
-                            patch_ctx_obj = patch.object(
-                                manager, method_name,
-                                return_value=patch_config.get('return_value'),
-                                side_effect=patch_config.get('side_effect')
-                            )
-                            patch_contexts.append(patch_ctx_obj)
+                    patch_contexts = _apply_patches(manager, patches)
                     
                     # Apply tkinter patches
-                    if tkinter_patches:
-                        for patch_config in tkinter_patches:
-                            tk_class = patch_config['class']
-                            method_name = patch_config['method']
-                            scaling_factor = patch_config.get('scaling_factor', 2.0)
-                            
-                            original_method = getattr(tk_class, method_name)
-                            original_methods[(tk_class, method_name)] = original_method
-                            
-                        # Apply the patch
-                        if method_name == '__init__':
-                            # For constructors, use the unified method
-                            if tk_class.__name__ == 'Button':
-                                patch_method = getattr(manager, '_patch_button_constructor')
-                                patch_method(scaling_factor)
-                            else:
-                                # For other constructors, use the unified method
-                                patch_method = getattr(manager, '_apply_standard_widget_patch')
-                                patch_method(tk_class, scaling_factor)
-                        else:
-                            # For layout methods, add '_method' suffix
-                            patch_method = getattr(manager, f'_patch_{method_name}_method')
-                            patch_method(scaling_factor)
+                    _apply_tkinter_patches(manager, tkinter_patches, original_methods)
                     
                     # Apply treeview patches
-                    if treeview_patches:
-                        from tkinter import ttk
-                        if 'column' in treeview_patches:
-                            original_methods[(ttk.Treeview, 'column')] = ttk.Treeview.column
-                        if 'style' in treeview_patches:
-                            original_methods[(ttk.Style, 'configure')] = ttk.Style.configure
+                    _apply_treeview_patches(treeview_patches, original_methods)
                     
                     # Execute test with all contexts
                     contexts = [patch_ctx]
@@ -755,41 +832,14 @@ def with_test_context(
                             stack.enter_context(ctx)
                         
                         # Prepare test arguments
-                        test_args = [self, manager, patch_ctx]
-                        if wintypes_ctx:
-                            test_args.append(wintypes_ctx)
-                        if root:
-                            test_args.insert(1, root)  # Insert root after self
-                        
-                        # Add commonly needed mock objects if test function expects them
-                        import inspect
-                        sig = inspect.signature(test_func)
-                        param_names = list(sig.parameters.keys())
-                        
-                        # Add mock objects if they are expected by the test function
-                        if 'mock_root' in param_names:
-                            test_args.append(create_basic_mock_root())
-                        if 'mock_windll' in param_names:
-                            test_args.append(patch_ctx.get_windll() if is_windows else None)
-                        if 'mock_dpi_values' in param_names:
-                            test_args.append((192, 192, 2.0) if is_windows else (96, 96, 1.0))
-                        
-                        test_args.extend(args)
+                        test_args = _prepare_test_args(
+                            self, manager, patch_ctx, wintypes_ctx, root, args, test_func, is_windows
+                        )
                         
                         return test_func(*test_args, **kwargs)
                 
                 finally:
-                    # Restore original methods
-                    for (tk_class, method_name), original_method in original_methods.items():
-                        setattr(tk_class, method_name, original_method)
-                    
-                    # Cleanup root
-                    if root:
-                        try:
-                            root.destroy()
-                        except Exception as e:
-                            # Log cleanup errors but don't fail the test
-                            print(f"Warning: Failed to destroy root in cleanup: {e}")
+                    _cleanup_test_context(original_methods, root)
         
         return wrapper
     return decorator
