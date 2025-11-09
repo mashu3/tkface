@@ -184,7 +184,7 @@ class FileDialogDemo:
         selected_order_frame.pack(side=tk.LEFT, padx=(5, 0), fill="x", expand=True)
         
         # Selected file types listbox
-        self.selected_filetypes_listbox = tk.Listbox(selected_order_frame, height=3, selectmode=tk.SINGLE)
+        self.selected_filetypes_listbox = tk.Listbox(selected_order_frame, height=5, selectmode=tk.SINGLE)
         self.selected_filetypes_listbox.pack(side=tk.LEFT, fill="x", expand=True)
         
         # Selected order control buttons
@@ -229,19 +229,19 @@ class FileDialogDemo:
         code_frame = tk.LabelFrame(
             main_frame, text="Generated Code", padx=10, pady=10
         )
-        code_frame.pack(fill="both", expand=True, pady=(10, 0))
+        code_frame.pack(fill="x", pady=(10, 0))
         
         # Code display
         self.code_text = tk.Text(
-            code_frame, height=8, wrap="word", font=("Courier", 9)
+            code_frame, height=12, wrap="word", font=("Courier", 9)
         )
-        self.code_text.pack(fill="both", expand=True)
+        self.code_text.pack(fill="x")
         
         # Result display section (moved to bottom)
         result_frame = tk.LabelFrame(
             main_frame, text="Selected Items (Result of 'Run Dialog' button)", padx=10, pady=10
         )
-        result_frame.pack(fill="both", expand=True, pady=(10, 0))
+        result_frame.pack(fill="x", pady=(10, 0))
         
         # Text widget for displaying results
         self.result_text = tk.Text(result_frame, wrap="word", height=4)
@@ -257,188 +257,148 @@ class FileDialogDemo:
         # Initialize dialog type settings and generate initial code
         self.update_dialog_type()
     
+    def _validate_initialdir(self):
+        """Validate initial directory if provided. Returns True if valid or empty, False otherwise."""
+        import os
+        try:
+            initialdir_raw = self.initialdir_var.get()
+            initialdir = initialdir_raw.strip()
+            if not initialdir:  # Empty is valid
+                return True
+
+            # Reject multi-line or embedded newlines to avoid dumping logs into message body
+            if ("\n" in initialdir) or ("\r" in initialdir):
+                tkface.messagebox.showerror(
+                    title="Invalid Path",
+                    message="Path must be a single line without newlines.",
+                    master=self.root,
+                )
+                return False
+            # Prepare safe display string (truncate long text)
+            display_path = initialdir
+            if len(display_path) > 160:
+                display_path = display_path[:160] + "..."
+            # Normalize for filesystem checks
+            initialdir_fs = os.path.normpath(os.path.expanduser(initialdir))
+            if not os.path.exists(initialdir_fs):
+                tkface.messagebox.showerror(
+                    title="Invalid Path",
+                    message=f"Path does not exist: {display_path}",
+                    master=self.root,
+                )
+                return False
+            if not os.path.isdir(initialdir_fs):
+                tkface.messagebox.showerror(
+                    title="Invalid Path",
+                    message=f"Not a directory: {display_path}",
+                    master=self.root,
+                )
+                return False
+            return True
+        except Exception as e:
+            # Log detailed error to console
+            print(f"Validation error: {e}")
+            import traceback
+            traceback.print_exc()
+            # Show user-friendly error message
+            tkface.messagebox.showerror(
+                title="Validation Error",
+                message="An error occurred while validating the path. Please check the console for details.",
+                master=self.root
+            )
+            return False
+
     def validate_and_generate_code(self):
         """Validate initial directory and generate code."""
-        try:
-            # Validate initial directory if provided
-            initialdir_raw = self.initialdir_var.get()
-            initialdir = initialdir_raw.strip()
-            if initialdir:  # Only validate if not empty
-                import os
-
-                # Reject multi-line or embedded newlines to avoid dumping logs into message body
-                if ("\n" in initialdir) or ("\r" in initialdir):
-                    tkface.messagebox.showerror(
-                        title="Invalid Path",
-                        message="Path must be a single line without newlines.",
-                        master=self.root,
-                    )
-                    return
-                # Prepare safe display string (truncate long text)
-                display_path = initialdir
-                if len(display_path) > 160:
-                    display_path = display_path[:160] + "..."
-                # Normalize for filesystem checks
-                initialdir_fs = os.path.normpath(os.path.expanduser(initialdir))
-                if not os.path.exists(initialdir_fs):
-                    tkface.messagebox.showerror(
-                        title="Invalid Path",
-                        message=f"Path does not exist: {display_path}",
-                        master=self.root,
-                    )
-                    return
-                if not os.path.isdir(initialdir_fs):
-                    tkface.messagebox.showerror(
-                        title="Invalid Path",
-                        message=f"Not a directory: {display_path}",
-                        master=self.root,
-                    )
-                    return
-            
-            # Generate code if validation passes or if no initialdir specified
+        if self._validate_initialdir():
             self.generate_code()
-        except Exception as e:
-            # Log detailed error to console
-            print(f"Validation error: {e}")
-            import traceback
-            traceback.print_exc()
-            # Show user-friendly error message
-            tkface.messagebox.showerror(
-                title="Validation Error",
-                message="An error occurred while validating the path. Please check the console for details.",
-                master=self.root
-            )
     
+    def _parse_filetypes(self):
+        """Parse filetypes from the filetypes variable. Returns parsed filetypes or None."""
+        filetypes_value = self.filetypes_var.get()
+        if filetypes_value and filetypes_value != "None":
+            try:
+                return eval(filetypes_value)
+            except (SyntaxError, NameError, TypeError, ValueError):
+                # If evaluation fails, use default
+                return None
+        return None
+
+    def _parse_position_params(self):
+        """Parse position parameters. Returns tuple (x_pos, y_pos)."""
+        if self.x_var.get() == "None" and self.y_var.get() == "None":
+            # Position dialog to the right of the demo window
+            self.root.update_idletasks()  # Ensure window is fully rendered
+            demo_x = self.root.winfo_x()
+            demo_y = self.root.winfo_y()
+            demo_width = self.root.winfo_width()
+            x_pos = demo_x + demo_width + 10  # 10px offset from right edge
+            y_pos = demo_y  # Same vertical position as demo window
+            return x_pos, y_pos
+        x_pos = None if self.x_var.get() == "None" else int(self.x_var.get())
+        y_pos = None if self.y_var.get() == "None" else int(self.y_var.get())
+        return x_pos, y_pos
+
+    def _parse_parent_param(self):
+        """Parse parent parameter. Returns parent widget."""
+        return self.root if self.parent_var.get() == "self.root" else eval(self.parent_var.get())
+
+    def _get_initialdir_value(self):
+        """Get initialdir value or None if empty."""
+        initialdir = self.initialdir_var.get()
+        return initialdir if initialdir else None
+
+    def _execute_dialog(self, dialog_type, filetypes, parent, x_pos, y_pos):
+        """Execute dialog based on type. Returns dialog result."""
+        initialdir = self._get_initialdir_value()
+        common_params = {
+            "title": self.title_var.get(),
+            "initialdir": initialdir,
+            "parent": parent,
+            "x": x_pos,
+            "y": y_pos,
+            "unround": self.unround_var.get()
+        }
+
+        if dialog_type == "askopenfile":
+            return tkface.pathchooser.askopenfile(
+                filetypes=filetypes,
+                **common_params
+            )
+        if dialog_type == "askopenfiles":
+            return tkface.pathchooser.askopenfiles(
+                filetypes=filetypes,
+                **common_params
+            )
+        if dialog_type == "askdirectory":
+            return tkface.pathchooser.askdirectory(**common_params)
+        if dialog_type == "askpath":
+            return tkface.pathchooser.askpath(
+                select=self.select_var.get(),
+                multiple=self.multiple_var.get(),
+                filetypes=filetypes,
+                **common_params
+            )
+        if dialog_type == "asksavefile":
+            return tkface.pathchooser.asksavefile(
+                initialfile="document.txt",
+                **common_params
+            )
+        return None
+
     def test_current_settings(self):
         """Test the current dialog settings."""
-        dialog_type = self.dialog_type_var.get()
-        
-        # Validate initial directory if provided
-        try:
-            initialdir_raw = self.initialdir_var.get()
-            initialdir = initialdir_raw.strip()
-            if initialdir:  # Only validate if not empty
-                import os
-                if ("\n" in initialdir) or ("\r" in initialdir):
-                    tkface.messagebox.showerror(
-                        title="Invalid Path",
-                        message="Path must be a single line without newlines.",
-                        master=self.root,
-                    )
-                    return
-                display_path = initialdir
-                if len(display_path) > 160:
-                    display_path = display_path[:160] + "..."
-                initialdir_fs = os.path.normpath(os.path.expanduser(initialdir))
-                if not os.path.exists(initialdir_fs):
-                    tkface.messagebox.showerror(
-                        title="Invalid Path",
-                        message=f"Path does not exist: {display_path}",
-                        master=self.root,
-                    )
-                    return
-                if not os.path.isdir(initialdir_fs):
-                    tkface.messagebox.showerror(
-                        title="Invalid Path",
-                        message=f"Not a directory: {display_path}",
-                        master=self.root,
-                    )
-                    return
-        except Exception as e:
-            # Log detailed error to console
-            print(f"Validation error: {e}")
-            import traceback
-            traceback.print_exc()
-            # Show user-friendly error message
-            tkface.messagebox.showerror(
-                title="Validation Error",
-                message="An error occurred while validating the path. Please check the console for details.",
-                master=self.root
-            )
+        if not self._validate_initialdir():
             return
-        
+
+        dialog_type = self.dialog_type_var.get()
+
         try:
-            # Parse filetypes if provided
-            filetypes = None
-            filetypes_value = self.filetypes_var.get()
-            if filetypes_value and filetypes_value != "None":
-                try:
-                    filetypes = eval(filetypes_value)
-                except (SyntaxError, NameError, TypeError, ValueError):
-                    # If evaluation fails, use default
-                    filetypes = None
-            
-            # Parse position parameters
-            if self.x_var.get() == "None" and self.y_var.get() == "None":
-                # Position dialog to the right of the demo window
-                self.root.update_idletasks()  # Ensure window is fully rendered
-                demo_x = self.root.winfo_x()
-                demo_y = self.root.winfo_y()
-                demo_width = self.root.winfo_width()
-                x_pos = demo_x + demo_width + 10  # 10px offset from right edge
-                y_pos = demo_y  # Same vertical position as demo window
-            else:
-                x_pos = None if self.x_var.get() == "None" else int(self.x_var.get())
-                y_pos = None if self.y_var.get() == "None" else int(self.y_var.get())
-            
-            # Parse parent parameter
-            parent = self.root if self.parent_var.get() == "self.root" else eval(self.parent_var.get())
-            
-            # Execute dialog based on type
-            if dialog_type == "askopenfile":
-                result = tkface.pathchooser.askopenfile(
-                    title=self.title_var.get(),
-                    filetypes=filetypes,
-                    initialdir=self.initialdir_var.get() if self.initialdir_var.get() else None,
-                    parent=parent,
-                    x=x_pos,
-                    y=y_pos,
-                    unround=self.unround_var.get()
-                )
-            elif dialog_type == "askopenfiles":
-                result = tkface.pathchooser.askopenfiles(
-                    title=self.title_var.get(),
-                    filetypes=filetypes,
-                    initialdir=self.initialdir_var.get() if self.initialdir_var.get() else None,
-                    parent=parent,
-                    x=x_pos,
-                    y=y_pos,
-                    unround=self.unround_var.get()
-                )
-            elif dialog_type == "askdirectory":
-                result = tkface.pathchooser.askdirectory(
-                    title=self.title_var.get(),
-                    initialdir=self.initialdir_var.get() if self.initialdir_var.get() else None,
-                    parent=parent,
-                    x=x_pos,
-                    y=y_pos,
-                    unround=self.unround_var.get()
-                )
-            elif dialog_type == "askpath":
-                result = tkface.pathchooser.askpath(
-                    select=self.select_var.get(),
-                    multiple=self.multiple_var.get(),
-                    title=self.title_var.get(),
-                    filetypes=filetypes,
-                    initialdir=self.initialdir_var.get() if self.initialdir_var.get() else None,
-                    parent=parent,
-                    x=x_pos,
-                    y=y_pos,
-                    unround=self.unround_var.get()
-                )
-            elif dialog_type == "asksavefile":
-                result = tkface.pathchooser.asksavefile(
-                    title=self.title_var.get(),
-                    initialfile="document.txt",
-                    initialdir=self.initialdir_var.get() if self.initialdir_var.get() else None,
-                    parent=parent,
-                    x=x_pos,
-                    y=y_pos,
-                    unround=self.unround_var.get()
-                )
-            
+            filetypes = self._parse_filetypes()
+            x_pos, y_pos = self._parse_position_params()
+            parent = self._parse_parent_param()
+            result = self._execute_dialog(dialog_type, filetypes, parent, x_pos, y_pos)
             self.display_result(f"Test: {dialog_type}", result)
-            
         except Exception as e:
             # Log detailed error to console
             print(f"Error executing dialog: {e}")
@@ -600,6 +560,95 @@ class FileDialogDemo:
                 self.selected_filetypes_listbox.selection_set(index + 1)
                 self.update_filetypes_from_checkboxes()
     
+    def _get_function_call_line(self, dialog_type):
+        """Get the function call line for the given dialog type."""
+        function_map = {
+            "askopenfile": "askopenfile",
+            "askopenfiles": "askopenfiles",
+            "askdirectory": "askdirectory",
+            "askpath": "askpath",
+            "asksavefile": "asksavefile"
+        }
+        function_name = function_map.get(dialog_type, "askopenfile")
+        return f"result = tkface.pathchooser.{function_name}("
+
+    def _add_title_param(self, code_lines):
+        """Add title parameter to code lines if specified."""
+        if self.title_var.get():
+            code_lines.append(f"    title='{self.title_var.get()}',")
+
+    def _add_filetypes_param(self, code_lines, dialog_type):
+        """Add filetypes parameter to code lines if applicable."""
+        if dialog_type not in ["askopenfile", "askopenfiles", "askpath"]:
+            return
+        if not self.filetypes_var.get():
+            return
+
+        filetypes_value = self.filetypes_var.get()
+        if filetypes_value == "None":
+            # Don't add filetypes parameter when None (will use default "All files")
+            return
+
+        try:
+            # Try to evaluate the filetypes string
+            filetypes = eval(filetypes_value)
+            if filetypes:
+                code_lines.append("    filetypes=[")
+                for filetype in filetypes:
+                    code_lines.append(f"        {filetype},")
+                code_lines.append("    ],")
+        except (SyntaxError, NameError, TypeError, ValueError):
+            # If evaluation fails, add as string
+            code_lines.append(f"    filetypes={filetypes_value},")
+
+    def _add_select_param(self, code_lines, dialog_type):
+        """Add select parameter to code lines if applicable."""
+        if dialog_type == "askpath" and self.select_var.get() != "file":
+            code_lines.append(f"    select='{self.select_var.get()}',")
+
+    def _add_multiple_param(self, code_lines, dialog_type):
+        """Add multiple parameter to code lines if applicable."""
+        if dialog_type == "askpath" and self.multiple_var.get():
+            code_lines.append("    multiple=True,")
+
+    def _add_initialfile_param(self, code_lines, dialog_type):
+        """Add initialfile parameter to code lines if applicable."""
+        if dialog_type == "asksavefile":
+            code_lines.append("    initialfile='document.txt',")
+
+    def _add_initialdir_param(self, code_lines):
+        """Add initialdir parameter to code lines if specified."""
+        if self.initialdir_var.get():
+            code_lines.append(f"    initialdir='{self.initialdir_var.get()}',")
+
+    def _add_parent_param(self, code_lines):
+        """Add parent parameter to code lines if not default."""
+        if self.parent_var.get() != "self.root":
+            code_lines.append(f"    parent={self.parent_var.get()},")
+
+    def _add_position_params(self, code_lines):
+        """Add position parameters to code lines if specified."""
+        if self.x_var.get() != "None":
+            code_lines.append(f"    x={self.x_var.get()},")
+        if self.y_var.get() != "None":
+            code_lines.append(f"    y={self.y_var.get()},")
+
+    def _add_unround_param(self, code_lines):
+        """Add unround parameter to code lines if enabled."""
+        if self.unround_var.get():
+            code_lines.append("    unround=True")
+
+    def _add_result_handling_code(self, code_lines):
+        """Add result handling code to code lines."""
+        code_lines.extend([
+            "",
+            "# Handle the result:",
+            "if result:",
+            "    print('Selected:', result)",
+            "else:",
+            "    print('Cancelled')"
+        ])
+
     def generate_code(self):
         """Generate Python code for the current pathchooser configuration."""
         dialog_type = self.dialog_type_var.get()
@@ -613,79 +662,21 @@ class FileDialogDemo:
         ]
         
         # Generate the function call
-        if dialog_type == "askopenfile":
-            code_lines.append("result = tkface.pathchooser.askopenfile(")
-        elif dialog_type == "askopenfiles":
-            code_lines.append("result = tkface.pathchooser.askopenfiles(")
-        elif dialog_type == "askdirectory":
-            code_lines.append("result = tkface.pathchooser.askdirectory(")
-        elif dialog_type == "askpath":
-            code_lines.append("result = tkface.pathchooser.askpath(")
-        elif dialog_type == "asksavefile":
-            code_lines.append("result = tkface.pathchooser.asksavefile(")
+        code_lines.append(self._get_function_call_line(dialog_type))
         
         # Add parameters
-        if self.title_var.get():
-            code_lines.append(f"    title='{self.title_var.get()}',")
-        
-        # Add filetypes for appropriate dialogs (not for asksavefile with fixed filename)
-        if dialog_type in ["askopenfile", "askopenfiles", "askpath"] and self.filetypes_var.get():
-            filetypes_value = self.filetypes_var.get()
-            if filetypes_value == "None":
-                # Don't add filetypes parameter when None (will use default "All files")
-                pass
-            else:
-                try:
-                    # Try to evaluate the filetypes string
-                    filetypes = eval(filetypes_value)
-                    if filetypes:
-                        code_lines.append("    filetypes=[")
-                        for filetype in filetypes:
-                            code_lines.append(f"        {filetype},")
-                        code_lines.append("    ],")
-                except (SyntaxError, NameError, TypeError, ValueError):
-                    # If evaluation fails, add as string
-                    code_lines.append(f"    filetypes={filetypes_value},")
-        
-        # Add select parameter for askpath
-        if dialog_type == "askpath" and self.select_var.get() != "file":
-            code_lines.append(f"    select='{self.select_var.get()}',")
-        
-        # Add multiple parameter for askpath
-        if dialog_type == "askpath" and self.multiple_var.get():
-            code_lines.append("    multiple=True,")
-        
-        # Add initialfile for asksavefile
-        if dialog_type == "asksavefile":
-            code_lines.append("    initialfile='document.txt',")
-        
-        # Add initialdir if specified
-        if self.initialdir_var.get():
-            code_lines.append(f"    initialdir='{self.initialdir_var.get()}',")
-        
-        # Add parent parameter
-        if self.parent_var.get() != "self.root":
-            code_lines.append(f"    parent={self.parent_var.get()},")
-        
-        # Add position parameters
-        if self.x_var.get() != "None":
-            code_lines.append(f"    x={self.x_var.get()},")
-        if self.y_var.get() != "None":
-            code_lines.append(f"    y={self.y_var.get()},")
-        
-        # Add unround parameter
-        if self.unround_var.get():
-            code_lines.append("    unround=True")
+        self._add_title_param(code_lines)
+        self._add_filetypes_param(code_lines, dialog_type)
+        self._add_select_param(code_lines, dialog_type)
+        self._add_multiple_param(code_lines, dialog_type)
+        self._add_initialfile_param(code_lines, dialog_type)
+        self._add_initialdir_param(code_lines)
+        self._add_parent_param(code_lines)
+        self._add_position_params(code_lines)
+        self._add_unround_param(code_lines)
         
         code_lines.append(")")
-        code_lines.extend([
-            "",
-            "# Handle the result:",
-            "if result:",
-            "    print('Selected:', result)",
-            "else:",
-            "    print('Cancelled')"
-        ])
+        self._add_result_handling_code(code_lines)
         
         # Update code display
         self.code_text.delete("1.0", tk.END)
@@ -704,7 +695,7 @@ def main():
     # Force update to ensure DPI scaling is applied before setting geometry
     root.update_idletasks()
     # Set window size and position (will be automatically adjusted for DPI if enabled)
-    root.geometry("500x700+0+0")
+    root.geometry("500x730+0+0")
     # Force another update to ensure geometry is properly applied
     root.update_idletasks()
     # Show window after all setup is complete
