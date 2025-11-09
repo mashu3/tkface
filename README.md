@@ -227,6 +227,93 @@ root.mainloop()
 - **DateFrame**: Customizable button text, more flexible layout
 - **DateEntry**: Combobox-style appearance, standard system look
 
+### TimePicker Widgets
+
+#### Usage Examples
+
+**Initial Time Behavior**: When no `initial_time` parameter is specified, both `TimeEntry` and `TimeFrame` automatically use the current time as the initial value. You can also explicitly set the initial time using the `initial_time` parameter.
+
+**Time Selection Features**: The time picker widgets include intuitive time selection features:
+- Click on the widget to open a popup time picker
+- Use spinboxes to adjust hours, minutes, and seconds
+- Toggle between 24-hour and 12-hour formats
+- Show or hide seconds display
+- Support for light and dark themes
+- Multilingual support (English/Japanese)
+
+```python
+import tkinter as tk
+import tkface
+import datetime
+
+root = tk.Tk()
+root.title("TimeEntry Demo")
+
+# Basic TimeEntry (uses current time by default)
+time_entry = tkface.TimeEntry(root)
+time_entry.pack(padx=10, pady=10)
+
+# TimeFrame with custom button text
+time_frame = tkface.TimeFrame(root, button_text="🕐")
+time_frame.pack(padx=10, pady=10)
+
+# Callback function for time selection
+def on_time_selected(time_obj):
+    if time_obj:
+        print(f"Selected time: {time_obj.strftime('%H:%M:%S')}")
+
+# Advanced TimeEntry with features
+time_entry = tkface.TimeEntry(
+    root,
+    time_format="%H:%M:%S",      # 24-hour format with seconds
+    hour_format="24",             # 24-hour format (or "12" for 12-hour)
+    show_seconds=True,            # Show seconds
+    theme="light",                # Light theme (or "dark")
+    language="ja",                # Japanese language
+    time_callback=on_time_selected  # Callback function
+)
+
+# TimeEntry with specific initial time
+time_entry_with_time = tkface.TimeEntry(
+    root,
+    time_format="%I:%M %p",       # 12-hour format without seconds
+    hour_format="12",              # 12-hour format
+    show_seconds=False,           # Hide seconds
+    initial_time=datetime.time(14, 30, 0)  # 2:30 PM
+)
+time_entry_with_time.pack(padx=10, pady=10)
+
+# Get selected time
+selected_time = time_entry.get_time()
+# Process the selected time as needed
+if selected_time:
+    # Handle the selected time
+    pass
+
+# Get selected time from specific time entry
+selected_time_with_time = time_entry_with_time.get_time()
+
+root.mainloop()
+```
+
+#### Key Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `time_format` | `str` | `"%H:%M:%S"` | Time format string |
+| `hour_format` | `str` | `"24"` | Hour format: "24" or "12" |
+| `show_seconds` | `bool` | `True` | Whether to show seconds |
+| `button_text` | `str` | `"🕐"` | Button text (TimeFrame only) |
+| `theme` | `str` | `"light"` | Theme: "light" or "dark" |
+| `language` | `str` | `"en"` | Language: "en" or "ja" |
+| `initial_time` | `datetime.time` | `None` (current time) | Initial time to display |
+| `time_callback` | `callable` | `None` | Callback function called when time is selected |
+
+#### TimeFrame vs TimeEntry
+
+- **TimeFrame**: Customizable button text, more flexible layout
+- **TimeEntry**: Combobox-style appearance, standard system look
+
 ### Windows-Specific Features
 
 Tkface provides Windows-specific enhancements that automatically detect the platform and gracefully degrade on non-Windows systems. These features include DPI awareness, Windows 11 corner rounding control, and system sound integration.
@@ -324,6 +411,7 @@ tkface.simpledialog.askfromlistbox(
 - **Enhanced Input Dialogs**: String/integer/float input, validation, password input, list selection, custom positioning
 - **File and Directory Selection**: Advanced file browser with directory tree, file filtering, multiple selection support
 - **Calendar Widget**: Multi-month display, week numbers, holiday highlighting, customizable colors, language support
+- **Time Picker Widget**: Time selection with 24/12-hour format, seconds display, popup time picker, theme support, language support
 - **Windows Features**: 
   - **DPI Awareness**: Automatic scaling for high-resolution displays
   - **Windows 11 Corner Rounding Control**: Modern UI appearance
@@ -341,6 +429,7 @@ See the `examples/` directory for complete working examples:
 - `demo_simpledialog.py` - Input dialog demonstrations
 - `demo_pathchooser.py` - File and directory selection demonstrations
 - `demo_calendar.py` - Calendar widget demonstrations
+- `demo_timepicker.py` - Time picker widget demonstrations
 - `demo_windows_features.py` - Windows-specific features demonstrations
 
 > **Note**: Test files are not included in the public release. For testing, see the development repository.
